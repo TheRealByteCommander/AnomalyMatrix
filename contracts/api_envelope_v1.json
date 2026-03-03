@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnomalyMatrix API Envelope v1",
+  "type": "object",
+  "required": ["ok", "meta"],
+  "properties": {
+    "ok": {"type": "boolean"},
+    "data": {},
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {"type": "string"},
+        "message": {"type": "string"},
+        "details": {},
+        "retryable": {"type": "boolean"}
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["requestId", "timestamp"],
+      "properties": {
+        "requestId": {"type": "string"},
+        "timestamp": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}
