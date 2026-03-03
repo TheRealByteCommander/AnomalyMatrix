@@ -23,7 +23,9 @@ jobs:
           pip install -r requirements.txt
       - name: Lint skeleton (compile)
         run: python -m compileall app
-      - name: Run tests
+      - name: Run tests (provider matrix)
         env:
           PYTHONPATH: ${{ github.workspace }}/backend
-        run: pytest -q
+        run: |
+          ANOMALYMATRIX_INFERENCE_PROVIDER=stub pytest -q
+          ANOMALYMATRIX_INFERENCE_PROVIDER=opencv_ready pytest -q
