@@ -74,3 +74,37 @@ Build check:
 ```bash
 npm run build
 ```
+
+## Phase 2 Vertical MVP Flow
+
+Backend endpoints:
+- `POST /api/v1/inspections/run`
+- `GET /api/v1/inspections/recent`
+
+Frontend behavior:
+- Dashboard can trigger inspection pipeline.
+- Latest result becomes clickable into Inspection Detail.
+- Trends page reflects latest synthetic inspections.
+
+Validation:
+```bash
+cd backend
+pytest -q
+
+cd ../frontend
+npm install
+npm run smoke
+```
+
+
+## Phase 2 Vertical Flow
+
+New endpoints:
+- `POST /api/v1/edge/capture`
+- `POST /api/v1/ai/infer`
+- `POST /api/v1/orchestrate/run-inspection`
+- `GET /api/v1/results/latest`
+
+Compatibility aliases kept:
+- `POST /api/v1/inspections/run`
+- `GET /api/v1/inspections/recent`
