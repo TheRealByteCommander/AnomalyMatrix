@@ -108,3 +108,13 @@ New endpoints:
 Compatibility aliases kept:
 - `POST /api/v1/inspections/run`
 - `GET /api/v1/inspections/recent`
+
+
+## Phase 3 Real Path
+
+- Pluggable inference provider: `ANOMALYMATRIX_INFERENCE_PROVIDER=stub|opencv_ready`
+- Query APIs:
+  - `GET /api/v1/results/query`
+  - `GET /api/v1/results/trend-summary`
+- OPC-UA payload mapping + publish integration in run-inspection flow.
+- DB migration scripts under `scripts/db/`.
