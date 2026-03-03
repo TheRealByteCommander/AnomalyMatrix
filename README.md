@@ -26,3 +26,25 @@ Selbstlernende Anomalie-Erkennungssoftware für industrielle Qualitätskontrolle
 
 ## Hinweise
 Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.
+
+## Frontend MVP Scaffold (UX/UI)
+
+Path: `frontend/`
+
+Pages (clickable wireframe):
+- Dashboard
+- Inspection Detail
+- Trends
+- Configuration
+
+Run locally:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Build check:
+```bash
+npm run build
+```
