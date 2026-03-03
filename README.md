@@ -49,6 +49,7 @@ Starts:
 - `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md`
 - `docs/IMPLEMENTATION_PLAN_V0.1.md`
 - `docs/KONZEPT_ORIGINAL_2026-02-24.md`
+- `docs/INSTALLATION.md` (vollständige Installation inkl. Installer-Datei)
 
 ## Hinweise
 Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.
