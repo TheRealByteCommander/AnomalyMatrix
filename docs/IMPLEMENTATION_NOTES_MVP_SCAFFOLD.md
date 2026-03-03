@@ -34,3 +34,7 @@ Services included:
 2. Influx write pipeline for `inspection_metrics`.
 3. MinIO bucket bootstrap and object naming conventions.
 4. OPC UA gateway MVP (`StartInspection`, `LastResult`).
+
+
+## Phase 2 update
+Implemented vertical inspection flow with synthetic capture + inference + persistence + retrieval.
