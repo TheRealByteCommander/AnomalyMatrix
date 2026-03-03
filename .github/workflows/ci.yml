@@ -24,4 +24,6 @@ jobs:
       - name: Lint skeleton (compile)
         run: python -m compileall app
       - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
         run: pytest -q
