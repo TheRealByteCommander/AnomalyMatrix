@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InspectionResult v1",
+  "type": "object",
+  "required": ["inspection_id", "frame", "inference"],
+  "properties": {
+    "inspection_id": {"type": "string"},
+    "frame": {
+      "type": "object",
+      "required": ["frame_id", "camera_id", "recipe_id", "captured_at", "image_uri"],
+      "properties": {
+        "frame_id": {"type": "string"},
+        "camera_id": {"type": "string"},
+        "recipe_id": {"type": "string"},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "image_uri": {"type": "string"}
+      }
+    },
+    "inference": {
+      "type": "object",
+      "required": ["anomaly_score", "status", "heatmap_uri", "model_version"],
+      "properties": {
+        "anomaly_score": {"type": "number"},
+        "status": {"type": "string"},
+        "heatmap_uri": {"type": "string"},
+        "model_version": {"type": "string"}
+      }
+    }
+  }
+}
