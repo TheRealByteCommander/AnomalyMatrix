@@ -1,11 +1,6 @@
 # AnomalyMatrix
 
-Selbstlernende Anomalie-Erkennungssoftware für industrielle Qualitätskontrolle (Klebenähte, Präzisionsbauteile, Lackoberflächen).
-
-## Projektstatus
-- Repository initialisiert
-- Konzept-Dokument importiert
-- Umsetzungsplan (v0.1) erstellt
+Engineering-first MVP scaffold for industrial anomaly detection stack.
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -14,15 +9,46 @@ Selbstlernende Anomalie-Erkennungssoftware für industrielle Qualitätskontrolle
 - Tesla-inspiriertes, operator-first HMI
 - Trendanalyse & Frühwarnungen für Prozessdrift
 
-## Dokumente
-- [`docs/KONZEPT_ORIGINAL_2026-02-24.md`](docs/KONZEPT_ORIGINAL_2026-02-24.md)
-- [`docs/IMPLEMENTATION_PLAN_V0.1.md`](docs/IMPLEMENTATION_PLAN_V0.1.md)
+## Repository Layout
+- `backend/` FastAPI service bootstrap
+- `frontend/` UI workspace
+- `edge-acquisition/` edge capture service
+- `opcua-gateway/` OPC UA integration service
+- `infra/` infra manifests
+- `scripts/` automation scripts
+- `tests/` top-level integration test workspace
+- `contracts/` versioned shared contracts
 
-## Nächste Schritte
-1. Zielarchitektur als Monorepo-Scaffold erzeugen (`backend`, `frontend`, `edge-acquisition`, `opcua-gateway`).
-2. MVP-Scope finalisieren (Phase 1/2).
-3. Datenmodell + API-Verträge fixieren.
-4. PoC-Pipeline für Bildakquise -> KI-Inferenz -> HMI aufsetzen.
+## Backend quick start
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
+uvicorn app.main:app --reload --port 8080
+```
+
+API examples:
+- `GET /api/v1/health`
+- `GET /api/v1/contracts/events`
+
+## Docker Compose baseline
+```bash
+docker compose up --build
+```
+
+Starts:
+- API (8080)
+- Postgres (5432)
+- InfluxDB (8086)
+- MinIO (9000/9001)
+
+## Dokumente
+- `docs/BUILD_READY_SPEC_V1.md`
+- `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md`
+- `docs/IMPLEMENTATION_PLAN_V0.1.md`
+- `docs/KONZEPT_ORIGINAL_2026-02-24.md`
 
 ## Hinweise
 Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.

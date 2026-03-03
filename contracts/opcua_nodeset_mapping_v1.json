@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "system_state": "ns=2;s=System.State",
+  "active_recipe": "ns=2;s=Recipe.Active",
+  "start_inspection_method": "ns=2;s=Inspection.Start",
+  "last_result": {
+    "pass_fail": "ns=2;s=Inspection.LastResult.PassFail",
+    "anomaly_score": "ns=2;s=Inspection.LastResult.AnomalyScore",
+    "defect_class": "ns=2;s=Inspection.LastResult.DefectClass"
+  },
+  "trend_warning": "ns=2;s=Inspection.Trend.Warning"
+}
