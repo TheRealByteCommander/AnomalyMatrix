@@ -25,6 +25,16 @@
 - **P1 (3-4 Wochen):** PoC Inferenz + Dashboard live view
 - **P2 (4-6 Wochen):** Feedback-Loop + Auto-Retraining + Validierung
 - **P3 (3-4 Wochen):** OPC-UA produktionsnah + Trendwarnungen
+- **P4 (v0.2.0 Milestone, 2-4 Wochen):** Produktionshärtung mit realer Kamera-/Inferenz-Integration, erweiterte Persistenzabfragen, Operator-Runbook v2, Security/Observability-Finalisierung
++
++## 4.1 Deployment Baseline
++- **Baseline-Release:** `v0.1.0`
++- **GitHub Release:** `https://github.com/TheRealByteCommander/AnomalyMatrix/releases/tag/v0.1.0`
++- **Installationsartefakte:**
++  - `dist/AnomalyMatrix-installer.run`
++  - `dist/AnomalyMatrix-installer-v0.1.0.run`
++- **Baseline-Einsatzregel:** Neue Umgebungen werden standardmäßig mit `v0.1.0` ausgerollt; Änderungen darüber hinaus nur über versionierte Folgereleases.
++- **Nächster Zielrelease:** `v0.2.0` nach Abschluss von P4 + grünen Gates (Tests, Readiness, Deployment-Plan, Merge).
 
 ## 5) Quality Gates
 - Unit + integration tests grün
