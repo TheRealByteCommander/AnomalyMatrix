@@ -2,6 +2,9 @@
 
 Engineering-first MVP scaffold for industrial anomaly detection stack.
 
+**Aktueller Stand:** Phase 3 (Real Path) + License Integration v1 abgeschlossen und gemerged.
+**Deployment Baseline:** `v0.1.0`
+
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
 - Continual-Learning Feedback-Loop (Human-in-the-Loop)
@@ -32,6 +35,9 @@ uvicorn app.main:app --reload --port 8080
 API examples:
 - `GET /api/v1/health`
 - `GET /api/v1/contracts/events`
+- `GET /api/v1/license/status`
+- `POST /api/v1/license/activate`
+- `POST /api/v1/license/deactivate`
 
 ## Docker Compose baseline
 ```bash
@@ -50,6 +56,9 @@ Starts:
 - `docs/IMPLEMENTATION_PLAN_V0.1.md`
 - `docs/KONZEPT_ORIGINAL_2026-02-24.md`
 - `docs/INSTALLATION.md` (vollständige Installation inkl. Installer-Datei)
+- `docs/PHASE3_REAL_PATH.md`
+- `docs/RELEASE_NOTES_v0.1.0.md`
+- `docs/product/PHASE3_VALUE_AND_KPI_PLAN.md`
 
 ## Hinweise
 Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.
@@ -119,3 +128,26 @@ Compatibility aliases kept:
   - `GET /api/v1/results/trend-summary`
 - OPC-UA payload mapping + publish integration in run-inspection flow.
 - DB migration scripts under `scripts/db/`.
+
+## License Integration v1
+
+- Lizenzsystem-Integration auf Basis des separaten Repos `software-licensing-concept`.
+- Backend-Endpunkte:
+  - `GET /api/v1/license/status`
+  - `POST /api/v1/license/activate`
+  - `POST /api/v1/license/deactivate`
+- Feature-Gating ist integriert (`inspection.run`, `inspection.read`, etc.).
+- Offline/Grace- und Statuszustände werden im Lizenzstatus geführt.
+
+Konfiguration (ENV, Auszug):
+- `LICENSE_ADMIN_TOKEN` (für administrative Lizenzaktionen)
+- `LICENSE_STATE_FILE` (Persistenzpfad Lizenzstatus)
+- `LICENSE_ENFORCE` (Feature-Gates strikt erzwingen)
+
+## Release & Installer
+
+- Baseline Release: `v0.1.0`
+- GitHub Release: `https://github.com/TheRealByteCommander/AnomalyMatrix/releases/tag/v0.1.0`
+- Installer-Dateien:
+  - `dist/AnomalyMatrix-installer.run`
+  - `dist/AnomalyMatrix-installer-v0.1.0.run`
