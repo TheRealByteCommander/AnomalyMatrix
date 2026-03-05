@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,19 +15,60 @@ from .api.health import router as health_router
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
 from .inference_provider import get_inference_provider
+from .licensing import LicenseManager
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_to_opcua
 from .repository import ResultRepository
 from .services_edge import generate_synthetic_frame
 
+repo = ResultRepository(Path(__file__).resolve().parents[1] / "data")
+license_manager = LicenseManager()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup validation
+    license_manager.validate_once()
+
+    stop = False
+
+    async def validator_loop():
+        while not stop:
+            await asyncio.sleep(license_manager.validation_interval_sec)
+            license_manager.validate_once()
+
+    task = asyncio.create_task(validator_loop())
+    try:
+        yield
+    finally:
+        stop = True
+        task.cancel()
+        with contextlib.suppress(BaseException):
+            await task
+
+
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.3.0",
-    description="MVP phase-3 real-path scaffold",
+    version="0.4.0",
+    description="MVP phase-3 real-path scaffold + licensing",
+    lifespan=lifespan,
 )
 
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
-repo = ResultRepository(Path(__file__).resolve().parents[1] / "data")
+
+
+def _require_license_feature(feature: str):
+    try:
+        license_manager.enforce_feature(feature)
+    except PermissionError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+
+
+def _check_admin_token(request: Request):
+    expected = os.getenv('LICENSE_ADMIN_TOKEN', '').strip()
+    provided = request.headers.get('X-License-Admin-Token', '')
+    if expected and provided != expected:
+        raise HTTPException(status_code=403, detail='Invalid admin token')
 
 
 @app.middleware("http")
@@ -74,6 +119,43 @@ async def generic_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content=payload)
 
 
+@app.get("/api/v1/license/status")
+async def license_status(request: Request):
+    request_id = request.state.request_id
+    snap = license_manager.snapshot()
+    payload = {
+        'active': bool(getattr(snap, 'active', False)),
+        'tier': getattr(snap, 'tier', 'none'),
+        'features': list(getattr(snap, 'features', [])),
+        'token_present': bool(getattr(snap, 'token_present', False)),
+        'valid_until': getattr(snap, 'valid_until', None),
+        'last_validation_at': getattr(snap, 'last_validation_at', None),
+        'offline_grace_until': getattr(snap, 'offline_grace_until', None),
+        'grace_active': bool(getattr(snap, 'grace_active', False)),
+        'last_error': getattr(snap, 'last_error', None),
+    }
+    return success_envelope(payload, request_id)
+
+
+@app.post("/api/v1/license/activate")
+async def license_activate(request: Request, payload: dict = Body(...)):
+    _check_admin_token(request)
+    request_id = request.state.request_id
+    key = str(payload.get('license_key', '')).strip()
+    if not key:
+        raise HTTPException(status_code=400, detail='license_key required')
+    state = license_manager.activate(key)
+    return success_envelope({'active': state.get('active', False), 'tier': state.get('tier'), 'features': state.get('features', [])}, request_id)
+
+
+@app.post("/api/v1/license/deactivate")
+async def license_deactivate(request: Request):
+    _check_admin_token(request)
+    request_id = request.state.request_id
+    state = license_manager.deactivate()
+    return success_envelope({'active': state.get('active', False)}, request_id)
+
+
 @app.get("/api/v1/contracts/events")
 async def contracts_events(request: Request):
     request_id = request.state.request_id
@@ -93,8 +175,8 @@ async def contracts_inspection_result(request: Request):
     request_id = request.state.request_id
     return success_envelope(
         {
-            "schema_version": "1.0.0",
-            "fields": ["inspection_id", "frame", "inference", "decision", "heatmap", "opcua_publish"],
+            "schema_version": "1.1.0",
+            "fields": ["inspection_id", "frame", "inference", "decision", "heatmap", "opcua_publish", "license_tier"],
         },
         request_id,
     )
@@ -102,6 +184,7 @@ async def contracts_inspection_result(request: Request):
 
 @app.post("/api/v1/edge/capture")
 async def edge_capture(payload: CaptureRequest, request: Request):
+    _require_license_feature('inspection.run')
     request_id = request.state.request_id
     frame = generate_synthetic_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
     return success_envelope(frame.__dict__, request_id)
@@ -109,6 +192,7 @@ async def edge_capture(payload: CaptureRequest, request: Request):
 
 @app.post("/api/v1/ai/infer")
 async def ai_infer(payload: InferRequest, request: Request):
+    _require_license_feature('inspection.run')
     request_id = request.state.request_id
     provider = get_inference_provider()
     inference = provider.infer(payload.model_dump())
@@ -118,6 +202,7 @@ async def ai_infer(payload: InferRequest, request: Request):
 @app.post("/api/v1/orchestrate/run-inspection")
 @app.post("/api/v1/inspections/run")
 async def run_inspection(request: Request, payload: RunInspectionRequest = Body(default_factory=RunInspectionRequest)):
+    _require_license_feature('inspection.run')
     request_id = request.state.request_id
 
     frame = generate_synthetic_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
@@ -125,12 +210,14 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     inference = provider.infer(frame.__dict__)
 
     decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
+    snap = license_manager.snapshot()
     result = {
         "inspection_id": str(uuid4()),
         "frame": frame.__dict__,
         "inference": inference.__dict__,
         "decision": decision,
         "heatmap": {"uri": inference.heatmap_uri, "placeholder": True},
+        "license_tier": snap.tier,
     }
 
     opcua = publish_to_opcua(result)
@@ -143,6 +230,7 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
 @app.get("/api/v1/results/latest")
 @app.get("/api/v1/inspections/recent")
 async def results_latest(request: Request, limit: int = 20):
+    _require_license_feature('inspection.read')
     request_id = request.state.request_id
     data = repo.latest(limit=max(1, min(100, limit)))
     return success_envelope({"items": data, "count": len(data)}, request_id)
@@ -156,6 +244,7 @@ async def results_query(
     max_score: float | None = Query(default=None, ge=0.0, le=1.0),
     limit: int = Query(default=50, ge=1, le=200),
 ):
+    _require_license_feature('inspection.read')
     request_id = request.state.request_id
     data = repo.query(recipe_id=recipe_id, min_score=min_score, max_score=max_score, limit=limit)
     return success_envelope({"items": data, "count": len(data)}, request_id)
@@ -163,5 +252,6 @@ async def results_query(
 
 @app.get("/api/v1/results/trend-summary")
 async def results_trend_summary(request: Request):
+    _require_license_feature('inspection.read')
     request_id = request.state.request_id
     return success_envelope(repo.trend_summary(), request_id)
