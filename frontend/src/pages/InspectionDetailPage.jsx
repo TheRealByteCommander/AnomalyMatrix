@@ -1,6 +1,19 @@
+import { useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
+import { submitFeedback } from '../services';
+
+const VERDICTS = [
+  { value: 'confirm_anomaly', label: 'Anomalie bestätigen' },
+  { value: 'false_positive', label: 'Falsch positiv' },
+  { value: 'needs_review', label: 'Nachprüfung nötig' },
+];
 
 export default function InspectionDetailPage({ selectedInspection }) {
+  const [verdict, setVerdict] = useState('needs_review');
+  const [comment, setComment] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
   if (!selectedInspection) {
     return (
       <section className="page-grid">
@@ -13,6 +26,25 @@ export default function InspectionDetailPage({ selectedInspection }) {
   }
 
   const passFail = selectedInspection.decision === 'red' ? 'Fail' : selectedInspection.decision === 'amber' ? 'Review' : 'Pass';
+
+  async function handleFeedbackSubmit(e) {
+    e.preventDefault();
+    setSubmitting(true);
+    setFeedbackStatus(null);
+    try {
+      await submitFeedback({
+        inspectionId: selectedInspection.id,
+        verdict,
+        comment,
+      });
+      setFeedbackStatus({ ok: true, message: 'Feedback gespeichert.' });
+      setComment('');
+    } catch (err) {
+      setFeedbackStatus({ ok: false, message: err.message || 'Feedback fehlgeschlagen.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <section className="page-grid">
@@ -39,6 +71,31 @@ export default function InspectionDetailPage({ selectedInspection }) {
           </div>
           <p className="muted">Phase 2: wired placeholder for vertical flow; real overlay comes in model integration phase.</p>
         </div>
+      </article>
+
+      <article className="card">
+        <h3>QA-Feedback</h3>
+        <p className="muted">Verdict an Backend senden (QA Lead / Admin).</p>
+        <form className="feedback-form" onSubmit={handleFeedbackSubmit}>
+          <label htmlFor="feedback-verdict">Verdict</label>
+          <select id="feedback-verdict" value={verdict} onChange={(e) => setVerdict(e.target.value)}>
+            {VERDICTS.map((v) => (
+              <option key={v.value} value={v.value}>{v.label}</option>
+            ))}
+          </select>
+          <label htmlFor="feedback-comment">Kommentar</label>
+          <textarea
+            id="feedback-comment"
+            rows={3}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Optional"
+          />
+          <button type="submit" disabled={submitting}>{submitting ? 'Sende…' : 'Feedback senden'}</button>
+        </form>
+        {feedbackStatus && (
+          <p className={feedbackStatus.ok ? 'muted' : 'error-text'} role="status">{feedbackStatus.message}</p>
+        )}
       </article>
     </section>
   );

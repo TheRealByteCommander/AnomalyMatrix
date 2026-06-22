@@ -12,27 +12,34 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .api.catalog import router as catalog_router
 from .api.health import router as health_router
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
+from .core_store import CoreStore
 from .event_bus import DomainEventBus
 from .inference_provider import get_inference_provider
 from .licensing import LicenseManager
 from .metrics_influx import query_observability_summary, record_inspection_metrics
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_to_opcua
+from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
 from .services_edge import capture_frame, frame_to_dict
 from .storage_minio import ensure_buckets, store_heatmap_artifact
 
 _data_root = Path(__file__).resolve().parents[1] / "data"
+_dsn = os.getenv("DATABASE_URL", "").strip() or None
 repo = build_repository(_data_root)
+core_store = CoreStore(_data_root, dsn=_dsn)
 license_manager = LicenseManager()
 event_bus = DomainEventBus(_data_root)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.core_store = core_store
+    app.state.event_bus = event_bus
     license_manager.validate_once()
     ensure_buckets()
 
@@ -55,12 +62,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.5.0",
-    description="MVP phase-3 real-path + observability data layer",
+    version="0.6.0",
+    description="MVP v0.6: RBAC, feedback, PatchCore, core schema",
     lifespan=lifespan,
 )
 
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
+app.include_router(catalog_router, prefix="/api/v1")
+
+
+def _auth(request: Request):
+    return resolve_auth(request, core_store)
 
 
 def _require_license_feature(feature: str):
@@ -68,6 +80,20 @@ def _require_license_feature(feature: str):
         license_manager.enforce_feature(feature)
     except PermissionError as exc:
         raise HTTPException(status_code=402, detail=str(exc)) from exc
+
+
+def _guard(request: Request, permission: str) -> None:
+    auth = _auth(request)
+    request.state.auth = auth
+    require_permission(auth, permission)
+    license_map = {
+        "inspection.run": "inspection.run",
+        "inspection.read": "inspection.read",
+        "license.admin": "inspection.run",
+    }
+    lic = license_map.get(permission)
+    if lic:
+        _require_license_feature(lic)
 
 
 def _check_admin_token(request: Request):
@@ -145,6 +171,7 @@ async def license_status(request: Request):
 
 @app.post("/api/v1/license/activate")
 async def license_activate(request: Request, payload: dict = Body(...)):
+    _guard(request, "license.admin")
     _check_admin_token(request)
     request_id = request.state.request_id
     key = str(payload.get('license_key', '')).strip()
@@ -156,6 +183,7 @@ async def license_activate(request: Request, payload: dict = Body(...)):
 
 @app.post("/api/v1/license/deactivate")
 async def license_deactivate(request: Request):
+    _guard(request, "license.admin")
     _check_admin_token(request)
     request_id = request.state.request_id
     state = license_manager.deactivate()
@@ -190,7 +218,7 @@ async def contracts_inspection_result(request: Request):
 
 @app.post("/api/v1/edge/capture")
 async def edge_capture(payload: CaptureRequest, request: Request):
-    _require_license_feature('inspection.run')
+    _guard(request, "inspection.run")
     request_id = request.state.request_id
     frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
     return success_envelope(frame_to_dict(frame), request_id)
@@ -198,7 +226,7 @@ async def edge_capture(payload: CaptureRequest, request: Request):
 
 @app.post("/api/v1/ai/infer")
 async def ai_infer(payload: InferRequest, request: Request):
-    _require_license_feature('inspection.run')
+    _guard(request, "inspection.run")
     request_id = request.state.request_id
     provider = get_inference_provider()
     inference = provider.infer(payload.model_dump())
@@ -208,7 +236,8 @@ async def ai_infer(payload: InferRequest, request: Request):
 @app.post("/api/v1/orchestrate/run-inspection")
 @app.post("/api/v1/inspections/run")
 async def run_inspection(request: Request, payload: RunInspectionRequest = Body(default_factory=RunInspectionRequest)):
-    _require_license_feature('inspection.run')
+    _guard(request, "inspection.run")
+    auth = request.state.auth
     request_id = request.state.request_id
     started = time.perf_counter()
 
@@ -252,13 +281,21 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     result["domain_event_id"] = event.get("event_id")
 
     repo.append(result)
+    core_store.append_audit(
+        actor=auth.user_id,
+        action="inspection.run",
+        resource_type="inspection",
+        resource_id=inspection_id,
+        after_state={"decision": decision, "score": inference.anomaly_score},
+        request_id=request.state.request_id,
+    )
     return success_envelope(result, request_id)
 
 
 @app.get("/api/v1/results/latest")
 @app.get("/api/v1/inspections/recent")
 async def results_latest(request: Request, limit: int = 20):
-    _require_license_feature('inspection.read')
+    _guard(request, "inspection.read")
     request_id = request.state.request_id
     data = repo.latest(limit=max(1, min(100, limit)))
     return success_envelope({"items": data, "count": len(data)}, request_id)
@@ -272,7 +309,7 @@ async def results_query(
     max_score: float | None = Query(default=None, ge=0.0, le=1.0),
     limit: int = Query(default=50, ge=1, le=200),
 ):
-    _require_license_feature('inspection.read')
+    _guard(request, "inspection.read")
     request_id = request.state.request_id
     data = repo.query(recipe_id=recipe_id, min_score=min_score, max_score=max_score, limit=limit)
     return success_envelope({"items": data, "count": len(data)}, request_id)
@@ -280,14 +317,14 @@ async def results_query(
 
 @app.get("/api/v1/results/trend-summary")
 async def results_trend_summary(request: Request):
-    _require_license_feature('inspection.read')
+    _guard(request, "trends.read")
     request_id = request.state.request_id
     return success_envelope(repo.trend_summary(), request_id)
 
 
 @app.get("/api/v1/observability/summary")
 async def observability_summary(request: Request):
-    _require_license_feature('inspection.read')
+    _guard(request, "trends.read")
     request_id = request.state.request_id
     trend = repo.trend_summary()
     influx = query_observability_summary()
@@ -305,7 +342,7 @@ async def observability_summary(request: Request):
 
 @app.get("/api/v1/events/recent")
 async def events_recent(request: Request, limit: int = Query(default=20, ge=1, le=200)):
-    _require_license_feature('inspection.read')
+    _guard(request, "inspection.read")
     request_id = request.state.request_id
     items = event_bus.recent(limit=limit)
     return success_envelope({"items": items, "count": len(items)}, request_id)

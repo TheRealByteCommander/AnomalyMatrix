@@ -1,17 +1,27 @@
 import { useEffect, useState } from 'react';
 import { configSummary } from '../data/sampleData';
 import StatusBadge from '../components/StatusBadge';
-import { fetchLicenseStatus } from '../services';
+import { fetchLicenseStatus, fetchModels, fetchRecipes } from '../services';
 
 export default function ConfigurationPage() {
   const [license, setLicense] = useState(null);
+  const [recipes, setRecipes] = useState([]);
+  const [models, setModels] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await fetchLicenseStatus();
-        if (!cancelled) setLicense(data);
+        const [lic, recipeData, modelData] = await Promise.all([
+          fetchLicenseStatus(),
+          fetchRecipes().catch(() => ({ items: [] })),
+          fetchModels().catch(() => ({ items: [] })),
+        ]);
+        if (!cancelled) {
+          setLicense(lic);
+          setRecipes(recipeData.items || []);
+          setModels(modelData.items || []);
+        }
       } catch {
         if (!cancelled) setLicense(null);
       }
@@ -22,6 +32,8 @@ export default function ConfigurationPage() {
   }, []);
 
   const licenseState = license?.active ? 'green' : 'amber';
+  const activeRecipe = recipes.find((r) => r.status === 'active') || recipes[0];
+  const activeModel = models.find((m) => m.status === 'active') || models[0];
 
   return (
     <section className="page-grid">
@@ -35,8 +47,8 @@ export default function ConfigurationPage() {
       </article>
       <article className="card kpi-grid">
         <div><label>OPC UA profile</label><strong>{configSummary.opcUaProfile}</strong></div>
-        <div><label>Recipe version</label><strong>{configSummary.recipeVersion}</strong></div>
-        <div><label>Model profile</label><strong>{configSummary.modelProfile}</strong></div>
+        <div><label>Recipe version</label><strong>{activeRecipe?.recipe_version || configSummary.recipeVersion}</strong></div>
+        <div><label>Model profile</label><strong>{activeModel?.name || configSummary.modelProfile}</strong></div>
         <div><label>Audit mode</label><strong>{configSummary.auditMode}</strong></div>
       </article>
       <article className="card kpi-grid">

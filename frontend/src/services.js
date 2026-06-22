@@ -1,5 +1,14 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080/api/v1';
 
+const defaultHeaders = {
+  'X-AMX-Role': import.meta.env.VITE_AMX_ROLE || 'operator',
+  'X-AMX-User': import.meta.env.VITE_AMX_USER || 'hmi-operator',
+};
+
+function withHeaders(extra = {}) {
+  return { ...defaultHeaders, ...extra };
+}
+
 async function parseEnvelope(response) {
   if (!response.ok) {
     throw new Error(`API error (${response.status})`);
@@ -35,29 +44,65 @@ export function mapApiInspection(item) {
 export async function runInspection(cameraId = 'cam-01', recipeId = 'recipe-default') {
   const r = await fetch(`${API_BASE}/inspections/run`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ camera_id: cameraId, recipe_id: recipeId }),
   });
   return mapApiInspection(await parseEnvelope(r));
 }
 
 export async function fetchRecentInspections(limit = 20) {
-  const r = await fetch(`${API_BASE}/inspections/recent?limit=${limit}`);
+  const r = await fetch(`${API_BASE}/inspections/recent?limit=${limit}`, { headers: withHeaders() });
   const data = await parseEnvelope(r);
   return (data.items || []).map(mapApiInspection);
 }
 
 export async function fetchTrendSummary() {
-  const r = await fetch(`${API_BASE}/results/trend-summary`);
+  const r = await fetch(`${API_BASE}/results/trend-summary`, { headers: withHeaders() });
   return parseEnvelope(r);
 }
 
 export async function fetchLicenseStatus() {
-  const r = await fetch(`${API_BASE}/license/status`);
+  const r = await fetch(`${API_BASE}/license/status`, { headers: withHeaders() });
   return parseEnvelope(r);
 }
 
 export async function fetchObservabilitySummary() {
-  const r = await fetch(`${API_BASE}/observability/summary`);
+  const r = await fetch(`${API_BASE}/observability/summary`, { headers: withHeaders() });
+  return parseEnvelope(r);
+}
+
+export async function fetchRecipes() {
+  const r = await fetch(`${API_BASE}/recipes`, { headers: withHeaders() });
+  return parseEnvelope(r);
+}
+
+export async function fetchModels() {
+  const r = await fetch(`${API_BASE}/models`, { headers: withHeaders() });
+  return parseEnvelope(r);
+}
+
+export async function submitFeedback({ inspectionId, verdict, comment = '', recipeVersion = 'v1', modelVersion = 'v0' }) {
+  const r = await fetch(`${API_BASE}/feedback`, {
+    method: 'POST',
+    headers: withHeaders({
+      'Content-Type': 'application/json',
+      'X-AMX-Role': import.meta.env.VITE_AMX_FEEDBACK_ROLE || 'qa_lead',
+    }),
+    body: JSON.stringify({
+      inspection_id: inspectionId,
+      verdict,
+      comment,
+      recipe_version: recipeVersion,
+      model_version: modelVersion,
+    }),
+  });
+  return parseEnvelope(r);
+}
+
+export async function fetchFeedback(inspectionId) {
+  const q = inspectionId ? `?inspection_id=${encodeURIComponent(inspectionId)}` : '';
+  const r = await fetch(`${API_BASE}/feedback${q}`, {
+    headers: withHeaders({ 'X-AMX-Role': import.meta.env.VITE_AMX_FEEDBACK_ROLE || 'qa_lead' }),
+  });
   return parseEnvelope(r);
 }
