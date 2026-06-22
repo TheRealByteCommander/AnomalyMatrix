@@ -41,8 +41,12 @@ services:
     build:
       context: ./opcua-gateway
       dockerfile: Dockerfile
+    environment:
+      OPCUA_SERVER_ENABLED: "true"
+      OPCUA_SERVER_ENDPOINT: opc.tcp://0.0.0.0:4840/anomalymatrix/server/
     ports:
       - "8092:8092"
+      - "4840:4840"
 
   postgres:
     image: postgres:16
