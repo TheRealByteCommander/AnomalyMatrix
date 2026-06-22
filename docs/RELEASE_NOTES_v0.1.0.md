@@ -1,5 +1,8 @@
 # AnomalyMatrix v0.1.0 – Release Notes
 
+> **Hinweis:** Aktueller Entwicklungsstand ist **v0.6.0** — siehe `docs/RELEASE_NOTES_v0.6.0.md`.  
+> Dieses Dokument beschreibt die **Installer-Baseline** v0.1.0.
+
 ## Highlights
 - MVP monorepo scaffold (backend, frontend, edge-acquisition, opcua-gateway, infra, scripts, tests, contracts)
 - Phase 2 vertical flow integrated:

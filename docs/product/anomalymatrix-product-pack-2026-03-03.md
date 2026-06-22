@@ -1,5 +1,7 @@
 # AnomalyMatrix — Product/Feature Ideation Pack (2026-03-03)
 
+> **Umsetzungsstand (2026-06):** MVP v0.6.0 — Inspection-Pipeline, HMI, RBAC, Feedback, OPC-UA asyncua, Observability optional. Offen: echtes Training, E2E-Gates, Executive-Dashboards.
+
 ## Scope & Product Lens
 **Product goal:** Reduce unplanned industrial downtime by detecting anomalies early, accelerating root-cause analysis, and operationalizing reliable response playbooks.
 

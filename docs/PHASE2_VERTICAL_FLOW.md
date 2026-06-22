@@ -1,5 +1,7 @@
 # Phase 2 Vertical MVP Flow (2026-03-03)
 
+> **Implementierungsstand v0.6.0:** Flow aktiv; Persistenz Postgres oder JSONL; HMI mit Feedback auf Inspection Detail.
+
 ## End-to-end path
 1. `POST /api/v1/edge/capture`
    - generates synthetic frame + metadata
@@ -11,8 +13,9 @@
    - retrieves recent persisted results
 
 ## Persistence
-- Minimal JSONL persistence via `backend/data/inspection_results.jsonl`
-- Thread-safe append via lock in repository.
+- Postgres wenn `DATABASE_URL` gesetzt (Docker Compose)
+- JSONL-Fallback: `backend/data/inspection_results.jsonl`
+- Thread-safe append via lock in repository
 
 ## Envelope
 All responses follow v1 envelope (`ok`, `data/error`, `meta.requestId`, `meta.timestamp`).

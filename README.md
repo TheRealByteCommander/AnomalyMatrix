@@ -1,9 +1,9 @@
 # AnomalyMatrix
 
-Engineering-first MVP scaffold for industrial anomaly detection stack.
+Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
-**Aktueller Stand:** Phase 3 (Real Path) + License Integration v1 abgeschlossen und gemerged.
-**Deployment Baseline:** `v0.1.0`
+**Aktueller Stand (2026-06):** API **v0.6.0** auf `master`  
+**Deployment Baseline:** `v0.6.0` (lokal/Docker); Installer-Artefakt weiterhin `v0.1.0`
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -13,141 +13,145 @@ Engineering-first MVP scaffold for industrial anomaly detection stack.
 - Trendanalyse & Frühwarnungen für Prozessdrift
 
 ## Repository Layout
-- `backend/` FastAPI service bootstrap
-- `frontend/` UI workspace
-- `edge-acquisition/` edge capture service
-- `opcua-gateway/` OPC UA integration service
-- `infra/` infra manifests
-- `scripts/` automation scripts
-- `tests/` top-level integration test workspace
-- `contracts/` versioned shared contracts
+| Pfad | Inhalt |
+|------|--------|
+| `backend/` | FastAPI API (Inspection, RBAC, License, Observability) |
+| `frontend/` | React/Vite HMI (Dashboard, Detail, Trends, Config) |
+| `edge-acquisition/` | HTTP Capture-Service (synthetisch / Stub) |
+| `opcua-gateway/` | HTTP `/publish` + asyncua OPC-UA-Server (Port 4840) |
+| `infra/` | Infra-Manifeste (Platzhalter) |
+| `scripts/` | DB-Migrationen, Installer, Automation |
+| `tests/` | Top-Level Integration-Test-Workspace |
+| `contracts/` | Versionierte JSON-Schemas (Envelope, Events, OPC-UA) |
 
-## Backend quick start
-```bash
+## Schnellstart (lokal, Windows)
+
+### Backend (Port 8080)
+```powershell
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pytest -q
-uvicorn app.main:app --reload --port 8080
+py -3 -m pip install -r requirements.txt
+py -3 -m pytest -q
+py -3 -m uvicorn app.main:app --reload --port 8080
 ```
 
-API examples:
-- `GET /api/v1/health`
-- `GET /api/v1/contracts/events`
-- `GET /api/v1/license/status`
-- `POST /api/v1/license/activate`
-- `POST /api/v1/license/deactivate`
+### Frontend (Port 5173)
+Node **18+** erforderlich (`winget install OpenJS.NodeJS.18` oder `OpenJS.NodeJS.20`).
 
-## Docker Compose baseline
-```bash
-docker compose up --build
-```
-
-Starts:
-- API (8080)
-- Postgres (5432)
-- InfluxDB (8086)
-- MinIO (9000/9001)
-
-## Dokumente
-- `docs/BUILD_READY_SPEC_V1.md`
-- `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md`
-- `docs/IMPLEMENTATION_PLAN_V0.1.md`
-- `docs/KONZEPT_ORIGINAL_2026-02-24.md`
-- `docs/INSTALLATION.md` (vollständige Installation inkl. Installer-Datei)
-- `docs/PHASE3_REAL_PATH.md`
-- `docs/RELEASE_NOTES_v0.1.0.md`
-- `docs/product/PHASE3_VALUE_AND_KPI_PLAN.md`
-
-## Hinweise
-Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.
-
-## Frontend MVP Scaffold (UX/UI)
-
-Path: `frontend/`
-
-Pages (clickable wireframe):
-- Dashboard
-- Inspection Detail
-- Trends
-- Configuration
-
-Run locally:
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Build check:
+Browser: [http://localhost:5173](http://localhost:5173) — Dev-Server muss laufen (`ERR_CONNECTION_REFUSED` = `npm run dev` nicht gestartet).
+
+API-Health: [http://127.0.0.1:8080/api/v1/health](http://127.0.0.1:8080/api/v1/health)
+
+Details: `docs/INSTALLATION.md`
+
+## Docker Compose
 ```bash
-npm run build
+docker compose up --build
 ```
 
-## Phase 2 Vertical MVP Flow
+| Service | Port |
+|---------|------|
+| API | 8080 |
+| edge-acquisition | 8091 |
+| opcua-gateway (HTTP) | 8092 |
+| opcua-gateway (OPC-UA) | 4840 |
+| Postgres | 5432 |
+| InfluxDB | 8086 |
+| MinIO | 9000 / 9001 |
 
-Backend endpoints:
-- `POST /api/v1/inspections/run`
-- `GET /api/v1/inspections/recent`
+DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
 
-Frontend behavior:
-- Dashboard can trigger inspection pipeline.
-- Latest result becomes clickable into Inspection Detail.
-- Trends page reflects latest synthetic inspections.
+## API v0.6.0 (Auszug)
 
-Validation:
+### Inspection & Ergebnisse
+- `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`)
+- `GET /api/v1/inspections/recent` (Alias: `/results/latest`)
+- `GET /api/v1/results/query`
+- `GET /api/v1/results/trend-summary`
+- `POST /api/v1/edge/capture`, `POST /api/v1/ai/infer`
+
+### Catalog, Feedback, Audit
+- `GET /api/v1/recipes`, `GET /api/v1/models`
+- `POST /api/v1/feedback`, `GET /api/v1/feedback`
+- `GET /api/v1/audit/recent`
+
+### Observability & Events
+- `GET /api/v1/observability/summary`
+- `GET /api/v1/events/recent`
+- `GET /api/v1/contracts/events`, `GET /api/v1/contracts/inspection-result`
+
+### License
+- `GET /api/v1/license/status`
+- `POST /api/v1/license/activate`, `POST /api/v1/license/deactivate`
+
+## Konfiguration (ENV, wichtigste)
+
+| Variable | Zweck |
+|----------|--------|
+| `DATABASE_URL` | Postgres (Compose); leer = JSONL-Fallback |
+| `ANOMALYMATRIX_INFERENCE_PROVIDER` | `stub` \| `opencv_ready` \| `patchcore` |
+| `EDGE_ACQUISITION_URL` | Edge-Capture HTTP |
+| `OPCUA_GATEWAY_URL` | OPC-UA Gateway HTTP |
+| `INFLUX_URL`, `MINIO_ENDPOINT` | Optionale Metriken/Heatmap-Persistenz |
+| `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
+| `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
+
+Dev-Auth (wenn `RBAC_ENFORCE=false`): Header `X-AMX-Role`, `X-AMX-User` oder `X-AMX-Api-Key` (Seed-Keys in `scripts/db/003_core_schema.sql`).
+
+Vollständige Liste: `.env.example`
+
+## Frontend (HMI)
+
+Seiten: **Dashboard**, **Inspection Detail** (inkl. QA-Feedback), **Trends**, **Configuration** (Recipes/Models aus API).
+
+```bash
+cd frontend
+npm install
+npm run dev      # Entwicklung
+npm run build    # Produktions-Build
+npm run smoke    # Build-Check (CI)
+```
+
+Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` im `frontend/`.
+
+## Implementierungsstand vs. BUILD_READY_SPEC
+
+| Bereich | Status |
+|---------|--------|
+| API-Envelope, Request-ID | ✅ |
+| Inspection-Pipeline, Postgres/JSONL | ✅ |
+| RBAC (Operator/QA/Engineer/Admin) | ✅ MVP (Header/API-Key) |
+| Feedback-Loop + `FeedbackSubmitted` | ✅ |
+| Core-Schema (recipes, audit, models, users) | ✅ |
+| PatchCore-Inferenz (MVP-Proxy) | ✅ |
+| OPC-UA asyncua-Server | ✅ MVP |
+| Influx/MinIO/Observability | ✅ optional |
+| Echtes Modell-Training, JWT-Auth, E2E-Gates | 🔜 Folgerelease |
+
+## Dokumente
+- `docs/INSTALLATION.md` — Installation (Installer + lokal)
+- `docs/BUILD_READY_SPEC_V1.md` — Ziel-Spezifikation
+- `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md` — Umsetzungsnotizen
+- `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz
+- `docs/RELEASE_NOTES_v0.6.0.md` — Aktuelles Release
+- `docs/RELEASE_NOTES_v0.1.0.md` — Baseline-Installer-Release
+- `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
+
+## Tests
 ```bash
 cd backend
-pytest -q
-
-cd ../frontend
-npm install
-npm run smoke
+py -3 -m pytest -q    # 27+ Tests (Stand v0.6.0)
 ```
 
-
-## Phase 2 Vertical Flow
-
-New endpoints:
-- `POST /api/v1/edge/capture`
-- `POST /api/v1/ai/infer`
-- `POST /api/v1/orchestrate/run-inspection`
-- `GET /api/v1/results/latest`
-
-Compatibility aliases kept:
-- `POST /api/v1/inspections/run`
-- `GET /api/v1/inspections/recent`
-
-
-## Phase 3 Real Path
-
-- Pluggable inference provider: `ANOMALYMATRIX_INFERENCE_PROVIDER=stub|opencv_ready`
-- Query APIs:
-  - `GET /api/v1/results/query`
-  - `GET /api/v1/results/trend-summary`
-- OPC-UA payload mapping + publish integration in run-inspection flow.
-- DB migration scripts under `scripts/db/`.
-
-## License Integration v1
-
-- Lizenzsystem-Integration auf Basis des separaten Repos `software-licensing-concept`.
-- Backend-Endpunkte:
-  - `GET /api/v1/license/status`
-  - `POST /api/v1/license/activate`
-  - `POST /api/v1/license/deactivate`
-- Feature-Gating ist integriert (`inspection.run`, `inspection.read`, etc.).
-- Offline/Grace- und Statuszustände werden im Lizenzstatus geführt.
-
-Konfiguration (ENV, Auszug):
-- `LICENSE_ADMIN_TOKEN` (für administrative Lizenzaktionen)
-- `LICENSE_STATE_FILE` (Persistenzpfad Lizenzstatus)
-- `LICENSE_ENFORCE` (Feature-Gates strikt erzwingen)
-
 ## Release & Installer
+- **Aktueller Code-Stand:** `v0.6.0` (Git `master`)
+- **Installer-Baseline:** `v0.1.0` — `dist/AnomalyMatrix-installer-v0.1.0.run`
+- GitHub: [TheRealByteCommander/AnomalyMatrix](https://github.com/TheRealByteCommander/AnomalyMatrix)
 
-- Baseline Release: `v0.1.0`
-- GitHub Release: `https://github.com/TheRealByteCommander/AnomalyMatrix/releases/tag/v0.1.0`
-- Installer-Dateien:
-  - `dist/AnomalyMatrix-installer.run`
-  - `dist/AnomalyMatrix-installer-v0.1.0.run`
+## Hinweise
+Dieses Repo folgt dem Byte-Commander-Standard: Abschluss gilt erst nach Merge in Ziel-Branch mit grünem Test-/Review-Gate.

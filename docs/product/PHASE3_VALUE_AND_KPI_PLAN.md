@@ -1,5 +1,7 @@
 # AnomalyMatrix Phase 3 — Value & KPI Plan
 
+> **Observability v0.5/v0.6:** `GET /observability/summary`, Influx-Metriken (optional), Dashboard-KPIs angebunden.
+
 ## Objective
 Translate AnomalyMatrix capabilities into a measurable value system that operators, plant leaders, and executives can align on during the next sprint cycle.
 

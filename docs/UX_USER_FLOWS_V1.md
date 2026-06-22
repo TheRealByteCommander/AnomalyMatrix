@@ -1,5 +1,7 @@
 # UX User Flows v1 (Operator-first HMI)
 
+> **Implementierungsstand v0.6.0:** Operator- und QA-Flows im HMI; Feedback (QA) auf Inspection Detail; RBAC-Rollen im Backend.
+
 ## Core personas
 - Operator (line monitoring, quick decision)
 - QA Lead (review anomalies, classify defect)

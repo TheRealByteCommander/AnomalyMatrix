@@ -1,5 +1,7 @@
 # UX Component States v1
 
+> **Implementiert:** `StatusBadge` (green/amber/red) in Dashboard, Detail, Trends, Configuration.
+
 ## StatusBadge
 - green: normal
 - amber: warning/review needed

@@ -1,5 +1,7 @@
 # AnomalyMatrix Phase 2 — Operator Story (Capture → Detect → Review)
 
+> **Technischer Stand v0.6.0:** Capture/Infer/Run über API; Review inkl. QA-Feedback (`POST /feedback`) im HMI.
+
 ## Why this flow matters (operator value framing)
 
 Operators don’t need “more dashboards.” They need a reliable rhythm that helps them act fast with confidence:

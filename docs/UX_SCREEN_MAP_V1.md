@@ -1,5 +1,7 @@
 # UX Screen Map v1
 
+> **Implementiert (v0.6.0):** Alle 4 Screens in `frontend/` mit API-Anbindung; Inspection Detail inkl. QA-Feedback.
+
 1. Dashboard
    - HMI status hero
    - KPI strip

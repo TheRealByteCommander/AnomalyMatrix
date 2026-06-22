@@ -102,7 +102,23 @@ A release/project increment is only complete when all are true:
 5. Changes merged to target branch on GitHub
 
 ## 11. Immediate Next Execution Steps
-1) Generate repository scaffold (`backend`, `frontend`, `edge-acquisition`, `opcua-gateway`, `infra`, `docs`).
-2) Freeze OpenAPI v1 + OPC UA Node mapping v1.
-3) Implement MVP vertical slice (single recipe/single camera).
-4) Add CI gates for lint/test/security.
+
+### Erledigt (Stand v0.6.0, `master`)
+- [x] Repository scaffold (`backend`, `frontend`, `edge-acquisition`, `opcua-gateway`, `infra`, `docs`)
+- [x] OpenAPI v1 Envelope + Domain-Event-Schemas
+- [x] MVP vertical slice (single recipe / single camera)
+- [x] Postgres core schema (`recipes`, `users`, `roles`, `audit_log`, `feedback_events`, `model_registry`)
+- [x] RBAC MVP (Operator, QA-Lead, Process Engineer, Admin)
+- [x] Feedback-Loop + `FeedbackSubmitted`
+- [x] PatchCore inference provider (MVP-Proxy)
+- [x] OPC-UA asyncua gateway (Port 4840)
+- [x] Observability (Influx/MinIO optional)
+- [x] Unit/Integration tests (backend pytest)
+
+### Offen (Folgerelease)
+1) CI gates für lint/test/security vollständig automatisieren
+2) E2E-Tests (capture → inference → decision → feedback)
+3) Echtes PatchCore-Training + Model-Registry-Promotion
+4) OPC-UA Sign/Encrypt + Zertifikats-Auth
+5) JWT/Session-Auth, WebSocket Live-View
+6) Performance-Tests unter Last (< 500 ms Ziel)

@@ -7,6 +7,8 @@
 
 > Originaldokument wurde vom Auftraggeber bereitgestellt und in dieses Repo übernommen.
 > Volltext liegt in der Projektkommunikation vor; bei Bedarf kann hier die vollständige Version versioniert nachgezogen werden.
+>
+> **Umsetzungsstand Repo (v0.6.0):** Module edge-acquisition, ai-core (Inferenz-Provider), opcua-gateway, hmi-web, data-layer (Postgres/Influx/MinIO) als MVP implementiert.
 
 ## Kernaussagen (Kurzübernahme)
 - Modulare Service-Architektur mit Bildakquise, KI-Kern, OPC-UA-Gateway, HMI, Persistenz.

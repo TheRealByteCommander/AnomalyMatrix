@@ -1,5 +1,7 @@
 # UX Phase 2 Vertical Flow (MVP)
 
+> **Implementiert (v0.6.0):** Dashboard → Run → Recent → Detail; Trends aus API; Feedback auf Detail-Seite.
+
 ## Ziel
 Durchgängiger Operator-Pfad von Dashboard-Aktion bis Detail-/Trend-Sicht.
 
