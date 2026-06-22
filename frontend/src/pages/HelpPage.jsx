@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
-import { getArticleById, getArticlesByCategory, getHelpArticles, getHelpCategories } from '../help/helpContent';
+import { getArticleById, getArticlesByCategory, getApplicationOverviewArticles, getHelpArticles, getHelpCategories } from '../help/helpContent';
 import { searchHelpArticles } from '../help/searchHelp';
 
 function ArticleBody({ article, categories, onSelectArticle, lookupArticle, t }) {
@@ -54,7 +54,7 @@ export default function HelpPage({
   const { locale, t, messages } = useI18n();
   const [query, setQuery] = useState(initialQuery);
   const [categoryId, setCategoryId] = useState(initialCategoryId || '');
-  const [selectedId, setSelectedId] = useState(initialArticleId || 'help-using-help');
+  const [selectedId, setSelectedId] = useState(initialArticleId || 'what-is-anomalymatrix');
 
   const categories = useMemo(() => getHelpCategories(locale), [locale]);
   const allArticles = useMemo(() => getHelpArticles(locale), [locale]);
@@ -82,6 +82,9 @@ export default function HelpPage({
     onNavigateArticle?.(id);
   }
 
+  const applicationArticles = useMemo(() => getApplicationOverviewArticles(locale), [locale]);
+  const featured = applicationArticles.find((a) => a.id === 'what-is-anomalymatrix') || applicationArticles[0];
+
   const faqItems = messages.help.faqItems;
 
   return (
@@ -91,6 +94,28 @@ export default function HelpPage({
           <p className="eyebrow">{t('help.eyebrow')}</p>
           <h2>{t('help.title')}</h2>
           <p className="muted">{t('help.subtitle')}</p>
+        </div>
+      </article>
+
+      <article className="card help-application-showcase">
+        <h3>{t('help.applicationSectionTitle')}</h3>
+        <p className="muted">{t('help.applicationSectionHint')}</p>
+        {featured && (
+          <div className="help-application-lead">
+            <p>{featured.summary}</p>
+            <button type="button" className="tab active" onClick={() => selectArticle(featured.id)}>
+              {t('help.applicationReadMore')}
+            </button>
+          </div>
+        )}
+        <div className="help-faq-grid">
+          {applicationArticles.filter((a) => a.id !== 'what-is-anomalymatrix').map((item) => (
+            <button key={item.id} type="button" className="help-faq-card" onClick={() => selectArticle(item.id)}>
+              <span className="muted">{t('help.eyebrow')}</span>
+              <strong>{item.title}</strong>
+              <span className="muted help-article-summary">{item.summary}</span>
+            </button>
+          ))}
         </div>
       </article>
 

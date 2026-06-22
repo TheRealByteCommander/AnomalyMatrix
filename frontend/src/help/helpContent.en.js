@@ -4,6 +4,7 @@
  */
 
 export const HELP_CATEGORIES = [
+  { id: 'application', label: 'Application & Use Cases', icon: '🏭' },
   { id: 'start', label: 'Getting Started', icon: '🚀' },
   { id: 'screens', label: 'Screens', icon: '🖥️' },
   { id: 'workflow', label: 'Workflows', icon: '🔄' },
@@ -14,6 +15,168 @@ export const HELP_CATEGORIES = [
 ];
 
 export const HELP_ARTICLES = [
+  {
+    id: 'what-is-anomalymatrix',
+    category: 'application',
+    title: 'What is AnomalyMatrix for?',
+    keywords: ['application', 'purpose', 'use', 'software', 'quality', 'vision'],
+    summary: 'Automated anomaly detection on the production line — with operator HMI, PLC integration, and QA feedback.',
+    featured: true,
+    sections: [
+      {
+        heading: 'Core purpose',
+        paragraphs: [
+          'AnomalyMatrix inspects parts and surfaces on the line for deviations from the defined good part — without programming every possible defect in advance.',
+          'The software learns from “good” references and reports unusual patterns as an anomaly score with a traffic-light decision (green / amber / red).',
+          'Goal: detect defects early, reduce scrap, and keep the process stable.',
+        ],
+      },
+      {
+        heading: 'Typical use cases',
+        paragraphs: [
+          'Inline quality control after machining, bonding, welding, coating, or assembly.',
+          '100% inspection at bottlenecks where manual visual checks are too slow or inconsistent.',
+          'Retrofit on existing cells via OPC UA — triggers and stop signals to the PLC.',
+          'Trend monitoring: detect process drift before serial defects occur.',
+          'QS documentation and feedback: assessments feed audit trails and model improvement.',
+        ],
+      },
+      {
+        heading: 'What the software does',
+        paragraphs: [
+          'Trigger inspections (manually on the dashboard, automatically via PLC trigger, or OPC UA method).',
+          'Capture images, score with the AI model, store results, and report to the machine.',
+          'On red: stop and reject signals to the PLC (StopLineRequest, RejectPart).',
+          'Operator HMI: latest inspections, detail with score and heatmap preview.',
+          'QA feedback: confirm anomaly, mark false positive, or request review.',
+          'Trends and KPIs: anomaly rate, cycle times, OPC UA error rate.',
+        ],
+      },
+      {
+        heading: 'Who uses it?',
+        paragraphs: [
+          'Operator: run inspections, read traffic lights, react to issues.',
+          'QA lead: assess results, submit feedback for continuous improvement.',
+          'Process engineer: monitor trends and recipe/model versions.',
+          'Maintenance / automation: integrate the OPC UA interface into PLC logic.',
+        ],
+      },
+      {
+        heading: 'What it does not replace',
+        paragraphs: [
+          'Not a substitute for your plant’s formal release and hold processes — those remain with QS.',
+          'Not fully automatic root-cause analysis — it provides clues (score, heatmap, defect class) for experts.',
+          'Dimensional gauging only where defined in recipe and model.',
+        ],
+      },
+    ],
+    related: ['use-case-inline-qc', 'use-case-plc-automation', 'plc-opcua-signals', 'operator-daily-flow'],
+  },
+  {
+    id: 'use-case-inline-qc',
+    category: 'application',
+    title: 'Inline quality control on the line',
+    keywords: ['inline', 'line', '100 percent', 'inspection', 'scrap'],
+    summary: 'Inspect every part without breaking takt time.',
+    sections: [
+      {
+        heading: 'Scenario',
+        paragraphs: [
+          'After a process step (e.g. seam, coating, label), every part must be checked.',
+          'The PLC releases the part or stops the line on red.',
+        ],
+      },
+      {
+        heading: 'Benefits',
+        paragraphs: [
+          'Consistent evaluation instead of sample-based manual checks.',
+          'Immediate reaction: stop signal on clear anomalies.',
+          'Traceable history per inspection (ID, time, score, decision).',
+        ],
+      },
+      {
+        heading: 'Typical flow',
+        paragraphs: [
+          'Part in position → PLC sets ExternalTrigger → inspection runs → result to PLC.',
+          'Green: continue transport. Red: stop, hold part, notify QA.',
+        ],
+      },
+    ],
+    related: ['what-is-anomalymatrix', 'decision-colors', 'plc-opcua-signals'],
+  },
+  {
+    id: 'use-case-process-monitoring',
+    category: 'application',
+    title: 'Process monitoring & drift',
+    keywords: ['drift', 'trend', 'process', 'early warning', 'maintenance'],
+    summary: 'Detect slow degradation before the batch fails.',
+    sections: [
+      {
+        heading: 'Scenario',
+        paragraphs: [
+          'Wear, media changes, or parameter drift gradually raise anomaly scores.',
+          'Single amber or red parts may be acceptable — the trend is the warning.',
+        ],
+      },
+      {
+        heading: 'Benefits',
+        paragraphs: [
+          'Trends page and dashboard KPIs show averages and anomaly rate.',
+          'Early warning for maintenance or process correction before mass scrap.',
+          'Comparison across shifts and recipe versions.',
+        ],
+      },
+    ],
+    related: ['trends-overview', 'engineer-trends-flow', 'what-is-anomalymatrix'],
+  },
+  {
+    id: 'use-case-plc-automation',
+    category: 'application',
+    title: 'Automation with the PLC',
+    keywords: ['automation', 'plc', 'opc', 'trigger', 'stop'],
+    summary: 'Inspection and reaction without manual HMI steps.',
+    sections: [
+      {
+        heading: 'Scenario',
+        paragraphs: [
+          'The PLC controls takt, camera trigger, and transport — AnomalyMatrix is the scoring engine.',
+        ],
+      },
+      {
+        heading: 'Benefits',
+        paragraphs: [
+          'No separate operator action for every inspection.',
+          'Unified signals: Busy, ResultReady, DecisionCode, StopLineRequest.',
+          'AcknowledgeStop for safe restart logic.',
+        ],
+      },
+    ],
+    related: ['plc-opcua-signals', 'what-is-anomalymatrix'],
+  },
+  {
+    id: 'use-case-quality-loop',
+    category: 'application',
+    title: 'Quality assurance & continuous improvement',
+    keywords: ['qa', 'feedback', 'learning', 'audit', 'documentation'],
+    summary: 'Feed human expertise back into the system.',
+    sections: [
+      {
+        heading: 'Scenario',
+        paragraphs: [
+          'The model reports anomalies — QA decides whether they are real defects or false alarms.',
+        ],
+      },
+      {
+        heading: 'Benefits',
+        paragraphs: [
+          'Feedback (confirm / false positive / review) documents the QS decision.',
+          'Audit log and events for traceability.',
+          'Foundation for future model retraining (continual learning, roadmap).',
+        ],
+      },
+    ],
+    related: ['qa-review-flow', 'what-is-anomalymatrix', 'glossary-feedback-verdict'],
+  },
   {
     id: 'help-using-help',
     category: 'start',

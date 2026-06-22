@@ -12,6 +12,20 @@ Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-P
 - Tesla-inspiriertes, operator-first HMI
 - Trendanalyse & Frühwarnungen für Prozessdrift
 
+## Wofür wird AnomalyMatrix eingesetzt?
+
+AnomalyMatrix ist eine **Inline-Qualitätslösung** für die Produktion: Sie prüft Bauteile an der Linie auf Abweichungen vom Gut-Teil, ohne jeden Fehlertyp vorab zu programmieren.
+
+| Einsatz | Nutzen |
+|---------|--------|
+| **100-%-Kontrolle** | Jedes Teil nach kritischem Prozessschritt bewerten |
+| **SPS-Integration** | Automatischer Trigger, Stop/Ausschleusen bei rot über OPC UA |
+| **Operator-HMI** | Ampel, Score, letzte Inspektionen — schnelle Entscheidung am Band |
+| **QA-Feedback** | Falschmeldungen markieren, echte Defekte dokumentieren |
+| **Trends** | Prozessdrift früh erkennen, bevor Serienfehler entstehen |
+
+Ausführliche Beschreibung (DE/EN): **Hilfe & FAQ** im HMI oder `docs/PRODUCT_APPLICATION.md`.
+
 ## Repository Layout
 | Pfad | Inhalt |
 |------|--------|
@@ -135,6 +149,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 
 ## Dokumente
 - `docs/INSTALLATION.md` — Installation (Installer + lokal)
+- `docs/PRODUCT_APPLICATION.md` — Anwendung, Einsatzgebiete, Zielgruppen
 - `docs/BUILD_READY_SPEC_V1.md` — Ziel-Spezifikation
 - `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md` — Umsetzungsnotizen
 - `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz

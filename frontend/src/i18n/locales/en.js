@@ -133,6 +133,9 @@ export default {
     fabAria: 'Open help (F1)',
     fabTitle: 'Help (F1)',
     categoryFallback: 'Help',
+    applicationSectionTitle: 'What is AnomalyMatrix for?',
+    applicationSectionHint: 'Use cases and benefits at a glance.',
+    applicationReadMore: 'Read full description',
     faqItems: [
       { id: 'operator-daily-flow', q: 'How do I start an inspection?' },
       { id: 'decision-colors', q: 'What do green, amber, and red mean?' },

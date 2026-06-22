@@ -148,3 +148,6 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
   display: grid; gap: .25rem;
 }
 .help-faq-card:hover { border-color: #6ea9ff; }
+.help-application-showcase h3 { margin-top: 0; }
+.help-application-lead { display: grid; gap: .75rem; margin: .75rem 0 1rem; max-width: 72ch; }
+.help-application-lead p { margin: 0; line-height: 1.5; }

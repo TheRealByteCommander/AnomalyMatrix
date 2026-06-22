@@ -22,3 +22,11 @@ export function getArticleById(id, locale) {
 export function getArticlesByCategory(categoryId, locale) {
   return getHelpArticles(locale).filter((a) => a.category === categoryId);
 }
+
+export function getFeaturedArticles(locale) {
+  return getHelpArticles(locale).filter((a) => a.featured);
+}
+
+export function getApplicationOverviewArticles(locale) {
+  return getHelpArticles(locale).filter((a) => a.category === 'application');
+}

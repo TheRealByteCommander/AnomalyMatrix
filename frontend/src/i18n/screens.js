@@ -11,7 +11,7 @@ export const SCREEN_HELP_ARTICLE = {
   inspectionDetail: 'inspection-detail',
   trends: 'trends-overview',
   configuration: 'configuration-overview',
-  help: 'help-using-help',
+  help: 'what-is-anomalymatrix',
 };
 
 export const SCREEN_ORDER = [

@@ -15,7 +15,7 @@ React/Vite HMI für AnomalyMatrix (**v0.6.0**).
 - **Deutsch** und **English** — Umschalter oben rechts auf dem Hauptbildschirm
 - Auswahl wird in `localStorage` (`amx-locale`) gespeichert
 - Hilfe-Artikel in beiden Sprachen (`help/helpContent.de.js`, `help/helpContent.en.js`)
-- Tab **Hilfe & FAQ** — Bedienung, Arbeitsabläufe, Rollen, KPIs, Glossar
+- Tab **Hilfe & FAQ** — Bedienung, **Anwendung & Einsatz**, Arbeitsabläufe, Glossar
 - Schwebender **?**-Button — Schnellsuche
 - **F1** — Hilfe-Drawer
 - Kontext-Link auf jedem Bildschirm

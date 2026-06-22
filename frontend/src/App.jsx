@@ -48,13 +48,13 @@ export default function App() {
   );
 
   function openHelp(articleId) {
-    const id = articleId || SCREEN_HELP_ARTICLE[active] || 'help-using-help';
+    const id = articleId || SCREEN_HELP_ARTICLE[active] || 'what-is-anomalymatrix';
     setHelpState({ articleId: id, categoryId: null, query: '' });
     setActive(SCREEN_IDS.help);
   }
 
   function openFullHelp({ categoryId = null, query = '' } = {}) {
-    setHelpState({ articleId: 'help-using-help', categoryId, query });
+    setHelpState({ articleId: 'what-is-anomalymatrix', categoryId, query });
     setActive(SCREEN_IDS.help);
   }
 

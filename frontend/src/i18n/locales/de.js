@@ -133,6 +133,9 @@ export default {
     fabAria: 'Hilfe öffnen (F1)',
     fabTitle: 'Hilfe (F1)',
     categoryFallback: 'Hilfe',
+    applicationSectionTitle: 'Wofür ist AnomalyMatrix?',
+    applicationSectionHint: 'Einsatzgebiete und Nutzen der Software im Überblick.',
+    applicationReadMore: 'Vollständige Beschreibung lesen',
     faqItems: [
       { id: 'operator-daily-flow', q: 'Wie starte ich eine Prüfung?' },
       { id: 'decision-colors', q: 'Was bedeuten grün, gelb und rot?' },

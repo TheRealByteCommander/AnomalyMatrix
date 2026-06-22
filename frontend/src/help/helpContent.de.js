@@ -4,6 +4,7 @@
  */
 
 export const HELP_CATEGORIES = [
+  { id: 'application', label: 'Anwendung & Einsatz', icon: '🏭' },
   { id: 'start', label: 'Einstieg', icon: '🚀' },
   { id: 'screens', label: 'Bildschirme', icon: '🖥️' },
   { id: 'workflow', label: 'Arbeitsabläufe', icon: '🔄' },
@@ -14,6 +15,168 @@ export const HELP_CATEGORIES = [
 ];
 
 export const HELP_ARTICLES = [
+  {
+    id: 'what-is-anomalymatrix',
+    category: 'application',
+    title: 'Wofür ist AnomalyMatrix?',
+    keywords: ['anwendung', 'zweck', 'einsatz', 'nutzen', 'software', 'qualität', 'vision'],
+    summary: 'Automatische Anomalieerkennung an der Produktionslinie — mit Operator-HMI, SPS-Anbindung und Qualitäts-Feedback.',
+    featured: true,
+    sections: [
+      {
+        heading: 'Kernaufgabe',
+        paragraphs: [
+          'AnomalyMatrix prüft Bauteile und Oberflächen an der Linie auf Abweichungen vom definierten Gut-Teil — ohne dass jeder mögliche Fehler vorher einzeln programmiert werden muss.',
+          'Die Software lernt aus „guten“ Referenzen und meldet ungewöhnliche Muster als Anomalie-Score mit Ampelentscheidung (grün / gelb / rot).',
+          'Ziel: Fehler früh erkennen, Ausschuss reduzieren und den Prozess stabil halten.',
+        ],
+      },
+      {
+        heading: 'Typische Einsatzgebiete',
+        paragraphs: [
+          'Inline-Qualitätskontrolle nach Bearbeitung, Kleben, Schweißen, Beschichten oder Montage.',
+          '100-%-Kontrolle an Engpässen, wo manuelle Sichtprüfung zu langsam oder zu unzuverlässig ist.',
+          'Nachrüstung an bestehenden Zellen über OPC UA — Trigger und Stop-Signale an die SPS.',
+          'Trendüberwachung: Prozessdrift erkennen, bevor serienweise Fehlteile entstehen.',
+          'Dokumentation und Feedback für QS: Bewertungen fließen in Audit und Modellverbesserung ein.',
+        ],
+      },
+      {
+        heading: 'Was die Software konkret leistet',
+        paragraphs: [
+          'Inspektion auslösen (manuell im Dashboard, automatisch per SPS-Trigger oder OPC-UA-Methode).',
+          'Bild erfassen, mit KI-Modell bewerten, Ergebnis speichern und an die Anlage melden.',
+          'Bei rot: Stop- und Ausschleus-Signale an die SPS (StopLineRequest, RejectPart).',
+          'Operator-HMI: letzte Prüfungen, Detail mit Score und Heatmap-Vorschau.',
+          'QA-Feedback: Anomalie bestätigen, falsch positiv markieren oder Nachprüfung anfordern.',
+          'Trends und KPIs: Anomaliequote, Zykluszeiten, OPC-UA-Fehlerrate.',
+        ],
+      },
+      {
+        heading: 'Für wen ist es gedacht?',
+        paragraphs: [
+          'Operator: Prüfung starten, Ampel lesen, bei Auffälligkeiten reagieren.',
+          'QA Lead: Ergebnisse bewerten, Feedback für kontinuierliche Verbesserung.',
+          'Prozessingenieur: Trends und Rezept-/Modellversionen beobachten.',
+          'Instandhaltung / Automatisierung: OPC-UA-Schnittstelle in die SPS-Logik einbinden.',
+        ],
+      },
+      {
+        heading: 'Was AnomalyMatrix nicht ersetzt',
+        paragraphs: [
+          'Kein Ersatz für werksverbindliche Freigabe- und Sperrprozesse — diese bleiben in Ihrer QS-Organisation.',
+          'Kein vollautomatisches Root-Cause-Tool: Es liefert Hinweise (Score, Heatmap, DefectClass), die Fachpersonal einordnet.',
+          'Messtechnische Einzelprüfung (z. B. Toleranzbemaßung) nur, wenn im Rezept und Modell vorgesehen.',
+        ],
+      },
+    ],
+    related: ['use-case-inline-qc', 'use-case-plc-automation', 'plc-opcua-signals', 'operator-daily-flow'],
+  },
+  {
+    id: 'use-case-inline-qc',
+    category: 'application',
+    title: 'Inline-Qualitätskontrolle an der Linie',
+    keywords: ['inline', 'linie', '100 prozent', 'kontrolle', 'ausschuss'],
+    summary: 'Jedes Teil prüfen, ohne den Takt zu sprengen.',
+    sections: [
+      {
+        heading: 'Szenario',
+        paragraphs: [
+          'Nach einem Prozessschritt (z. B. Naht, Beschichtung, Etikett) soll jedes Teil geprüft werden.',
+          'Die SPS gibt das Teil frei oder stoppt die Linie bei rot.',
+        ],
+      },
+      {
+        heading: 'Nutzen',
+        paragraphs: [
+          'Konsistente Bewertung statt stichprobenartiger manueller Kontrolle.',
+          'Sofortige Reaktion: Stop-Signal bei klarer Anomalie.',
+          'Nachvollziehbare Historie jeder Inspektion (ID, Zeit, Score, Entscheidung).',
+        ],
+      },
+      {
+        heading: 'Typischer Ablauf',
+        paragraphs: [
+          'Teil positioniert → SPS setzt ExternalTrigger → Inspektion läuft → Ergebnis an SPS.',
+          'Grün: Transport weiter. Rot: Stop, Teil gesperrt, QA informieren.',
+        ],
+      },
+    ],
+    related: ['what-is-anomalymatrix', 'decision-colors', 'plc-opcua-signals'],
+  },
+  {
+    id: 'use-case-process-monitoring',
+    category: 'application',
+    title: 'Prozessüberwachung & Drift',
+    keywords: ['drift', 'trend', 'prozess', 'frühwarnung', 'wartung'],
+    summary: 'Langsame Verschlechterung erkennen, bevor die Serie kippt.',
+    sections: [
+      {
+        heading: 'Szenario',
+        paragraphs: [
+          'Verschleiß, Medienwechsel oder Parameterabweichung führen zu schleichend steigenden Anomalie-Scores.',
+          'Einzelne gelbe oder rote Teile sind noch kein Drama — der Trend ist es.',
+        ],
+      },
+      {
+        heading: 'Nutzen',
+        paragraphs: [
+          'Trends-Seite und Dashboard-KPIs zeigen Durchschnitt und Anomaliequote.',
+          'Frühwarnung für Wartung oder Prozesskorrektur vor Massenausschuss.',
+          'Vergleich über Schichten und Rezeptversionen möglich.',
+        ],
+      },
+    ],
+    related: ['trends-overview', 'engineer-trends-flow', 'what-is-anomalymatrix'],
+  },
+  {
+    id: 'use-case-plc-automation',
+    category: 'application',
+    title: 'Automatisierung mit der SPS',
+    keywords: ['automatisierung', 'sps', 'opc', 'trigger', 'stop'],
+    summary: 'Prüfung und Reaktion ohne manuellen Eingriff am HMI.',
+    sections: [
+      {
+        heading: 'Szenario',
+        paragraphs: [
+          'Die SPS steuert Takt, Kamera-Trigger und Transport — AnomalyMatrix ist die Bewertungsinstanz.',
+        ],
+      },
+      {
+        heading: 'Nutzen',
+        paragraphs: [
+          'Kein separater Bedienschritt für jede Inspektion nötig.',
+          'Einheitliche Signale: Busy, ResultReady, DecisionCode, StopLineRequest.',
+          'Quittierung über AcknowledgeStop für sichere Wiederanlauf-Logik.',
+        ],
+      },
+    ],
+    related: ['plc-opcua-signals', 'what-is-anomalymatrix'],
+  },
+  {
+    id: 'use-case-quality-loop',
+    category: 'application',
+    title: 'Qualitätssicherung & kontinuierliche Verbesserung',
+    keywords: ['qa', 'feedback', 'lernen', 'audit', 'dokumentation'],
+    summary: 'Menschliche Expertise in die Software zurückführen.',
+    sections: [
+      {
+        heading: 'Szenario',
+        paragraphs: [
+          'Das Modell meldet Anomalien — QA entscheidet, ob es echte Defekte oder Falschmeldungen sind.',
+        ],
+      },
+      {
+        heading: 'Nutzen',
+        paragraphs: [
+          'Feedback (bestätigen / falsch positiv / Nachprüfung) dokumentiert die QS-Entscheidung.',
+          'Audit-Log und Events für Nachvollziehbarkeit bei Audits.',
+          'Grundlage für spätere Modell-Nachschulung (Continual Learning, roadmap).',
+        ],
+      },
+    ],
+    related: ['qa-review-flow', 'what-is-anomalymatrix', 'glossary-feedback-verdict'],
+  },
   {
     id: 'help-using-help',
     category: 'start',
