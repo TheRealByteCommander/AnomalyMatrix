@@ -12,6 +12,14 @@ services:
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
       ANOMALYMATRIX_INFERENCE_PROVIDER: stub
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-anomaly-token}
+      INFLUX_ORG: ${INFLUX_ORG:-anomalymatrix}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-inspection_metrics}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+      MINIO_SECURE: "false"
     ports:
       - "8080:8080"
     depends_on:

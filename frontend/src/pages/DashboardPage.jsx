@@ -1,11 +1,36 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
-import { runInspection, fetchRecentInspections } from '../services';
+import { runInspection, fetchRecentInspections, fetchObservabilitySummary } from '../services';
 import StatusBadge from '../components/StatusBadge';
 
 export default function DashboardPage({ inspections, setInspections, setSelectedInspectionId, goTo }) {
   const [runState, setRunState] = useState('idle'); // idle|running|success|error
   const [notice, setNotice] = useState('Bereit für neue Inspektion.');
+  const [kpis, setKpis] = useState(hmiState.kpis);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const summary = await fetchObservabilitySummary();
+        if (!cancelled) {
+          setKpis({
+            cycleMsP95: summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
+            anomalyRate: summary.inspection_count
+              ? ((summary.anomaly_count / summary.inspection_count) * 100).toFixed(1)
+              : hmiState.kpis.anomalyRate,
+            queueLagMs: hmiState.kpis.queueLagMs,
+            opcUaPublishErrorRate: summary.opc_ua_publish_error_rate_pct ?? hmiState.kpis.opcUaPublishErrorRate,
+          });
+        }
+      } catch {
+        // keep seed KPIs when API unavailable
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [inspections.length]);
 
   const anomalyRate = useMemo(() => {
     if (!inspections.length) return 0;
@@ -72,10 +97,10 @@ export default function DashboardPage({ inspections, setInspections, setSelected
       </article>
 
       <article className="card kpi-grid">
-        <div><label>Cycle p95</label><strong>{hmiState.kpis.cycleMsP95} ms</strong></div>
+        <div><label>Cycle p95</label><strong>{kpis.cycleMsP95} ms</strong></div>
         <div><label>Anomaly Rate</label><strong>{anomalyRate}%</strong></div>
-        <div><label>Queue Lag</label><strong>{hmiState.kpis.queueLagMs} ms</strong></div>
-        <div><label>OPC UA Error</label><strong>{hmiState.kpis.opcUaPublishErrorRate}%</strong></div>
+        <div><label>Queue Lag</label><strong>{kpis.queueLagMs} ms</strong></div>
+        <div><label>OPC UA Error</label><strong>{kpis.opcUaPublishErrorRate}%</strong></div>
       </article>
 
       <article className="card">

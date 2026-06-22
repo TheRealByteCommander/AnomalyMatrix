@@ -56,3 +56,8 @@ export async function fetchLicenseStatus() {
   const r = await fetch(`${API_BASE}/license/status`);
   return parseEnvelope(r);
 }
+
+export async function fetchObservabilitySummary() {
+  const r = await fetch(`${API_BASE}/observability/summary`);
+  return parseEnvelope(r);
+}

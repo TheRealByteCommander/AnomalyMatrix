@@ -31,9 +31,10 @@ Services included:
 
 ## Next engineering slice
 1. Postgres schema migration baseline (`recipes`, `audit_log`, `model_registry`).
-2. Influx write pipeline for `inspection_metrics`.
-3. MinIO bucket bootstrap and object naming conventions.
-4. OPC UA gateway MVP (`StartInspection`, `LastResult`).
+2. ~~Influx write pipeline for `inspection_metrics`.~~ **Done (v0.5)** – optional via `INFLUX_URL`.
+3. ~~MinIO bucket bootstrap and object naming conventions.~~ **Done (v0.5)** – optional via `MINIO_ENDPOINT`.
+4. OPC UA gateway MVP (`StartInspection`, `LastResult`) – HTTP publish wired; asyncua transport pending.
+5. Domain event emission (`InspectionCompleted`) – **Done (v0.5)** via `domain_events.jsonl` + `GET /api/v1/events/recent`.
 
 
 ## Phase 2 update

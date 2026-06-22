@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -14,21 +15,26 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .api.health import router as health_router
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
+from .event_bus import DomainEventBus
 from .inference_provider import get_inference_provider
 from .licensing import LicenseManager
+from .metrics_influx import query_observability_summary, record_inspection_metrics
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_to_opcua
 from .repository_factory import build_repository
 from .services_edge import capture_frame, frame_to_dict
+from .storage_minio import ensure_buckets, store_heatmap_artifact
 
-repo = build_repository(Path(__file__).resolve().parents[1] / "data")
+_data_root = Path(__file__).resolve().parents[1] / "data"
+repo = build_repository(_data_root)
 license_manager = LicenseManager()
+event_bus = DomainEventBus(_data_root)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup validation
     license_manager.validate_once()
+    ensure_buckets()
 
     stop = False
 
@@ -49,8 +55,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.4.0",
-    description="MVP phase-3 real-path scaffold + licensing",
+    version="0.5.0",
+    description="MVP phase-3 real-path + observability data layer",
     lifespan=lifespan,
 )
 
@@ -204,6 +210,7 @@ async def ai_infer(payload: InferRequest, request: Request):
 async def run_inspection(request: Request, payload: RunInspectionRequest = Body(default_factory=RunInspectionRequest)):
     _require_license_feature('inspection.run')
     request_id = request.state.request_id
+    started = time.perf_counter()
 
     frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
     provider = get_inference_provider()
@@ -211,8 +218,9 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
 
     decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
     snap = license_manager.snapshot()
+    inspection_id = str(uuid4())
     result = {
-        "inspection_id": str(uuid4()),
+        "inspection_id": inspection_id,
         "frame": frame_to_dict(frame),
         "inference": inference.__dict__,
         "decision": decision,
@@ -222,6 +230,26 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
 
     opcua = publish_to_opcua(result)
     result["opcua_publish"] = opcua.__dict__
+
+    stored_uri = store_heatmap_artifact(
+        inspection_id=inspection_id,
+        heatmap_uri=inference.heatmap_uri,
+        anomaly_score=inference.anomaly_score,
+    )
+    if stored_uri:
+        result["heatmap"] = {"uri": stored_uri, "placeholder": True, "storage": "minio"}
+
+    latency_ms = (time.perf_counter() - started) * 1000.0
+    record_inspection_metrics(
+        inspection_id=inspection_id,
+        score=inference.anomaly_score,
+        latency_ms=latency_ms,
+        decision=decision,
+        provider=inference.provider,
+        opcua_published=bool(opcua.published),
+    )
+    event = event_bus.emit_inspection_completed(result, latency_ms=latency_ms)
+    result["domain_event_id"] = event.get("event_id")
 
     repo.append(result)
     return success_envelope(result, request_id)
@@ -255,3 +283,29 @@ async def results_trend_summary(request: Request):
     _require_license_feature('inspection.read')
     request_id = request.state.request_id
     return success_envelope(repo.trend_summary(), request_id)
+
+
+@app.get("/api/v1/observability/summary")
+async def observability_summary(request: Request):
+    _require_license_feature('inspection.read')
+    request_id = request.state.request_id
+    trend = repo.trend_summary()
+    influx = query_observability_summary()
+    payload = {
+        "avg_score": trend.get("avg_score", 0.0),
+        "max_score": trend.get("max_score", 0.0),
+        "inspection_count": trend.get("count", 0),
+        "anomaly_count": trend.get("anomaly_count", 0),
+        "inference_p95_ms": influx.get("inference_p95_ms", 0.0),
+        "opc_ua_publish_error_rate_pct": influx.get("opc_ua_publish_error_rate_pct", 0.0),
+        "metrics_source": influx.get("source", "repository"),
+    }
+    return success_envelope(payload, request_id)
+
+
+@app.get("/api/v1/events/recent")
+async def events_recent(request: Request, limit: int = Query(default=20, ge=1, le=200)):
+    _require_license_feature('inspection.read')
+    request_id = request.state.request_id
+    items = event_bus.recent(limit=limit)
+    return success_envelope({"items": items, "count": len(items)}, request_id)
