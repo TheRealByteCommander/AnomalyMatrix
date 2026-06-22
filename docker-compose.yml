@@ -7,13 +7,34 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env.example
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
+      EDGE_ACQUISITION_URL: http://edge-acquisition:8091
+      OPCUA_GATEWAY_URL: http://opcua-gateway:8092
+      ANOMALYMATRIX_INFERENCE_PROVIDER: stub
     ports:
       - "8080:8080"
     depends_on:
       - postgres
       - influxdb
       - minio
+      - edge-acquisition
+      - opcua-gateway
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+
+  edge-acquisition:
+    build:
+      context: ./edge-acquisition
+      dockerfile: Dockerfile
+    ports:
+      - "8091:8091"
+
+  opcua-gateway:
+    build:
+      context: ./opcua-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8092:8092"
 
   postgres:
     image: postgres:16
@@ -25,6 +46,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db:/docker-entrypoint-initdb.d
 
   influxdb:
     image: influxdb:2.7

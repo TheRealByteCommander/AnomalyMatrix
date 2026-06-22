@@ -1,14 +1,35 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DashboardPage from './pages/DashboardPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
 import TrendsPage from './pages/TrendsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import { inspections as seed } from './data/sampleData';
+import { fetchRecentInspections } from './services';
 
 export default function App() {
   const [active, setActive] = useState('Dashboard');
   const [inspections, setInspections] = useState(seed);
   const [selectedInspectionId, setSelectedInspectionId] = useState(seed[0]?.id ?? null);
+  const [apiOnline, setApiOnline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const latest = await fetchRecentInspections();
+        if (!cancelled && latest.length) {
+          setInspections(latest);
+          setSelectedInspectionId(latest[0].id);
+          setApiOnline(true);
+        }
+      } catch {
+        if (!cancelled) setApiOnline(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedInspection = useMemo(
     () => inspections.find((i) => i.id === selectedInspectionId) || inspections[0] || null,
@@ -21,6 +42,7 @@ export default function App() {
     selectedInspection,
     setSelectedInspectionId,
     goTo: setActive,
+    apiOnline,
   };
 
   const pages = {
@@ -34,8 +56,9 @@ export default function App() {
     <div className="shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">AnomalyMatrix HMI · Phase 2 Vertical MVP</p>
+          <p className="eyebrow">AnomalyMatrix HMI · Phase 3 Real Path</p>
           <h1>Operator-first Inspection Interface</h1>
+          <p className="muted">{apiOnline ? 'Backend verbunden (Port 8080)' : 'Offline-Seed-Daten (Backend nicht erreichbar)'}</p>
         </div>
         <nav className="tabs" aria-label="Primary screens">
           {Object.keys(pages).map((name) => (

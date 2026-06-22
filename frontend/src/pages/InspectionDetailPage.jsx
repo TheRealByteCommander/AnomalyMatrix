@@ -35,7 +35,7 @@ export default function InspectionDetailPage({ selectedInspection }) {
         <div>
           <h3>Heatmap (placeholder)</h3>
           <div className="heatmap-placeholder" role="img" aria-label="Synthetic anomaly heatmap placeholder">
-            <span>Heatmap Preview Placeholder</span>
+            <span>{selectedInspection.heatmapUri || 'Heatmap Preview Placeholder'}</span>
           </div>
           <p className="muted">Phase 2: wired placeholder for vertical flow; real overlay comes in model integration phase.</p>
         </div>

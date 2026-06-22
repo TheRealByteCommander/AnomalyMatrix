@@ -46,7 +46,9 @@ def test_trend_summary_endpoint():
 def test_opcua_payload_mapping_unit():
     mapped = map_inspection_to_opcua_payload({
         'inspection_id': 'x',
-        'inference': {'status': 'normal', 'anomaly_score': 0.12, 'heatmap_uri': 'h', 'model_version': 'm'},
+        'decision': 'red',
+        'inference': {'status': 'anomaly', 'anomaly_score': 0.12, 'heatmap_uri': 'h', 'model_version': 'm', 'defect_class': 'seam_void'},
     })
-    assert mapped['ns=2;s=Inspection.LastResult.PassFail'] == 'normal'
+    assert mapped['ns=2;s=Inspection.LastResult.PassFail'] == 'anomaly'
     assert mapped['ns=2;s=Inspection.LastResult.AnomalyScore'] == 0.12
+    assert mapped['ns=2;s=Inspection.LastResult.DefectClass'] == 'seam_void'

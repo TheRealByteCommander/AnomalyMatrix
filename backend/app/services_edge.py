@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 import random
 from uuid import uuid4
+
+import httpx
 
 
 @dataclass
@@ -15,6 +18,10 @@ class SyntheticFrame:
     image_uri: str
     exposure_ms: float
     gain_db: float
+
+
+def frame_to_dict(frame: SyntheticFrame) -> dict:
+    return asdict(frame)
 
 
 def generate_synthetic_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") -> SyntheticFrame:
@@ -32,3 +39,29 @@ def generate_synthetic_frame(camera_id: str = "cam-01", recipe_id: str = "recipe
         exposure_ms=exposure_ms,
         gain_db=gain_db,
     )
+
+
+def capture_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") -> SyntheticFrame:
+    """Prefer edge-acquisition HTTP service; fall back to in-process synthetic capture."""
+    edge_url = os.getenv("EDGE_ACQUISITION_URL", "").strip().rstrip("/")
+    if edge_url:
+        try:
+            with httpx.Client(timeout=3.0) as client:
+                response = client.post(
+                    f"{edge_url}/capture",
+                    json={"camera_id": camera_id, "recipe_id": recipe_id},
+                )
+                response.raise_for_status()
+                data = response.json()
+                return SyntheticFrame(
+                    frame_id=data["frame_id"],
+                    camera_id=data.get("camera_id", camera_id),
+                    recipe_id=data.get("recipe_id", recipe_id),
+                    captured_at=data.get("captured_at", datetime.now(timezone.utc).isoformat()),
+                    image_uri=data.get("image_uri", f"synthetic://frame/{data['frame_id']}.png"),
+                    exposure_ms=float(data.get("exposure_ms", 10.0)),
+                    gain_db=float(data.get("gain_db", 0.0)),
+                )
+        except Exception:
+            pass
+    return generate_synthetic_frame(camera_id=camera_id, recipe_id=recipe_id)

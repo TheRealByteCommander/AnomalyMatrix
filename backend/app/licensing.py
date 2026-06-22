@@ -66,14 +66,46 @@ class LicenseSnapshot:
         return None if self.active else self.message
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name, "true" if default else "false").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _offline_grace_hours() -> int:
+    try:
+        return max(1, int(os.getenv("LICENSE_OFFLINE_GRACE_HOURS", "72")))
+    except ValueError:
+        return 72
+
+
 class LicenseManager:
     def __init__(self, storage_path: Path | None = None):
         env_path = os.getenv("LICENSE_STATE_FILE", "").strip()
         default_path = Path(__file__).resolve().parents[1] / "data" / "license_state.json"
         self.storage_path = storage_path or (Path(env_path) if env_path else default_path)
-        self.validation_interval_sec = 300
+        try:
+            self.validation_interval_sec = max(30, int(os.getenv("LICENSE_VALIDATE_INTERVAL_SEC", "300")))
+        except ValueError:
+            self.validation_interval_sec = 300
+
+    @property
+    def enforce(self) -> bool:
+        return _env_bool("LICENSE_ENFORCE", default=False)
+
+    def _base_features(self, *, enabled: bool) -> dict:
+        return {
+            "dashboard_run": enabled,
+            "inspection_detail": enabled,
+            "inspection.run": enabled,
+            "inspection.read": enabled,
+            "trends_filters": enabled,
+            "advanced_export": False,
+        }
 
     def _default(self) -> dict:
+        # Dev-friendly: ohne LICENSE_ENFORCE sind Features erlaubt (MVP-Scaffold).
+        # Mit LICENSE_ENFORCE=true müssen Lizenzen explizit aktiviert werden.
+        enabled = not self.enforce
         return {
             "state": "invalid",
             "message": "License not activated",
@@ -81,14 +113,7 @@ class LicenseManager:
             "graceUntil": None,
             "seats": {"used": 0, "total": 0},
             "device": {"id": "unknown", "lastValidationUtc": datetime.now(timezone.utc).isoformat()},
-            "features": {
-                "dashboard_run": True,
-                "inspection_detail": True,
-                "inspection.run": True,
-                "inspection.read": True,
-                "trends_filters": False,
-                "advanced_export": False,
-            },
+            "features": self._base_features(enabled=enabled),
         }
 
     def _load(self) -> dict:
@@ -132,7 +157,7 @@ class LicenseManager:
                 data["state"] = "expired"
                 data["message"] = "License expired"
                 if not data.get("graceUntil"):
-                    data["graceUntil"] = (now + timedelta(days=3)).isoformat()
+                    data["graceUntil"] = (now + timedelta(hours=_offline_grace_hours())).isoformat()
                 self._save(data)
 
         snap = self._to_snapshot(data)
@@ -160,7 +185,7 @@ class LicenseManager:
         if key.startswith("AMX-EXPIRED"):
             state = "expired"
             expires = now - timedelta(days=1)
-            grace = now + timedelta(days=3)
+            grace = now + timedelta(hours=_offline_grace_hours())
             features = {
                 "dashboard_run": True,
                 "inspection_detail": True,
@@ -229,6 +254,11 @@ class LicenseManager:
 
     def enforce_feature(self, feature_name: str) -> None:
         state = self._load()
+        snap = self._to_snapshot(state)
+
+        if self.enforce and not snap.active:
+            raise PermissionError("License not active")
+
         features = state.get("features", {})
 
         enabled = False

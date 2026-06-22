@@ -18,10 +18,10 @@ from .inference_provider import get_inference_provider
 from .licensing import LicenseManager
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_to_opcua
-from .repository import ResultRepository
-from .services_edge import generate_synthetic_frame
+from .repository_factory import build_repository
+from .services_edge import capture_frame, frame_to_dict
 
-repo = ResultRepository(Path(__file__).resolve().parents[1] / "data")
+repo = build_repository(Path(__file__).resolve().parents[1] / "data")
 license_manager = LicenseManager()
 
 
@@ -186,8 +186,8 @@ async def contracts_inspection_result(request: Request):
 async def edge_capture(payload: CaptureRequest, request: Request):
     _require_license_feature('inspection.run')
     request_id = request.state.request_id
-    frame = generate_synthetic_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
-    return success_envelope(frame.__dict__, request_id)
+    frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+    return success_envelope(frame_to_dict(frame), request_id)
 
 
 @app.post("/api/v1/ai/infer")
@@ -205,15 +205,15 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     _require_license_feature('inspection.run')
     request_id = request.state.request_id
 
-    frame = generate_synthetic_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+    frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
     provider = get_inference_provider()
-    inference = provider.infer(frame.__dict__)
+    inference = provider.infer(frame_to_dict(frame))
 
     decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
     snap = license_manager.snapshot()
     result = {
         "inspection_id": str(uuid4()),
-        "frame": frame.__dict__,
+        "frame": frame_to_dict(frame),
         "inference": inference.__dict__,
         "decision": decision,
         "heatmap": {"uri": inference.heatmap_uri, "placeholder": True},
