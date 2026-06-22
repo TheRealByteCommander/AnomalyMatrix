@@ -22,7 +22,7 @@ from .inference_provider import get_inference_provider
 from .licensing import LicenseManager
 from .metrics_influx import query_observability_summary, record_inspection_metrics
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
-from .opcua_publish import publish_to_opcua
+from .opcua_publish import publish_busy_state, publish_to_opcua
 from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
 from .services_edge import capture_frame, frame_to_dict
@@ -204,6 +204,14 @@ async def contracts_events(request: Request):
     )
 
 
+@app.get("/api/v1/contracts/opcua")
+async def contracts_opcua(request: Request):
+    from .opcua_nodes import load_opcua_contract
+
+    request_id = request.state.request_id
+    return success_envelope(load_opcua_contract(), request_id)
+
+
 @app.get("/api/v1/contracts/inspection-result")
 async def contracts_inspection_result(request: Request):
     request_id = request.state.request_id
@@ -240,6 +248,8 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     auth = request.state.auth
     request_id = request.state.request_id
     started = time.perf_counter()
+
+    publish_busy_state(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
 
     frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
     provider = get_inference_provider()

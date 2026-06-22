@@ -9,6 +9,17 @@ React/Vite HMI für AnomalyMatrix (**v0.6.0**).
 | Inspection Detail | Score, Heatmap-Platzhalter, **QA-Feedback** |
 | Trends | Trend-Summary aus API |
 | Configuration | License, Recipes/Models aus API |
+| **Hilfe & FAQ** | Durchsuchbare Wissensdatenbank, FAQ, Glossar |
+
+## Sprachen
+- **Deutsch** und **English** — Umschalter oben rechts auf dem Hauptbildschirm
+- Auswahl wird in `localStorage` (`amx-locale`) gespeichert
+- Hilfe-Artikel in beiden Sprachen (`help/helpContent.de.js`, `help/helpContent.en.js`)
+- Tab **Hilfe & FAQ** — Bedienung, Arbeitsabläufe, Rollen, KPIs, Glossar
+- Schwebender **?**-Button — Schnellsuche
+- **F1** — Hilfe-Drawer
+- Kontext-Link auf jedem Bildschirm
+- Keine Installations- oder IT-Dokumentation in der Hilfe
 
 ## Voraussetzungen
 - **Node.js 18+** (Vite 8)

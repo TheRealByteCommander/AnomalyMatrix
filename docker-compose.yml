@@ -39,11 +39,14 @@ services:
 
   opcua-gateway:
     build:
-      context: ./opcua-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: opcua-gateway/Dockerfile
     environment:
       OPCUA_SERVER_ENABLED: "true"
       OPCUA_SERVER_ENDPOINT: opc.tcp://0.0.0.0:4840/anomalymatrix/server/
+      ANOMALYMATRIX_API_URL: http://api:8080
+      OPCUA_API_KEY: amx-key-operator
+      OPCUA_PLC_STOP_ON_RED: "true"
     ports:
       - "8092:8092"
       - "4840:4840"

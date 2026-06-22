@@ -1,12 +1,37 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "namespace_uri": "http://anomalymatrix.local/opcua",
+  "description": "Machine Vision companion — PLC inputs (trigger/ack) and outputs (result/stop/reject)",
   "system_state": "ns=2;s=System.State",
+  "system_health": "ns=2;s=System.Health",
   "active_recipe": "ns=2;s=Recipe.Active",
-  "start_inspection_method": "ns=2;s=Inspection.Start",
+  "start_inspection_method": "ns=2;s=Inspection.StartInspection",
+  "inspection": {
+    "busy": "ns=2;s=Inspection.Busy",
+    "external_trigger": "ns=2;s=Inspection.ExternalTrigger",
+    "start_request": "ns=2;s=Inspection.StartRequest",
+    "acknowledge_stop": "ns=2;s=Inspection.AcknowledgeStop",
+    "stop_line_request": "ns=2;s=Inspection.StopLineRequest",
+    "reject_part": "ns=2;s=Inspection.RejectPart",
+    "result_ready": "ns=2;s=Inspection.ResultReady",
+    "camera_id": "ns=2;s=Inspection.Request.CameraId",
+    "recipe_id": "ns=2;s=Inspection.Request.RecipeId"
+  },
   "last_result": {
     "pass_fail": "ns=2;s=Inspection.LastResult.PassFail",
+    "pass_fail_bool": "ns=2;s=Inspection.LastResult.PassFailBool",
     "anomaly_score": "ns=2;s=Inspection.LastResult.AnomalyScore",
-    "defect_class": "ns=2;s=Inspection.LastResult.DefectClass"
+    "defect_class": "ns=2;s=Inspection.LastResult.DefectClass",
+    "decision_code": "ns=2;s=Inspection.LastResult.DecisionCode",
+    "heatmap_uri": "ns=2;s=Inspection.LastResult.HeatmapUri",
+    "model_version": "ns=2;s=Inspection.LastResult.ModelVersion",
+    "inspection_id": "ns=2;s=Inspection.LastResult.InspectionId",
+    "timestamp": "ns=2;s=Inspection.LastResult.Timestamp"
   },
-  "trend_warning": "ns=2;s=Inspection.Trend.Warning"
+  "trend_warning": "ns=2;s=Inspection.Trend.Warning",
+  "decision_codes": {
+    "green": 0,
+    "amber": 1,
+    "red": 2
+  }
 }

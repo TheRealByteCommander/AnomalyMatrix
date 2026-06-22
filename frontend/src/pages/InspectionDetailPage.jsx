@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
+import ContextHelp from '../components/ContextHelp';
 import { submitFeedback } from '../services';
+import { useI18n } from '../i18n/I18nProvider';
 
-const VERDICTS = [
-  { value: 'confirm_anomaly', label: 'Anomalie bestätigen' },
-  { value: 'false_positive', label: 'Falsch positiv' },
-  { value: 'needs_review', label: 'Nachprüfung nötig' },
-];
+const VERDICT_KEYS = ['confirm_anomaly', 'false_positive', 'needs_review'];
 
-export default function InspectionDetailPage({ selectedInspection }) {
+export default function InspectionDetailPage({ selectedInspection, openHelp }) {
+  const { t } = useI18n();
   const [verdict, setVerdict] = useState('needs_review');
   const [comment, setComment] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState(null);
@@ -18,14 +17,19 @@ export default function InspectionDetailPage({ selectedInspection }) {
     return (
       <section className="page-grid">
         <article className="card">
-          <h2>No inspection selected</h2>
-          <p className="muted">Run pipeline from Dashboard to generate first inspection.</p>
+          <h2>{t('inspectionDetail.emptyTitle')}</h2>
+          <p className="muted">{t('inspectionDetail.emptyHint')}</p>
         </article>
       </section>
     );
   }
 
-  const passFail = selectedInspection.decision === 'red' ? 'Fail' : selectedInspection.decision === 'amber' ? 'Review' : 'Pass';
+  const passFail =
+    selectedInspection.decision === 'red'
+      ? t('decision.fail')
+      : selectedInspection.decision === 'amber'
+        ? t('decision.review')
+        : t('decision.pass');
 
   async function handleFeedbackSubmit(e) {
     e.preventDefault();
@@ -37,10 +41,10 @@ export default function InspectionDetailPage({ selectedInspection }) {
         verdict,
         comment,
       });
-      setFeedbackStatus({ ok: true, message: 'Feedback gespeichert.' });
+      setFeedbackStatus({ ok: true, message: t('inspectionDetail.saved') });
       setComment('');
     } catch (err) {
-      setFeedbackStatus({ ok: false, message: err.message || 'Feedback fehlgeschlagen.' });
+      setFeedbackStatus({ ok: false, message: err.message || t('inspectionDetail.failed') });
     } finally {
       setSubmitting(false);
     }
@@ -50,48 +54,56 @@ export default function InspectionDetailPage({ selectedInspection }) {
     <section className="page-grid">
       <article className="card hero">
         <div>
-          <p className="eyebrow">Inspection Detail</p>
+          <p className="eyebrow">{t('inspectionDetail.eyebrow')}</p>
           <h2>{selectedInspection.id}</h2>
-          <p className="muted">Part: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}</p>
+          <p className="muted">
+            {t('inspectionDetail.part')}: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}
+          </p>
+          <ContextHelp articleId="inspection-detail" onOpen={openHelp} />
         </div>
         <StatusBadge state={selectedInspection.decision}>{passFail}</StatusBadge>
       </article>
 
       <article className="card detail-grid">
         <div>
-          <h3>Anomaly score</h3>
+          <h3>{t('inspectionDetail.scoreTitle')}</h3>
           <p className="score-big">{selectedInspection.score}</p>
-          <p className="muted">Defect label: {selectedInspection.defect}</p>
-          <p className="muted">Decision: <StatusBadge state={selectedInspection.decision}>{selectedInspection.decision}</StatusBadge></p>
+          <p className="muted">{t('inspectionDetail.defectLabel')}: {selectedInspection.defect}</p>
+          <p className="muted">
+            {t('inspectionDetail.decisionLabel')}:{' '}
+            <StatusBadge state={selectedInspection.decision}>{t(`decision.${selectedInspection.decision}`)}</StatusBadge>
+          </p>
         </div>
         <div>
-          <h3>Heatmap (placeholder)</h3>
-          <div className="heatmap-placeholder" role="img" aria-label="Synthetic anomaly heatmap placeholder">
-            <span>{selectedInspection.heatmapUri || 'Heatmap Preview Placeholder'}</span>
+          <h3>{t('inspectionDetail.heatmapTitle')}</h3>
+          <div className="heatmap-placeholder" role="img" aria-label={t('inspectionDetail.heatmapAria')}>
+            <span>{selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}</span>
           </div>
-          <p className="muted">Phase 2: wired placeholder for vertical flow; real overlay comes in model integration phase.</p>
+          <p className="muted">{t('inspectionDetail.heatmapHint')}</p>
         </div>
       </article>
 
       <article className="card">
-        <h3>QA-Feedback</h3>
-        <p className="muted">Verdict an Backend senden (QA Lead / Admin).</p>
+        <h3>{t('inspectionDetail.feedbackTitle')}</h3>
+        <p className="muted">{t('inspectionDetail.feedbackHint')}</p>
         <form className="feedback-form" onSubmit={handleFeedbackSubmit}>
-          <label htmlFor="feedback-verdict">Verdict</label>
+          <label htmlFor="feedback-verdict">{t('inspectionDetail.verdictLabel')}</label>
           <select id="feedback-verdict" value={verdict} onChange={(e) => setVerdict(e.target.value)}>
-            {VERDICTS.map((v) => (
-              <option key={v.value} value={v.value}>{v.label}</option>
+            {VERDICT_KEYS.map((key) => (
+              <option key={key} value={key}>{t(`inspectionDetail.verdicts.${key}`)}</option>
             ))}
           </select>
-          <label htmlFor="feedback-comment">Kommentar</label>
+          <label htmlFor="feedback-comment">{t('inspectionDetail.commentLabel')}</label>
           <textarea
             id="feedback-comment"
             rows={3}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Optional"
+            placeholder={t('common.optional')}
           />
-          <button type="submit" disabled={submitting}>{submitting ? 'Sende…' : 'Feedback senden'}</button>
+          <button type="submit" disabled={submitting}>
+            {submitting ? t('inspectionDetail.submitting') : t('inspectionDetail.submit')}
+          </button>
         </form>
         {feedbackStatus && (
           <p className={feedbackStatus.ok ? 'muted' : 'error-text'} role="status">{feedbackStatus.message}</p>

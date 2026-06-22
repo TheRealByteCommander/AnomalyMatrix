@@ -13,6 +13,14 @@
 body { margin: 0; font-family: Inter, system-ui, sans-serif; background: radial-gradient(1200px 600px at 10% -20%, rgba(95,130,212,.25), transparent), var(--bg); color: var(--text); }
 .shell { max-width: 1260px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
 .topbar { display: grid; gap: .8rem; }
+.topbar-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.lang-switcher { display: grid; gap: .25rem; min-width: 140px; }
+.lang-switcher-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.lang-switcher-select {
+  min-height: 42px; border: 1px solid var(--line); border-radius: 12px;
+  background: #111a2b; color: var(--text); padding: .45rem .65rem; font: inherit; cursor: pointer;
+}
+.lang-switcher-select:focus { outline: 2px solid #6ea9ff; outline-offset: 2px; }
 .eyebrow { margin:0; text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; color: #8ec3ff; }
 h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
 .tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -43,4 +51,100 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
   .run-panel { flex-direction: column; }
   .row { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
+  .help-layout { grid-template-columns: 1fr; }
 }
+
+/* Feedback form */
+.feedback-form { display: grid; gap: .6rem; max-width: 420px; margin-top: .75rem; }
+.feedback-form label { font-size: .85rem; color: var(--muted); }
+.feedback-form select, .feedback-form textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: 10px;
+  background: #0d1627; color: var(--text); padding: .55rem .65rem; font: inherit;
+}
+.feedback-form button[type="submit"] { justify-self: start; }
+.error-text { color: var(--red); margin-top: .5rem; }
+
+/* Context help */
+.context-help-link {
+  display: inline-flex; align-items: center; gap: .35rem; margin-top: .55rem;
+  border: none; background: transparent; color: #8ec3ff; cursor: pointer;
+  font-size: .82rem; padding: 0; text-decoration: underline; text-underline-offset: 2px;
+}
+.context-help-icon {
+  display: inline-flex; width: 1.1rem; height: 1.1rem; border-radius: 50%;
+  border: 1px solid rgba(110, 169, 255, .5); align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 700; text-decoration: none;
+}
+
+/* Help FAB & drawer */
+.help-fab {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 40;
+  width: 3rem; height: 3rem; border-radius: 50%; border: 1px solid #6ea9ff;
+  background: linear-gradient(180deg, #21406b, #172338); color: var(--text);
+  font-size: 1.35rem; font-weight: 800; cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+.help-fab:hover { border-color: #8ec3ff; }
+.help-overlay {
+  position: fixed; inset: 0; z-index: 50; background: rgba(4, 8, 16, .72);
+  display: flex; align-items: flex-end; justify-content: center; padding: 1rem;
+}
+.help-drawer {
+  width: min(560px, 100%); max-height: min(85vh, 720px); overflow: auto;
+  background: linear-gradient(180deg, var(--surface), var(--surface-soft));
+  border: 1px solid var(--line); border-radius: 18px; padding: 1rem;
+  display: grid; gap: .85rem;
+}
+.help-drawer-header { display: flex; justify-content: space-between; gap: .75rem; align-items: flex-start; }
+.help-drawer-footer { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.help-search-input {
+  width: 100%; border: 1px solid var(--line); border-radius: 12px;
+  background: #0d1627; color: var(--text); padding: .7rem .85rem; font: inherit;
+}
+.help-quick-cats, .help-related-links { display: flex; flex-wrap: wrap; gap: .45rem; }
+.help-chip {
+  border: 1px solid var(--line); background: #111a2b; color: var(--text);
+  border-radius: 999px; padding: .35rem .7rem; font-size: .78rem; cursor: pointer;
+}
+.help-chip:hover { border-color: #6ea9ff; }
+.help-result-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+.help-result-btn {
+  width: 100%; text-align: left; border: 1px solid rgba(144,166,211,.24);
+  background: rgba(13, 22, 39, .45); border-radius: 12px; padding: .65rem .75rem;
+  color: var(--text); cursor: pointer; display: grid; gap: .2rem;
+}
+.help-result-btn:hover { border-color: #6ea9ff; }
+.help-empty { padding: .5rem 0; font-size: .9rem; }
+
+/* Help page */
+.help-layout { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 1rem; align-items: start; }
+.help-sidebar { display: grid; gap: .75rem; max-height: calc(100vh - 220px); overflow: auto; }
+.help-categories { display: grid; gap: .35rem; }
+.help-cat-btn {
+  display: flex; align-items: center; gap: .45rem; width: 100%; text-align: left;
+  border: 1px solid transparent; background: transparent; color: var(--text);
+  border-radius: 10px; padding: .45rem .55rem; cursor: pointer; font: inherit;
+}
+.help-cat-btn:hover, .help-cat-btn.active { background: rgba(33, 64, 107, .45); border-color: var(--line); }
+.help-cat-count { margin-left: auto; color: var(--muted); font-size: .75rem; }
+.help-article-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.help-article-btn {
+  width: 100%; text-align: left; border: 1px solid rgba(144,166,211,.2);
+  background: rgba(13, 22, 39, .35); border-radius: 10px; padding: .55rem .65rem;
+  color: var(--text); cursor: pointer; display: grid; gap: .15rem;
+}
+.help-article-btn.active { border-color: #6ea9ff; background: rgba(33, 64, 107, .5); }
+.help-article-title { font-size: .9rem; font-weight: 600; }
+.help-article-summary { font-size: .76rem; line-height: 1.35; }
+.help-main { min-height: 420px; }
+.help-article-body { display: grid; gap: 1rem; }
+.help-section h3 { margin: 0 0 .45rem; font-size: 1rem; }
+.help-bullet-list { margin: 0; padding-left: 1.15rem; color: #d5e3ff; display: grid; gap: .35rem; }
+.help-related h3 { margin: 0 0 .5rem; font-size: .95rem; }
+.help-faq-strip h3 { margin-top: 0; }
+.help-faq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .65rem; }
+.help-faq-card {
+  text-align: left; border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(13, 22, 39, .45); padding: .7rem .8rem; color: var(--text); cursor: pointer;
+  display: grid; gap: .25rem;
+}
+.help-faq-card:hover { border-color: #6ea9ff; }

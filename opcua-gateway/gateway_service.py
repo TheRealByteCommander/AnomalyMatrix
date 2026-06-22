@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from opcua_server import apply_payload, start_opcua_background, stop_opcua_background
+from nodes import load_contract
+from opcua_server import NODE_VALUES, apply_payload, start_opcua_background, stop_opcua_background
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,17 +23,22 @@ class PublishRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
+class TriggerRequest(BaseModel):
+    camera_id: str = "cam-01"
+    recipe_id: str = "recipe-default"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     endpoint = os.getenv("OPCUA_SERVER_ENDPOINT", "opc.tcp://0.0.0.0:4840/anomalymatrix/server/")
     if os.getenv("OPCUA_SERVER_ENABLED", "true").strip().lower() in {"1", "true", "yes"}:
         start_opcua_background(endpoint)
-        logger.info("Started OPC UA background server")
+        logger.info("Started OPC UA server with PLC trigger/stop interface")
     yield
     await stop_opcua_background()
 
 
-app = FastAPI(title="AnomalyMatrix OPC-UA Gateway", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="AnomalyMatrix OPC-UA Gateway", version="0.4.0", lifespan=lifespan)
 
 
 @app.get("/health")
@@ -40,9 +46,16 @@ def health():
     return {
         "ok": True,
         "service": "opcua-gateway",
+        "version": "0.4.0",
         "opcua_enabled": os.getenv("OPCUA_SERVER_ENABLED", "true"),
+        "api_url": os.getenv("ANOMALYMATRIX_API_URL", ""),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.get("/contract")
+def opcua_contract():
+    return load_contract()
 
 
 @app.post("/publish")
@@ -65,6 +78,16 @@ def publish(request: PublishRequest):
     }
 
 
+@app.post("/trigger")
+async def manual_trigger(body: TriggerRequest):
+    """HTTP fallback to simulate PLC trigger (same as ExternalTrigger rising edge)."""
+    from plc_bridge import get_plc_bridge
+
+    bridge = get_plc_bridge()
+    ok = await bridge.run_method(NODE_VALUES, body.camera_id, body.recipe_id)
+    return {"triggered": ok, "camera_id": body.camera_id, "recipe_id": body.recipe_id}
+
+
 @app.get("/last")
 def last_publish():
     return _last_publish or {"published": False}
@@ -72,6 +95,4 @@ def last_publish():
 
 @app.get("/nodes")
 def current_nodes():
-    from opcua_server import NODE_VALUES
-
     return NODE_VALUES

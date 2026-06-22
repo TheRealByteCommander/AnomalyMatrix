@@ -2,11 +2,19 @@ import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
 import { runInspection, fetchRecentInspections, fetchObservabilitySummary } from '../services';
 import StatusBadge from '../components/StatusBadge';
+import ContextHelp from '../components/ContextHelp';
+import { useI18n } from '../i18n/I18nProvider';
+import { SCREEN_IDS } from '../i18n/screens';
 
-export default function DashboardPage({ inspections, setInspections, setSelectedInspectionId, goTo }) {
-  const [runState, setRunState] = useState('idle'); // idle|running|success|error
-  const [notice, setNotice] = useState('Bereit für neue Inspektion.');
+export default function DashboardPage({ inspections, setInspections, setSelectedInspectionId, goTo, openHelp }) {
+  const { t, locale } = useI18n();
+  const [runState, setRunState] = useState('idle');
+  const [notice, setNotice] = useState(() => t('dashboard.ready'));
   const [kpis, setKpis] = useState(hmiState.kpis);
+
+  useEffect(() => {
+    if (runState === 'idle') setNotice(t('dashboard.ready'));
+  }, [locale, t, runState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,24 +48,28 @@ export default function DashboardPage({ inspections, setInspections, setSelected
 
   async function handleRunInspection() {
     setRunState('running');
-    setNotice('Pipeline wird ausgeführt …');
+    setNotice(t('dashboard.noticeRunning'));
     try {
       const result = await runInspection();
       const merged = [result, ...inspections.filter((i) => i.id !== result.id)].slice(0, 20);
       setInspections(merged);
       setSelectedInspectionId(result.id);
       setRunState('success');
-      setNotice(`Inspektion ${result.id} abgeschlossen (${result.decision.toUpperCase()}).`);
+      setNotice(
+        t('dashboard.noticeComplete', {
+          id: result.id,
+          decision: t(`decision.${result.decision}`).toUpperCase(),
+        })
+      );
       setTimeout(() => setRunState('idle'), 1500);
     } catch {
-      // fallback synthetic refresh path for scaffold usability
       try {
         const latest = await fetchRecentInspections();
         if (latest.length) {
           setInspections(latest);
           setSelectedInspectionId(latest[0].id);
           setRunState('success');
-          setNotice(`Inspektion aus latest feed geladen (${latest[0].id}).`);
+          setNotice(t('dashboard.noticeLoaded', { id: latest[0].id }));
           setTimeout(() => setRunState('idle'), 1500);
           return;
         }
@@ -65,7 +77,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         // ignore nested errors
       }
       setRunState('error');
-      setNotice('Pipeline fehlgeschlagen. Backend-Verbindung prüfen.');
+      setNotice(t('dashboard.noticeFailed'));
     }
   }
 
@@ -75,50 +87,54 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     <section className="page-grid">
       <article className="card hero">
         <div>
-          <p className="eyebrow">Operator Dashboard</p>
+          <p className="eyebrow">{t('dashboard.eyebrow')}</p>
           <h2>{hmiState.line}</h2>
-          <p className="muted">Recipe {hmiState.recipe} · Model {hmiState.modelVersion}</p>
+          <p className="muted">{t('common.recipe')} {hmiState.recipe} · {t('common.model')} {hmiState.modelVersion}</p>
+          <ContextHelp articleId="dashboard-overview" onOpen={openHelp} />
         </div>
-        <StatusBadge state={hmiState.status}>{hmiState.statusText}</StatusBadge>
+        <StatusBadge state={hmiState.status}>{t('dashboard.statusTrendWarning')}</StatusBadge>
       </article>
 
       <article className="card run-panel">
         <div>
-          <h3>Vertical MVP action</h3>
-          <p className="muted">Trigger inspection pipeline and jump to inspection details.</p>
+          <h3>{t('dashboard.actionTitle')}</h3>
+          <p className="muted">{t('dashboard.actionHint')}</p>
         </div>
         <div className="run-actions">
-          <button className="tab active" onClick={handleRunInspection} disabled={runState === 'running'}>
-            {runState === 'running' ? 'Running…' : 'Run Inspection Pipeline'}
+          <button type="button" className="tab active" onClick={handleRunInspection} disabled={runState === 'running'}>
+            {runState === 'running' ? t('dashboard.running') : t('dashboard.run')}
           </button>
-          <button className="tab" onClick={() => goTo('Inspection Detail')}>Open Inspection Detail</button>
-          <StatusBadge state={stateClass.replace('state-','')}>{notice}</StatusBadge>
+          <button type="button" className="tab" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
+            {t('dashboard.openDetail')}
+          </button>
+          <StatusBadge state={stateClass.replace('state-', '')}>{notice}</StatusBadge>
         </div>
       </article>
 
       <article className="card kpi-grid">
-        <div><label>Cycle p95</label><strong>{kpis.cycleMsP95} ms</strong></div>
-        <div><label>Anomaly Rate</label><strong>{anomalyRate}%</strong></div>
-        <div><label>Queue Lag</label><strong>{kpis.queueLagMs} ms</strong></div>
-        <div><label>OPC UA Error</label><strong>{kpis.opcUaPublishErrorRate}%</strong></div>
+        <div><label>{t('dashboard.kpiCycle')}</label><strong>{kpis.cycleMsP95} ms</strong></div>
+        <div><label>{t('dashboard.kpiAnomalyRate')}</label><strong>{anomalyRate}%</strong></div>
+        <div><label>{t('dashboard.kpiQueueLag')}</label><strong>{kpis.queueLagMs} ms</strong></div>
+        <div><label>{t('dashboard.kpiOpcError')}</label><strong>{kpis.opcUaPublishErrorRate}%</strong></div>
       </article>
 
       <article className="card">
-        <h3>Latest inspections</h3>
+        <h3>{t('dashboard.latestTitle')}</h3>
         <div className="table">
           {inspections.map((i) => (
             <button
               key={i.id}
+              type="button"
               className="row row-btn"
               onClick={() => {
                 setSelectedInspectionId(i.id);
-                goTo('Inspection Detail');
+                goTo(SCREEN_IDS.inspectionDetail);
               }}
             >
               <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
               <span>{i.id}</span>
               <span>{i.part}</span>
-              <StatusBadge state={i.decision}>{i.decision}</StatusBadge>
+              <StatusBadge state={i.decision}>{t(`decision.${i.decision}`)}</StatusBadge>
             </button>
           ))}
         </div>

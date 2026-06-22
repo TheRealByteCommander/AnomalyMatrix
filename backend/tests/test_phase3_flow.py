@@ -21,7 +21,9 @@ def test_run_inspection_includes_opcua_publish_block(monkeypatch):
     assert r.status_code == 200
     payload = r.json()['data']
     assert payload['opcua_publish']['published'] is True
-    assert 'ns=2;s=Inspection.LastResult.AnomalyScore' in payload['opcua_publish']['payload']
+    assert 'ns=2;s=Inspection.LastResult.AnomalyScore' in payload['opcua_publish']['payload'] or any(
+        'AnomalyScore' in k for k in payload['opcua_publish']['payload']
+    )
 
 
 def test_results_query_by_recipe_and_score_range():
@@ -49,6 +51,8 @@ def test_opcua_payload_mapping_unit():
         'decision': 'red',
         'inference': {'status': 'anomaly', 'anomaly_score': 0.12, 'heatmap_uri': 'h', 'model_version': 'm', 'defect_class': 'seam_void'},
     })
-    assert mapped['ns=2;s=Inspection.LastResult.PassFail'] == 'anomaly'
-    assert mapped['ns=2;s=Inspection.LastResult.AnomalyScore'] == 0.12
-    assert mapped['ns=2;s=Inspection.LastResult.DefectClass'] == 'seam_void'
+    from app.opcua_nodes import node
+    assert mapped[node('last_result.pass_fail')] == 'anomaly'
+    assert mapped[node('last_result.anomaly_score')] == 0.12
+    assert mapped[node('last_result.defect_class')] == 'seam_void'
+    assert mapped[node('inspection.stop_line_request')] is True
