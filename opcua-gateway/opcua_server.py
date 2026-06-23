@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from nodes import build_default_node_values, load_contract
 from plc_bridge import get_plc_bridge
+from security_config import apply_server_security
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,9 @@ async def _run_opcua_server(endpoint: str) -> None:
     await server.init()
     server.set_endpoint(endpoint)
     server.set_server_name("AnomalyMatrix OPC UA Gateway")
+    security = await apply_server_security(server)
+    if security.get("enabled"):
+        logger.info("OPC-UA security enabled: %s", security.get("mode"))
 
     uri = contract.get("namespace_uri", "http://anomalymatrix.local/opcua")
     idx = await server.register_namespace(uri)

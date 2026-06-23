@@ -18,6 +18,10 @@ class SyntheticFrame:
     image_uri: str
     exposure_ms: float
     gain_db: float
+    image_b64: str | None = None
+    image_width: int | None = None
+    image_height: int | None = None
+    capture_driver: str | None = None
 
 
 def frame_to_dict(frame: SyntheticFrame) -> dict:
@@ -61,6 +65,10 @@ def capture_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") 
                     image_uri=data.get("image_uri", f"synthetic://frame/{data['frame_id']}.png"),
                     exposure_ms=float(data.get("exposure_ms", 10.0)),
                     gain_db=float(data.get("gain_db", 0.0)),
+                    image_b64=data.get("image_b64"),
+                    image_width=data.get("image_width"),
+                    image_height=data.get("image_height"),
+                    capture_driver=data.get("capture_driver"),
                 )
         except Exception:
             pass

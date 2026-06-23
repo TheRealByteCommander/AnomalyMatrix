@@ -1,6 +1,6 @@
 # frontend
 
-React/Vite HMI für AnomalyMatrix (**v0.7.0**).
+React/Vite HMI für AnomalyMatrix (**v0.8.0**).
 
 ## Seiten
 | Seite | Funktion |

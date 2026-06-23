@@ -1,48 +1,36 @@
 # AnomalyMatrix — Release Readiness Checklist
 
-Stand: **v0.7.0** (2026-06)
+Stand: **v0.8.0** (2026-06)
 
 ## Build & Tests
 
 | Check | Status | Nachweis |
 |-------|--------|----------|
-| Backend `compileall` | ✅ | CI Job `backend-lint-test` |
-| pytest (stub/opencv/patchcore) | ✅ | CI Provider-Matrix |
-| E2E Vertical Flow | ✅ | `backend/tests/test_e2e_vertical_flow.py` |
-| Frontend production build | ✅ | CI Job `frontend-smoke` |
+| Backend `compileall` | ✅ | CI |
+| pytest (41+ Tests) | ✅ | Provider-Matrix, E2E, Auth, Training, Perf |
+| Performance < 500 ms | ✅ | `test_performance_gate.py` |
+| Frontend production build | ✅ | CI `frontend-smoke` |
+| Playwright HMI E2E | ✅ | CI `frontend-e2e` |
 
-## Security (MVP)
-
-| Check | Status | Hinweis |
-|-------|--------|---------|
-| RBAC auf mutierenden Endpunkten | ✅ | Header `X-AMX-Role` / API-Key |
-| License enforcement | ✅ | Feature-Gates |
-| JWT/Session-Auth | ⏳ | Folgerelease v0.8+ |
-| OPC-UA Sign/Encrypt | ⏳ | Folgerelease |
-
-## Observability
+## Security
 
 | Check | Status |
 |-------|--------|
-| Domain Events (`InspectionCompleted`, `FeedbackSubmitted`, `TrendWarningRaised`) | ✅ |
-| Optional Influx/MinIO | ✅ (env-gesteuert) |
+| RBAC + API-Key | ✅ |
+| JWT + Session Cookie | ✅ v0.8 |
+| OPC-UA Sign/Encrypt | ✅ v0.8 (self-signed, env-gated) |
+| `JWT_SECRET` in Produktion | ⚠️ Pflicht |
 
-## Dokumentation
+## Produktfeatures v0.8
 
-| Artefakt | Status |
-|----------|--------|
-| `README.md` | ✅ |
-| `docs/DEPLOYMENT_PLAN.md` | ✅ |
-| `docs/RELEASE_NOTES_v0.7.0.md` | ✅ |
-| `docs/BUILD_READY_SPEC_V1.md` | ✅ (Fortschritt markiert) |
-
-## Bekannte Grenzen vor Produktion
-
-- Inferenz: PatchCore-MVP-Proxy, kein echtes Training
-- Kamera: synthetischer Edge-Stub
-- Installer-Artefakt: weiterhin v0.1.0-Baseline — Docker/Git empfohlen
+| Feature | Status |
+|---------|--------|
+| PatchCore Memory-Bank Training | ✅ MVP |
+| Model Promotion + `ModelRetrained` | ✅ |
+| OpenCV Kamera (Webcam/Datei) | ✅ |
+| Installer v0.8.0 | ✅ |
 
 ## Freigabe-Empfehlung
 
 **Dev / Pilot / Demo:** freigegeben  
-**Unbeaufsichtigte Produktionslinie:** erst nach JWT, OPC-UA TLS und echtem Modell-Training
+**Produktion:** `RBAC_ENFORCE=true`, `JWT_SECRET` rotieren, OPC-UA-Zertifikate von PKI, echte Trainingsdaten statt Synthetic-Seed

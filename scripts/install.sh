@@ -5,10 +5,12 @@ APP_NAME="AnomalyMatrix"
 APP_DIR_DEFAULT="/opt/anomalymatrix"
 REPO_URL_DEFAULT="https://github.com/TheRealByteCommander/AnomalyMatrix.git"
 BRANCH_DEFAULT="master"
+VERSION_FILE_DEFAULT="$(dirname "$0")/../VERSION"
 
 APP_DIR="${APP_DIR:-$APP_DIR_DEFAULT}"
 REPO_URL="${REPO_URL:-$REPO_URL_DEFAULT}"
 BRANCH="${BRANCH:-$BRANCH_DEFAULT}"
+APP_VERSION="$(tr -d '\r\n' < "${VERSION_FILE:-$VERSION_FILE_DEFAULT}" 2>/dev/null || echo unknown)"
 
 log() { echo "[$APP_NAME] $*"; }
 err() { echo "[$APP_NAME][ERROR] $*" >&2; }
@@ -79,6 +81,17 @@ health_check() {
   return 1
 }
 
+smoke_check() {
+  log "Running post-install smoke (inspection run)"
+  local run_url="http://127.0.0.1:8080/api/v1/inspections/run"
+  if curl -fsS -X POST "$run_url" -H "Content-Type: application/json" -d '{"camera_id":"cam-01","recipe_id":"recipe-default"}' >/dev/null 2>&1; then
+    log "Smoke check OK"
+    return 0
+  fi
+  log "Smoke check skipped or failed (API may need warm-up)"
+  return 0
+}
+
 main() {
   require_cmd git
   require_cmd docker
@@ -90,10 +103,11 @@ main() {
   start_stack
   run_migrations
   health_check || true
+  smoke_check || true
 
   cat <<EOF
 
-$APP_NAME installation complete.
+$APP_NAME installation complete (version $APP_VERSION).
 
 Project directory: $APP_DIR
 API health:        http://127.0.0.1:8080/api/v1/health

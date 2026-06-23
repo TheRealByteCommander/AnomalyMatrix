@@ -9,6 +9,8 @@ venv/
 # Runtime data (local)
 backend/data/*.jsonl
 backend/data/license_state.json
+backend/data/training-artifacts/
+opcua-gateway/certs/*.pem
 
 # Node
 frontend/node_modules/

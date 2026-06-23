@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
-INSTALLER="$DIST_DIR/AnomalyMatrix-installer.run"
+VERSION="$(tr -d '\r\n' < "$ROOT_DIR/VERSION")"
+INSTALLER="$DIST_DIR/AnomalyMatrix-installer-v${VERSION}.run"
+LEGACY_INSTALLER="$DIST_DIR/AnomalyMatrix-installer.run"
 PAYLOAD="$ROOT_DIR/scripts/install.sh"
 
 mkdir -p "$DIST_DIR"
@@ -24,5 +26,7 @@ EOF
 
 cat "$PAYLOAD" >> "$INSTALLER"
 chmod +x "$INSTALLER"
+cp "$INSTALLER" "$LEGACY_INSTALLER"
 
 echo "Built installer: $INSTALLER"
+echo "Version: $VERSION"

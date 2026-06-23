@@ -7,20 +7,23 @@ Integration- und E2E-Tests für AnomalyMatrix.
 ```bash
 cd backend
 py -3 -m pip install -r requirements.txt
+py -3 -m pip install -r ../opcua-gateway/requirements.txt
 py -3 -m pytest -q
 ```
 
-**Stand v0.7.0:** API-Envelope, Inspection-Flow, License, Observability, RBAC, Feedback, OPC-UA PLC, Trend-Engine, **E2E Vertical Flow** (`test_e2e_vertical_flow.py`).
+**Stand v0.8.0 (41+ Tests):** API, E2E Vertical Flow, Auth JWT/Session, Training/Promotion, Performance Gate, OPC-UA Security.
+
+## Frontend (Playwright)
+
+```bash
+cd frontend
+npm ci --legacy-peer-deps
+npx playwright install chromium
+npm run test:e2e
+```
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`):
-
-- Backend: `compileall` + pytest mit Provider-Matrix (`stub`, `opencv_ready`, `patchcore`)
-- Frontend: `npm run smoke` (Vite production build)
-
-## Geplant (Folgerelease)
-
-- Playwright HMI-E2E
-- OPC-UA Integrationstests gegen Port 4840 (live asyncua)
-- Performance-Gates (< 500 ms Ziel)
+- `backend-lint-test` — pytest Provider-Matrix
+- `frontend-smoke` — Vite build
+- `frontend-e2e` — Playwright Navigation + Dashboard

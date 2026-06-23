@@ -1,12 +1,32 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080/api/v1';
+const TOKEN_KEY = 'amx_access_token';
 
 const defaultHeaders = {
   'X-AMX-Role': import.meta.env.VITE_AMX_ROLE || 'operator',
   'X-AMX-User': import.meta.env.VITE_AMX_USER || 'hmi-operator',
 };
 
+export function getStoredToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredToken(token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 function withHeaders(extra = {}) {
-  return { ...defaultHeaders, ...extra };
+  const token = getStoredToken();
+  const auth = token ? { Authorization: `Bearer ${token}` } : {};
+  return { ...defaultHeaders, ...auth, ...extra };
 }
 
 async function parseEnvelope(response) {
@@ -96,6 +116,23 @@ export async function submitFeedback({ inspectionId, verdict, comment = '', reci
       model_version: modelVersion,
     }),
   });
+  return parseEnvelope(r);
+}
+
+export async function login(userId, password) {
+  const r = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, password }),
+    credentials: 'include',
+  });
+  const data = await parseEnvelope(r);
+  if (data.access_token) setStoredToken(data.access_token);
+  return data;
+}
+
+export async function fetchAuthMe() {
+  const r = await fetch(`${API_BASE}/auth/me`, { headers: withHeaders(), credentials: 'include' });
   return parseEnvelope(r);
 }
 

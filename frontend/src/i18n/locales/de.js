@@ -5,7 +5,7 @@ export default {
     en: 'English',
   },
   app: {
-    eyebrow: 'AnomalyMatrix HMI · v0.7.0',
+    eyebrow: 'AnomalyMatrix HMI · v0.8.0',
     title: 'Bedienoberfläche für Inspektionen',
     connected: 'Mit Prüfserver verbunden',
     offline: 'Offline — Demo-/Ersatzdaten (keine Live-Verbindung)',

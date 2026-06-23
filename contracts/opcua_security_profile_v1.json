@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "security_mode": "SignAndEncrypt",
+  "security_policies": [
+    "Basic256Sha256_SignAndEncrypt",
+    "Basic256Sha256_Sign"
+  ],
+  "application_uri": "urn:anomalymatrix:opcua:gateway",
+  "certificate_paths": {
+    "server_cert": "opcua-gateway/certs/server_cert.pem",
+    "server_key": "opcua-gateway/certs/server_key.pem"
+  },
+  "env_flags": {
+    "OPCUA_SECURITY_ENABLED": "true",
+    "OPCUA_CERT_DIR": "opcua-gateway/certs"
+  }
+}

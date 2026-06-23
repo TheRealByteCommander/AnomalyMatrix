@@ -135,7 +135,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           <p className="muted">{t('dashboard.actionHint')}</p>
         </div>
         <div className="run-actions">
-          <button type="button" className="tab active" onClick={handleRunInspection} disabled={runState === 'running'}>
+          <button type="button" className="tab active" data-testid="dashboard-run" onClick={handleRunInspection} disabled={runState === 'running'}>
             {runState === 'running' ? t('dashboard.running') : t('dashboard.run')}
           </button>
           <button type="button" className="tab" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>

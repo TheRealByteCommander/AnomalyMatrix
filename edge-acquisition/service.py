@@ -3,24 +3,38 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title='AnomalyMatrix Edge Acquisition Stub', version='0.1.0')
+from camera_drivers import encode_image_b64, get_camera_driver
+
+app = FastAPI(title="AnomalyMatrix Edge Acquisition", version="0.8.0")
 
 
 class CaptureRequest(BaseModel):
-    camera_id: str = 'cam-01'
-    recipe_id: str = 'recipe-default'
+    camera_id: str = "cam-01"
+    recipe_id: str = "recipe-default"
 
 
-@app.post('/capture')
+@app.post("/capture")
 def capture(payload: CaptureRequest):
     frame_id = str(uuid4())
-    return {
-        'frame_id': frame_id,
-        'camera_id': payload.camera_id,
-        'recipe_id': payload.recipe_id,
-        'captured_at': datetime.now(timezone.utc).isoformat(),
-        'image_uri': f'synthetic://frame/{frame_id}.png',
-    }
+    driver = get_camera_driver()
+    try:
+        image, meta = driver.capture(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+        image_b64 = encode_image_b64(image)
+        return {
+            "frame_id": frame_id,
+            "camera_id": payload.camera_id,
+            "recipe_id": payload.recipe_id,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "image_uri": f"capture://frame/{frame_id}.png",
+            "image_b64": image_b64,
+            "image_width": int(image.shape[1]),
+            "image_height": int(image.shape[0]),
+            "exposure_ms": float(meta.get("exposure_ms", 10.0)),
+            "gain_db": float(meta.get("gain_db", 0.0)),
+            "capture_driver": meta.get("driver", "unknown"),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -12,8 +12,10 @@ from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .api.auth import router as auth_router
 from .api.catalog import router as catalog_router
 from .api.health import router as health_router
+from .api.training import router as training_router
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
 from .core_store import CoreStore
@@ -63,13 +65,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.7.0",
-    description="v0.7: Trend warnings, E2E gates, HMI live context",
+    version="0.8.0",
+    description="v0.8: PatchCore training, JWT auth, camera, OPC-UA TLS, perf gates",
     lifespan=lifespan,
 )
 
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(catalog_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(training_router, prefix="/api/v1")
 
 
 def _auth(request: Request):

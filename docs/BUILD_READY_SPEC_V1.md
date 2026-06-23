@@ -116,9 +116,11 @@ A release/project increment is only complete when all are true:
 - [x] Unit/Integration tests (backend pytest)
 
 ### Offen (Folgerelease)
-1) ~~CI gates für lint/test/security vollständig automatisieren~~ — **teilweise v0.7** (Backend + Frontend smoke)
-2) ~~E2E-Tests (capture → inference → decision → feedback)~~ — **v0.7** (`test_e2e_vertical_flow.py`)
-3) Echtes PatchCore-Training + Model-Registry-Promotion
-4) OPC-UA Sign/Encrypt + Zertifikats-Auth
-5) JWT/Session-Auth, WebSocket Live-View
-6) Performance-Tests unter Last (< 500 ms Ziel)
+1) ~~CI gates~~ — v0.7/v0.8 (Backend, Frontend smoke, Playwright, Performance)
+2) ~~E2E-Tests~~ — v0.7 API + v0.8 Playwright HMI
+3) ~~PatchCore-Training + Promotion~~ — **v0.8** (Memory-Bank MVP)
+4) ~~OPC-UA Sign/Encrypt~~ — **v0.8** (Basic256Sha256, self-signed)
+5) ~~JWT/Session-Auth~~ — **v0.8**; WebSocket Live-View offen
+6) ~~Performance-Tests~~ — **v0.8** (< 500 ms Gate)
+7) ~~Echte Kamera~~ — **v0.8** OpenCV; GigE/GenICam Folgerelease
+8) ~~Installer-Sync~~ — **v0.8** (`VERSION` + v0.8.0 Artefakt)

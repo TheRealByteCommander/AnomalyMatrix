@@ -28,6 +28,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "trends.read",
         "recipes.read",
         "models.read",
+        "models.train",
+        "models.promote",
     },
     "admin": {
         "inspection.run",
@@ -37,6 +39,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "trends.read",
         "recipes.read",
         "models.read",
+        "models.train",
+        "models.promote",
         "audit.read",
         "license.admin",
     },
@@ -58,7 +62,35 @@ def rbac_enforced() -> bool:
 
 
 def resolve_auth(request: Request, core_store) -> AuthContext:
-    """Resolve user from X-AMX-Api-Key or dev headers X-AMX-User / X-AMX-Role."""
+    """Resolve user from JWT, session cookie, API key, or dev headers."""
+    auth_header = request.headers.get("Authorization", "").strip()
+    if auth_header.lower().startswith("bearer "):
+        from .auth_tokens import decode_access_token
+
+        claims = decode_access_token(auth_header[7:].strip())
+        if claims:
+            return AuthContext(
+                user_id=str(claims.get("sub", "jwt-user")),
+                display_name=str(claims.get("name", claims.get("sub", "jwt-user"))),
+                role_id=str(claims.get("role", "operator")),
+            )
+        if rbac_enforced():
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    session_id = request.cookies.get("amx_session", "").strip()
+    if session_id:
+        session = core_store.get_session(session_id)
+        if session:
+            user = core_store.get_user_by_id(session["user_id"])
+            if user:
+                return AuthContext(
+                    user_id=user["user_id"],
+                    display_name=user.get("display_name", user["user_id"]),
+                    role_id=user["role_id"],
+                )
+        if rbac_enforced():
+            raise HTTPException(status_code=401, detail="Invalid session")
+
     api_key = request.headers.get("X-AMX-Api-Key", "").strip()
     if api_key:
         user = core_store.get_user_by_api_key(api_key)

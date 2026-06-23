@@ -6,6 +6,8 @@ from pathlib import Path
 from threading import Lock
 from uuid import uuid4
 
+from .auth_tokens import create_session_id, hash_password, verify_password
+
 try:
     import psycopg2
     from psycopg2.extras import Json, RealDictCursor
@@ -28,6 +30,7 @@ class CoreStore:
         self._recipes_file = self.data_root / "recipes.json"
         self._models_file = self.data_root / "model_registry.json"
         self._users_file = self.data_root / "users.json"
+        self._sessions_file = self.data_root / "sessions.json"
         if not self.use_postgres:
             self._seed_json_fallback()
 
@@ -42,13 +45,14 @@ class CoreStore:
 
     def _seed_json_fallback(self) -> None:
         if not self._users_file.exists():
+            default_password = hash_password("changeme")
             self._users_file.write_text(
                 json.dumps(
                     [
-                        {"user_id": "operator-1", "display_name": "Line Operator", "role_id": "operator", "api_key": "amx-key-operator", "active": True},
-                        {"user_id": "qa-1", "display_name": "QA Lead", "role_id": "qa_lead", "api_key": "amx-key-qa", "active": True},
-                        {"user_id": "engineer-1", "display_name": "Process Engineer", "role_id": "process_engineer", "api_key": "amx-key-engineer", "active": True},
-                        {"user_id": "admin-1", "display_name": "System Admin", "role_id": "admin", "api_key": "amx-key-admin", "active": True},
+                        {"user_id": "operator-1", "display_name": "Line Operator", "role_id": "operator", "api_key": "amx-key-operator", "password_hash": default_password, "active": True},
+                        {"user_id": "qa-1", "display_name": "QA Lead", "role_id": "qa_lead", "api_key": "amx-key-qa", "password_hash": default_password, "active": True},
+                        {"user_id": "engineer-1", "display_name": "Process Engineer", "role_id": "process_engineer", "api_key": "amx-key-engineer", "password_hash": default_password, "active": True},
+                        {"user_id": "admin-1", "display_name": "System Admin", "role_id": "admin", "api_key": "amx-key-admin", "password_hash": default_password, "active": True},
                     ],
                     indent=2,
                 ),
@@ -86,6 +90,94 @@ class CoreStore:
                 return user
         return None
 
+    def get_user_by_id(self, user_id: str) -> dict | None:
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        "SELECT user_id, display_name, role_id, active, password_hash FROM users WHERE user_id = %s AND active = TRUE",
+                        (user_id,),
+                    )
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        for user in json.loads(self._users_file.read_text(encoding="utf-8")):
+            if user.get("user_id") == user_id and user.get("active", True):
+                return user
+        return None
+
+    def authenticate_user(self, user_id: str, password: str) -> dict | None:
+        user = self.get_user_by_id(user_id)
+        if not user:
+            return None
+        stored = user.get("password_hash")
+        if not stored or not verify_password(password, stored):
+            return None
+        return user
+
+    def create_session(self, user_id: str, *, ttl_sec: int = 28800) -> dict:
+        from datetime import datetime, timedelta, timezone
+
+        session_id = create_session_id()
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl_sec)
+        entry = {"session_id": session_id, "user_id": user_id, "expires_at": expires_at.isoformat()}
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO sessions (session_id, user_id, expires_at) VALUES (%s,%s,%s)",
+                        (session_id, user_id, expires_at),
+                    )
+                conn.commit()
+        else:
+            sessions = []
+            if self._sessions_file.exists():
+                sessions = json.loads(self._sessions_file.read_text(encoding="utf-8"))
+            sessions.append(entry)
+            self._sessions_file.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
+        return entry
+
+    def get_session(self, session_id: str) -> dict | None:
+        from datetime import datetime, timezone
+
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        "SELECT session_id, user_id, expires_at FROM sessions WHERE session_id = %s",
+                        (session_id,),
+                    )
+                    row = cur.fetchone()
+                    if not row:
+                        return None
+                    if row["expires_at"] < datetime.now(timezone.utc):
+                        return None
+                    return dict(row)
+        if not self._sessions_file.exists():
+            return None
+        now = datetime.now(timezone.utc)
+        for entry in json.loads(self._sessions_file.read_text(encoding="utf-8")):
+            if entry.get("session_id") != session_id:
+                continue
+            expires = datetime.fromisoformat(entry["expires_at"])
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if expires < now:
+                return None
+            return entry
+        return None
+
+    def revoke_session(self, session_id: str) -> None:
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM sessions WHERE session_id = %s", (session_id,))
+                conn.commit()
+            return
+        if not self._sessions_file.exists():
+            return
+        sessions = [s for s in json.loads(self._sessions_file.read_text(encoding="utf-8")) if s.get("session_id") != session_id]
+        self._sessions_file.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
+
     def list_recipes(self) -> list[dict]:
         if self.use_postgres:
             with self._connect() as conn:
@@ -103,6 +195,91 @@ class CoreStore:
                     )
                     return [dict(r) for r in cur.fetchall()]
         return json.loads(self._models_file.read_text(encoding="utf-8"))
+
+    def get_model(self, model_id: str) -> dict | None:
+        for item in self.list_models():
+            if item.get("model_id") == model_id:
+                return item
+        return None
+
+    def get_active_model(self) -> dict | None:
+        models = self.list_models()
+        for item in models:
+            if item.get("status") == "active":
+                return item
+        return models[0] if models else None
+
+    def register_model(self, entry: dict) -> dict:
+        payload = {
+            "model_id": entry["model_id"],
+            "name": entry["name"],
+            "model_version": entry["model_version"],
+            "provider": entry.get("provider", "patchcore"),
+            "dataset_version": entry.get("dataset_version", "v1"),
+            "status": entry.get("status", "candidate"),
+            "metadata": entry.get("metadata", {}),
+        }
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO model_registry (model_id, name, model_version, provider, dataset_version, status, metadata)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s)
+                        ON CONFLICT (model_id) DO UPDATE SET
+                          name = EXCLUDED.name,
+                          model_version = EXCLUDED.model_version,
+                          provider = EXCLUDED.provider,
+                          dataset_version = EXCLUDED.dataset_version,
+                          status = EXCLUDED.status,
+                          metadata = EXCLUDED.metadata
+                        RETURNING model_id, name, model_version, provider, dataset_version, status, metadata
+                        """,
+                        (
+                            payload["model_id"],
+                            payload["name"],
+                            payload["model_version"],
+                            payload["provider"],
+                            payload["dataset_version"],
+                            payload["status"],
+                            Json(payload["metadata"]),
+                        ),
+                    )
+                    row = cur.fetchone()
+                conn.commit()
+                return dict(row) if row else payload
+        models = self.list_models()
+        models = [m for m in models if m.get("model_id") != payload["model_id"]]
+        models.insert(0, payload)
+        self._models_file.write_text(json.dumps(models, indent=2), encoding="utf-8")
+        return payload
+
+    def promote_model(self, model_id: str) -> dict:
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("UPDATE model_registry SET status = 'archived' WHERE status = 'active'")
+                    cur.execute(
+                        "UPDATE model_registry SET status = 'active' WHERE model_id = %s RETURNING *",
+                        (model_id,),
+                    )
+                    row = cur.fetchone()
+                conn.commit()
+                if not row:
+                    raise ValueError(f"Model not found: {model_id}")
+                return dict(row)
+        models = self.list_models()
+        found = None
+        for item in models:
+            if item.get("model_id") == model_id:
+                found = item
+                item["status"] = "active"
+            elif item.get("status") == "active":
+                item["status"] = "archived"
+        if not found:
+            raise ValueError(f"Model not found: {model_id}")
+        self._models_file.write_text(json.dumps(models, indent=2), encoding="utf-8")
+        return found
 
     def append_audit(
         self,

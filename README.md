@@ -2,8 +2,8 @@
 
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
-**Aktueller Stand (2026-06):** API **v0.7.0** auf `master`  
-**Deployment Baseline:** `v0.7.0` (lokal/Docker); Installer-Artefakt weiterhin `v0.1.0`
+**Aktueller Stand (2026-06):** API **v0.8.0** auf `master`  
+**Deployment Baseline:** `v0.8.0` (lokal/Docker); Installer `AnomalyMatrix-installer-v0.8.0.run`
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -80,7 +80,11 @@ docker compose up --build
 
 DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
 
-## API v0.7.0 (Auszug)
+## API v0.8.0 (Auszug)
+
+### Auth & Training
+- `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
+- `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`
 
 ### Inspection & Ergebnisse
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`)
@@ -144,10 +148,14 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | Core-Schema (recipes, audit, models, users) | ✅ |
 | PatchCore-Inferenz (MVP-Proxy) | ✅ |
 | OPC-UA asyncua-Server | ✅ MVP |
-| Trend-Warn-Engine + `TrendWarningRaised` | ✅ v0.7 |
-| E2E Vertical Flow + CI Frontend smoke | ✅ v0.7 |
-| Influx/MinIO/Observability | ✅ optional |
-| Echtes Modell-Training, JWT-Auth, OPC-UA TLS | 🔜 Folgerelease |
+| PatchCore Training + Promotion | ✅ v0.8 |
+| JWT/Session Auth | ✅ v0.8 |
+| OPC-UA Sign/Encrypt | ✅ v0.8 (self-signed) |
+| Performance Gate < 500 ms | ✅ v0.8 |
+| OpenCV Kamera (Webcam/Datei) | ✅ v0.8 |
+| Playwright HMI E2E | ✅ v0.8 |
+| Installer v0.8.0 | ✅ |
+| WebSocket Live-View, GigE/GenICam | 🔜 Folgerelease |
 
 ## Dokumente
 - `docs/INSTALLATION.md` — Installation (Installer + lokal)
@@ -157,7 +165,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz
 - `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
-- `docs/RELEASE_NOTES_v0.7.0.md` — Aktuelles Release
+- `docs/RELEASE_NOTES_v0.8.0.md` — Aktuelles Release
 - `docs/RELEASE_NOTES_v0.6.0.md` — Vorheriges Release
 - `docs/RELEASE_NOTES_v0.1.0.md` — Baseline-Installer-Release
 - `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
@@ -165,12 +173,12 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 ## Tests
 ```bash
 cd backend
-py -3 -m pytest -q    # 35+ Tests (Stand v0.7.0)
+py -3 -m pytest -q    # 41+ Tests (Stand v0.8.0)
 ```
 
 ## Release & Installer
-- **Aktueller Code-Stand:** `v0.7.0` (Git `master`)
-- **Installer-Baseline:** `v0.1.0` — `dist/AnomalyMatrix-installer-v0.1.0.run`
+- **Aktueller Code-Stand:** `v0.8.0` (Git `master`)
+- **Installer:** `dist/AnomalyMatrix-installer-v0.8.0.run` (via `scripts/build_installer.sh`)
 - GitHub: [TheRealByteCommander/AnomalyMatrix](https://github.com/TheRealByteCommander/AnomalyMatrix)
 
 ## Hinweise

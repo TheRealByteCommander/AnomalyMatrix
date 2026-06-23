@@ -5,7 +5,7 @@ export default {
     en: 'English',
   },
   app: {
-    eyebrow: 'AnomalyMatrix HMI · v0.7.0',
+    eyebrow: 'AnomalyMatrix HMI · v0.8.0',
     title: 'Operator Inspection Interface',
     connected: 'Connected to inspection server',
     offline: 'Offline — demo/fallback data (no live connection)',

@@ -85,7 +85,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <a href="#main-content" className="skip-link">{t('app.skipToContent')}</a>
+      <a href="#main-content" className="skip-link" data-testid="skip-to-content">{t('app.skipToContent')}</a>
       <header className="topbar">
         <div className="topbar-main">
           <div>
@@ -100,6 +100,7 @@ export default function App() {
             <button
               key={screenId}
               type="button"
+              data-testid={`nav-${screenId}`}
               onClick={() => setActive(screenId)}
               className={screenId === active ? 'tab active' : 'tab'}
             >
