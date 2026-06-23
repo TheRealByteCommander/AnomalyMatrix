@@ -41,6 +41,12 @@ export default function TrendsPage({ inspections, openHelp }) {
     [summary, t]
   );
 
+  const trendSeverity = summary?.trend_severity;
+  const trendBadgeState = trendSeverity && summary?.trend_warning ? trendSeverity : trendState(avg);
+  const trendBadgeLabel = summary?.trend_warning
+    ? t(`dashboard.statusTrend.${trendSeverity || 'amber'}`)
+    : t('trends.avgBadge', { value: avg.toFixed(2) });
+
   return (
     <section className="page-grid">
       <article className="card hero">
@@ -50,7 +56,7 @@ export default function TrendsPage({ inspections, openHelp }) {
           <p className="muted">{t('trends.source')}: {sourceLabel}</p>
           <ContextHelp articleId="trends-overview" onOpen={openHelp} />
         </div>
-        <StatusBadge state={trendState(avg)}>{t('trends.avgBadge', { value: avg.toFixed(2) })}</StatusBadge>
+        <StatusBadge state={trendBadgeState}>{trendBadgeLabel}</StatusBadge>
       </article>
 
       <article className="card kpi-grid">

@@ -18,8 +18,8 @@ def test_run_inspection_emits_domain_event(tmp_path, monkeypatch):
 
     events = bus.recent(limit=5)
     assert events
-    assert events[0]["event_type"] == "InspectionCompleted"
-    assert events[0]["payload"]["inspection_id"] == body["inspection_id"]
+    completed = next(e for e in events if e["event_type"] == "InspectionCompleted")
+    assert completed["payload"]["inspection_id"] == body["inspection_id"]
 
 
 def test_observability_summary_endpoint():

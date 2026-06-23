@@ -6,6 +6,8 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from .trend_warnings import enrich_trend_summary
+
 
 class PostgresResultRepository:
     """Postgres-backed inspection store (Phase 3). Falls back not required here."""
@@ -133,9 +135,11 @@ class PostgresResultRepository:
                     """
                 )
                 row = cur.fetchone() or {}
-        return {
+        base = {
             "count": int(row.get("count", 0)),
             "avg_score": round(float(row.get("avg_score", 0.0)), 4),
             "max_score": round(float(row.get("max_score", 0.0)), 4),
             "anomaly_count": int(row.get("anomaly_count", 0)),
         }
+        recent = list(reversed(self.latest(limit=50)))
+        return enrich_trend_summary(base, recent)

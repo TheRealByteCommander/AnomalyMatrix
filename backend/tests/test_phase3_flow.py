@@ -42,7 +42,7 @@ def test_trend_summary_endpoint():
     r = client.get('/api/v1/results/trend-summary')
     assert r.status_code == 200
     d = r.json()['data']
-    assert {'count', 'avg_score', 'max_score', 'anomaly_count'} <= set(d.keys())
+    assert {'count', 'avg_score', 'max_score', 'anomaly_count', 'trend_warning', 'trend_severity'} <= set(d.keys())
 
 
 def test_opcua_payload_mapping_unit():

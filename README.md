@@ -2,8 +2,8 @@
 
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
-**Aktueller Stand (2026-06):** API **v0.6.0** auf `master`  
-**Deployment Baseline:** `v0.6.0` (lokal/Docker); Installer-Artefakt weiterhin `v0.1.0`
+**Aktueller Stand (2026-06):** API **v0.7.0** auf `master`  
+**Deployment Baseline:** `v0.7.0` (lokal/Docker); Installer-Artefakt weiterhin `v0.1.0`
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -80,7 +80,7 @@ docker compose up --build
 
 DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
 
-## API v0.6.0 (Auszug)
+## API v0.7.0 (Auszug)
 
 ### Inspection & Ergebnisse
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`)
@@ -144,8 +144,10 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | Core-Schema (recipes, audit, models, users) | ✅ |
 | PatchCore-Inferenz (MVP-Proxy) | ✅ |
 | OPC-UA asyncua-Server | ✅ MVP |
+| Trend-Warn-Engine + `TrendWarningRaised` | ✅ v0.7 |
+| E2E Vertical Flow + CI Frontend smoke | ✅ v0.7 |
 | Influx/MinIO/Observability | ✅ optional |
-| Echtes Modell-Training, JWT-Auth, E2E-Gates | 🔜 Folgerelease |
+| Echtes Modell-Training, JWT-Auth, OPC-UA TLS | 🔜 Folgerelease |
 
 ## Dokumente
 - `docs/INSTALLATION.md` — Installation (Installer + lokal)
@@ -153,18 +155,21 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/BUILD_READY_SPEC_V1.md` — Ziel-Spezifikation
 - `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md` — Umsetzungsnotizen
 - `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz
-- `docs/RELEASE_NOTES_v0.6.0.md` — Aktuelles Release
+- `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose
+- `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
+- `docs/RELEASE_NOTES_v0.7.0.md` — Aktuelles Release
+- `docs/RELEASE_NOTES_v0.6.0.md` — Vorheriges Release
 - `docs/RELEASE_NOTES_v0.1.0.md` — Baseline-Installer-Release
 - `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
 
 ## Tests
 ```bash
 cd backend
-py -3 -m pytest -q    # 27+ Tests (Stand v0.6.0)
+py -3 -m pytest -q    # 35+ Tests (Stand v0.7.0)
 ```
 
 ## Release & Installer
-- **Aktueller Code-Stand:** `v0.6.0` (Git `master`)
+- **Aktueller Code-Stand:** `v0.7.0` (Git `master`)
 - **Installer-Baseline:** `v0.1.0` — `dist/AnomalyMatrix-installer-v0.1.0.run`
 - GitHub: [TheRealByteCommander/AnomalyMatrix](https://github.com/TheRealByteCommander/AnomalyMatrix)
 

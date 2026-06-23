@@ -5,11 +5,12 @@ export default {
     en: 'English',
   },
   app: {
-    eyebrow: 'AnomalyMatrix HMI · v0.6.0',
+    eyebrow: 'AnomalyMatrix HMI · v0.7.0',
     title: 'Operator Inspection Interface',
     connected: 'Connected to inspection server',
     offline: 'Offline — demo/fallback data (no live connection)',
     navLabel: 'Main navigation',
+    skipToContent: 'Skip to content',
   },
   nav: {
     dashboard: 'Dashboard',
@@ -58,7 +59,13 @@ export default {
     kpiQueueLag: 'Queue lag',
     kpiOpcError: 'OPC UA errors',
     latestTitle: 'Latest inspections',
+    statusOk: 'Process stable',
     statusTrendWarning: 'Trend warning active',
+    statusTrend: {
+      amber: 'Trend warning active',
+      red: 'Critical trend',
+      green: 'Process stable',
+    },
   },
   inspectionDetail: {
     eyebrow: 'Inspection Detail',

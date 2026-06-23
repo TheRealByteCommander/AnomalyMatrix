@@ -14,8 +14,10 @@ def _store(request: Request) -> CoreStore:
     return request.app.state.core_store
 
 
-def _events(request: Request) -> DomainEventBus:
-    return request.app.state.event_bus
+def _events(_request: Request) -> DomainEventBus:
+    from .. import main as main_module
+
+    return main_module.event_bus
 
 
 @router.get("/recipes")

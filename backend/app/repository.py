@@ -4,6 +4,8 @@ from pathlib import Path
 from threading import Lock
 import json
 
+from .trend_warnings import enrich_trend_summary
+
 
 class ResultRepository:
     def __init__(self, root: Path) -> None:
@@ -53,12 +55,14 @@ class ResultRepository:
     def trend_summary(self) -> dict:
         items = self._read_all()
         if not items:
-            return {"count": 0, "avg_score": 0.0, "max_score": 0.0, "anomaly_count": 0}
+            base = {"count": 0, "avg_score": 0.0, "max_score": 0.0, "anomaly_count": 0}
+            return enrich_trend_summary(base, [])
         scores = [float(i.get('inference', {}).get('anomaly_score', 0.0)) for i in items]
         anomaly_count = sum(1 for i in items if i.get('inference', {}).get('status') == 'anomaly')
-        return {
+        base = {
             "count": len(items),
             "avg_score": round(sum(scores) / len(scores), 4),
             "max_score": round(max(scores), 4),
             "anomaly_count": anomaly_count,
         }
+        return enrich_trend_summary(base, items)

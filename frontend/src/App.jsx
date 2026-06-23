@@ -85,6 +85,7 @@ export default function App() {
 
   return (
     <div className="shell">
+      <a href="#main-content" className="skip-link">{t('app.skipToContent')}</a>
       <header className="topbar">
         <div className="topbar-main">
           <div>
@@ -107,7 +108,9 @@ export default function App() {
           ))}
         </nav>
       </header>
-      {pages[active]}
+      <main id="main-content" className="main-content">
+        {pages[active]}
+      </main>
       <HelpLauncher onOpenArticle={openHelp} onOpenFullHelp={openFullHelp} />
     </div>
   );

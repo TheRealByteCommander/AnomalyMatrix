@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
-import { runInspection, fetchRecentInspections, fetchObservabilitySummary } from '../services';
+import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary } from '../services';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { useI18n } from '../i18n/I18nProvider';
@@ -11,6 +11,15 @@ export default function DashboardPage({ inspections, setInspections, setSelected
   const [runState, setRunState] = useState('idle');
   const [notice, setNotice] = useState(() => t('dashboard.ready'));
   const [kpis, setKpis] = useState(hmiState.kpis);
+  const [context, setContext] = useState({
+    line: hmiState.line,
+    recipe: hmiState.recipe,
+    modelVersion: hmiState.modelVersion,
+  });
+  const [trendStatus, setTrendStatus] = useState({
+    warning: true,
+    severity: hmiState.status,
+  });
 
   useEffect(() => {
     if (runState === 'idle') setNotice(t('dashboard.ready'));
@@ -20,17 +29,38 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     let cancelled = false;
     (async () => {
       try {
-        const summary = await fetchObservabilitySummary();
-        if (!cancelled) {
-          setKpis({
-            cycleMsP95: summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
-            anomalyRate: summary.inspection_count
-              ? ((summary.anomaly_count / summary.inspection_count) * 100).toFixed(1)
-              : hmiState.kpis.anomalyRate,
-            queueLagMs: hmiState.kpis.queueLagMs,
-            opcUaPublishErrorRate: summary.opc_ua_publish_error_rate_pct ?? hmiState.kpis.opcUaPublishErrorRate,
-          });
-        }
+        const [summary, recipeData, modelData, trend] = await Promise.all([
+          fetchObservabilitySummary(),
+          fetchRecipes().catch(() => ({ items: [] })),
+          fetchModels().catch(() => ({ items: [] })),
+          fetchTrendSummary().catch(() => null),
+        ]);
+        if (cancelled) return;
+
+        const activeRecipe = (recipeData.items || []).find((r) => r.status === 'active') || recipeData.items?.[0];
+        const activeModel = (modelData.items || []).find((m) => m.status === 'active') || modelData.items?.[0];
+        const latestCamera = inspections[0]?.raw?.frame?.camera_id;
+
+        setContext({
+          line: latestCamera ? `Camera ${latestCamera}` : activeRecipe?.name || hmiState.line,
+          recipe: activeRecipe?.recipe_id || activeRecipe?.name || hmiState.recipe,
+          modelVersion: activeModel?.model_version || activeModel?.name || hmiState.modelVersion,
+        });
+
+        setKpis({
+          cycleMsP95: summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
+          anomalyRate: summary.inspection_count
+            ? ((summary.anomaly_count / summary.inspection_count) * 100).toFixed(1)
+            : hmiState.kpis.anomalyRate,
+          queueLagMs: hmiState.kpis.queueLagMs,
+          opcUaPublishErrorRate: summary.opc_ua_publish_error_rate_pct ?? hmiState.kpis.opcUaPublishErrorRate,
+        });
+
+        const severity = trend?.trend_severity || summary.trend_severity || 'green';
+        setTrendStatus({
+          warning: Boolean(trend?.trend_warning ?? summary.trend_warning),
+          severity,
+        });
       } catch {
         // keep seed KPIs when API unavailable
       }
@@ -38,7 +68,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     return () => {
       cancelled = true;
     };
-  }, [inspections.length]);
+  }, [inspections.length, inspections[0]?.id]);
 
   const anomalyRate = useMemo(() => {
     if (!inspections.length) return 0;
@@ -81,6 +111,10 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     }
   }
 
+  const statusLabel = trendStatus.warning
+    ? t(`dashboard.statusTrend.${trendStatus.severity}`)
+    : t('dashboard.statusOk');
+
   const stateClass = runState === 'error' ? 'state-red' : runState === 'running' ? 'state-amber' : runState === 'success' ? 'state-green' : 'state-amber';
 
   return (
@@ -88,11 +122,11 @@ export default function DashboardPage({ inspections, setInspections, setSelected
       <article className="card hero">
         <div>
           <p className="eyebrow">{t('dashboard.eyebrow')}</p>
-          <h2>{hmiState.line}</h2>
-          <p className="muted">{t('common.recipe')} {hmiState.recipe} · {t('common.model')} {hmiState.modelVersion}</p>
+          <h2>{context.line}</h2>
+          <p className="muted">{t('common.recipe')} {context.recipe} · {t('common.model')} {context.modelVersion}</p>
           <ContextHelp articleId="dashboard-overview" onOpen={openHelp} />
         </div>
-        <StatusBadge state={hmiState.status}>{t('dashboard.statusTrendWarning')}</StatusBadge>
+        <StatusBadge state={trendStatus.warning ? trendStatus.severity : 'green'}>{statusLabel}</StatusBadge>
       </article>
 
       <article className="card run-panel">

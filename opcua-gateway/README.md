@@ -1,6 +1,6 @@
 # opcua-gateway
 
-OPC-UA-Gateway für AnomalyMatrix (**v0.4.0**) — SPS-Anbindung mit Trigger und Stop-Signalen.
+OPC-UA-Gateway für AnomalyMatrix (**v0.7.0**) — SPS-Anbindung mit Trigger und Stop-Signalen.
 
 ## Funktion
 - **asyncua** OPC-UA-Server (Port **4840**)

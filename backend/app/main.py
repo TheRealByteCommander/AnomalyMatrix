@@ -27,6 +27,7 @@ from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
 from .services_edge import capture_frame, frame_to_dict
 from .storage_minio import ensure_buckets, store_heatmap_artifact
+from .trend_warnings import maybe_emit_trend_warning
 
 _data_root = Path(__file__).resolve().parents[1] / "data"
 _dsn = os.getenv("DATABASE_URL", "").strip() or None
@@ -62,8 +63,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.6.0",
-    description="MVP v0.6: RBAC, feedback, PatchCore, core schema",
+    version="0.7.0",
+    description="v0.7: Trend warnings, E2E gates, HMI live context",
     lifespan=lifespan,
 )
 
@@ -94,6 +95,10 @@ def _guard(request: Request, permission: str) -> None:
     lic = license_map.get(permission)
     if lic:
         _require_license_feature(lic)
+
+
+def _event_bus(_request: Request) -> DomainEventBus:
+    return event_bus
 
 
 def _check_admin_token(request: Request):
@@ -287,10 +292,21 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
         provider=inference.provider,
         opcua_published=bool(opcua.published),
     )
-    event = event_bus.emit_inspection_completed(result, latency_ms=latency_ms)
+    event = _event_bus(request).emit_inspection_completed(result, latency_ms=latency_ms)
     result["domain_event_id"] = event.get("event_id")
 
     repo.append(result)
+    trend = repo.trend_summary()
+    result["trend_warning"] = trend.get("trend_warning", False)
+    trend_event = maybe_emit_trend_warning(
+        _event_bus(request),
+        trend=trend,
+        recipe_id=frame.recipe_id,
+        model_version=inference.model_version,
+    )
+    if trend_event:
+        result["trend_warning_event_id"] = trend_event.get("event_id")
+
     core_store.append_audit(
         actor=auth.user_id,
         action="inspection.run",
@@ -343,6 +359,9 @@ async def observability_summary(request: Request):
         "max_score": trend.get("max_score", 0.0),
         "inspection_count": trend.get("count", 0),
         "anomaly_count": trend.get("anomaly_count", 0),
+        "trend_warning": trend.get("trend_warning", False),
+        "trend_severity": trend.get("trend_severity", "green"),
+        "trend_reason": trend.get("trend_reason"),
         "inference_p95_ms": influx.get("inference_p95_ms", 0.0),
         "opc_ua_publish_error_rate_pct": influx.get("opc_ua_publish_error_rate_pct", 0.0),
         "metrics_source": influx.get("source", "repository"),
@@ -354,5 +373,5 @@ async def observability_summary(request: Request):
 async def events_recent(request: Request, limit: int = Query(default=20, ge=1, le=200)):
     _guard(request, "inspection.read")
     request_id = request.state.request_id
-    items = event_bus.recent(limit=limit)
+    items = _event_bus(request).recent(limit=limit)
     return success_envelope({"items": items, "count": len(items)}, request_id)

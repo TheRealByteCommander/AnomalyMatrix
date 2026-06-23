@@ -116,8 +116,8 @@ A release/project increment is only complete when all are true:
 - [x] Unit/Integration tests (backend pytest)
 
 ### Offen (Folgerelease)
-1) CI gates für lint/test/security vollständig automatisieren
-2) E2E-Tests (capture → inference → decision → feedback)
+1) ~~CI gates für lint/test/security vollständig automatisieren~~ — **teilweise v0.7** (Backend + Frontend smoke)
+2) ~~E2E-Tests (capture → inference → decision → feedback)~~ — **v0.7** (`test_e2e_vertical_flow.py`)
 3) Echtes PatchCore-Training + Model-Registry-Promotion
 4) OPC-UA Sign/Encrypt + Zertifikats-Auth
 5) JWT/Session-Auth, WebSocket Live-View
