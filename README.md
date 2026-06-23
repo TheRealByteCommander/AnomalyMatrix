@@ -2,8 +2,8 @@
 
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
-**Aktueller Stand (2026-06):** API **v0.8.0** auf `master`  
-**Deployment Baseline:** `v0.8.0` (lokal/Docker); Installer `AnomalyMatrix-installer-v0.8.0.run`
+**Aktueller Stand (2026-06):** API **v1.0.0** — produktionsbereit  
+**Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -63,10 +63,19 @@ API-Health: [http://127.0.0.1:8080/api/v1/health](http://127.0.0.1:8080/api/v1/h
 
 Details: `docs/INSTALLATION.md`
 
-## Docker Compose
+## Docker Compose (Development)
 ```bash
 docker compose up --build
 ```
+
+## Production Deploy
+
+```bash
+cp .env.production.example .env.production   # secrets ersetzen
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+HMI: Port **80** (nginx, Login erforderlich). Runbook: `docs/PRODUCTION_RUNBOOK.md` · Freigabe: `docs/RELEASE_READINESS.md`
 
 | Service | Port |
 |---------|------|
@@ -78,13 +87,13 @@ docker compose up --build
 | InfluxDB | 8086 |
 | MinIO | 9000 / 9001 |
 
-DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
+DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`004`).
 
-## API v0.8.0 (Auszug)
+## API v1.0.0 (Auszug)
 
 ### Auth & Training
 - `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
-- `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`
+- `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`, `POST /api/v1/models/rollback`
 
 ### Inspection & Ergebnisse
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`)
@@ -111,6 +120,9 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
 
 | Variable | Zweck |
 |----------|--------|
+| `ANOMALYMATRIX_ENV` | `prod` = Startup-Guards, Auth-Pflicht, CORS, Rate-Limits |
+| `AMX_CORS_ORIGINS` | Erlaubte HMI-Origins (Prod, kommagetrennt) |
+| `AMX_ADMIN_PASSWORD` | Einmaliges Admin-Passwort-Bootstrap (Prod) |
 | `DATABASE_URL` | Postgres (Compose); leer = JSONL-Fallback |
 | `ANOMALYMATRIX_INFERENCE_PROVIDER` | `stub` \| `opencv_ready` \| `patchcore` |
 | `EDGE_ACQUISITION_URL` | Edge-Capture HTTP |
@@ -119,9 +131,9 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`003`).
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
 
-Dev-Auth (wenn `RBAC_ENFORCE=false`): Header `X-AMX-Role`, `X-AMX-User` oder `X-AMX-Api-Key` (Seed-Keys in `scripts/db/003_core_schema.sql`).
+Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod` und `RBAC_ENFORCE=false`): Header `X-AMX-Role`, `X-AMX-User` oder `X-AMX-Api-Key`.
 
-Vollständige Liste: `.env.example`
+Produktion: `.env.production.example` · Dev: `.env.example`
 
 ## Frontend (HMI)
 

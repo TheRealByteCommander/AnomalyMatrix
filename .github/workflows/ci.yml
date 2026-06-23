@@ -67,3 +67,22 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run Playwright E2E
         run: npm run test:e2e
+
+  production-guards:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Production + RBAC tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          pytest -q tests/test_production_guards.py tests/test_load.py
+          ANOMALYMATRIX_ENV=prod RBAC_ENFORCE=true pytest -q tests/test_production_guards.py::test_production_requires_auth_header

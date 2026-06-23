@@ -55,6 +55,38 @@ def record_inspection_metrics(
         return False
 
 
+def record_process_trend(*, avg_score: float, drift_score: float | None = None) -> bool:
+    if not _influx_enabled():
+        return False
+    try:
+        from influxdb_client import InfluxDBClient, Point
+        from influxdb_client.client.write_api import SYNCHRONOUS
+    except ImportError:
+        return False
+
+    url = os.getenv("INFLUX_URL", "").strip()
+    token = os.getenv("INFLUX_TOKEN", "").strip()
+    org = os.getenv("INFLUX_ORG", "anomalymatrix").strip()
+    bucket = os.getenv("INFLUX_BUCKET", "inspection_metrics").strip()
+
+    if not url or not token:
+        return False
+
+    point = (
+        Point("process_trends")
+        .field("rolling_avg_score", float(avg_score))
+        .field("drift_score", float(drift_score if drift_score is not None else avg_score))
+        .time(datetime.now(timezone.utc))
+    )
+    try:
+        with InfluxDBClient(url=url, token=token, org=org) as client:
+            write_api = client.write_api(write_options=SYNCHRONOUS)
+            write_api.write(bucket=bucket, org=org, record=point)
+        return True
+    except Exception:
+        return False
+
+
 def query_observability_summary() -> dict:
     """Best-effort KPI summary from Influx; empty dict if unavailable."""
     if not _influx_enabled():

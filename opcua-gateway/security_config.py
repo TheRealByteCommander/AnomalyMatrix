@@ -7,7 +7,13 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def enforce_production_opcua() -> None:
+    if os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower() in {"prod", "production"}:
+        os.environ.setdefault("OPCUA_SECURITY_ENABLED", "true")
+
+
 def security_enabled() -> bool:
+    enforce_production_opcua()
     return os.getenv("OPCUA_SECURITY_ENABLED", "false").strip().lower() in {"1", "true", "yes"}
 
 

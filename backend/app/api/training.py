@@ -60,9 +60,12 @@ async def promote_model(request: Request, model_id: str, payload: dict = Body(de
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
+    meta = model.get("metadata") or {}
     validation = validate_candidate(
         baseline_score=float(payload.get("baseline_score", 0.35)),
         candidate_score=float(payload.get("candidate_score", 0.30)),
+        data_source=str(meta.get("data_source", "unknown")),
+        sample_count=int(meta.get("embedding_count", 0)),
     )
     if not validation["passed"]:
         raise HTTPException(status_code=409, detail=validation)
@@ -90,3 +93,23 @@ async def promote_model(request: Request, model_id: str, payload: dict = Body(de
     )
     promoted["domain_event_id"] = event.get("event_id")
     return success_envelope({"model": promoted, "validation": validation}, request.state.request_id)
+
+
+@router.post("/models/rollback")
+async def rollback_model(request: Request):
+    auth = resolve_auth(request, _store(request))
+    require_permission(auth, "models.rollback")
+    before = _store(request).get_active_model()
+    restored = _store(request).rollback_model()
+    if not restored:
+        raise HTTPException(status_code=404, detail="No archived model available for rollback")
+    _store(request).append_audit(
+        actor=auth.user_id,
+        action="models.rollback",
+        resource_type="model",
+        resource_id=restored.get("model_id"),
+        before_state=before,
+        after_state=restored,
+        request_id=request.state.request_id,
+    )
+    return success_envelope({"restored_model": restored, "rolled_back": before}, request.state.request_id)

@@ -20,15 +20,18 @@ from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
 from .core_store import CoreStore
 from .event_bus import DomainEventBus
-from .inference_provider import get_inference_provider
+from .heatmap import generate_heatmap_png
+from .inference_provider import _frame_grayscale, get_inference_provider
 from .licensing import LicenseManager
-from .metrics_influx import query_observability_summary, record_inspection_metrics
+from .metrics_influx import query_observability_summary, record_inspection_metrics, record_process_trend
+from .middleware_production import configure_production_middleware
 from .models import CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_busy_state, publish_to_opcua
+from .production import enforce_production_config, is_production
 from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
 from .services_edge import capture_frame, frame_to_dict
-from .storage_minio import ensure_buckets, store_heatmap_artifact
+from .storage_minio import ensure_buckets, store_heatmap_binary, store_raw_frame
 from .trend_warnings import maybe_emit_trend_warning
 
 _data_root = Path(__file__).resolve().parents[1] / "data"
@@ -41,8 +44,21 @@ event_bus = DomainEventBus(_data_root)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    enforce_production_config()
     app.state.core_store = core_store
     app.state.event_bus = event_bus
+    if is_production():
+        import logging
+
+        logger = logging.getLogger(__name__)
+        admin_pw = os.getenv("AMX_ADMIN_PASSWORD", "").strip()
+        if admin_pw:
+            user = core_store.get_user_by_id("admin-1")
+            if user and not user.get("password_hash"):
+                if core_store.set_user_password("admin-1", admin_pw):
+                    logger.info("Admin password bootstrapped from AMX_ADMIN_PASSWORD")
+        elif not (core_store.get_user_by_id("admin-1") or {}).get("password_hash"):
+            logger.warning("Production: set AMX_ADMIN_PASSWORD or configure admin-1 password_hash in database")
     license_manager.validate_once()
     ensure_buckets()
 
@@ -65,10 +81,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="0.8.0",
-    description="v0.8: PatchCore training, JWT auth, camera, OPC-UA TLS, perf gates",
+    version="1.0.0",
+    description="v1.0: Production-ready inspection platform",
     lifespan=lifespan,
 )
+
+configure_production_middleware(app)
 
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(catalog_router, prefix="/api/v1")
@@ -261,31 +279,45 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     publish_busy_state(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
 
     frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+    frame_dict = frame_to_dict(frame)
     provider = get_inference_provider()
-    inference = provider.infer(frame_to_dict(frame))
+    inference = provider.infer(frame_dict)
 
     decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
     snap = license_manager.snapshot()
     inspection_id = str(uuid4())
     result = {
         "inspection_id": inspection_id,
-        "frame": frame_to_dict(frame),
+        "frame": frame_dict,
         "inference": inference.__dict__,
         "decision": decision,
-        "heatmap": {"uri": inference.heatmap_uri, "placeholder": True},
+        "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
         "license_tier": snap.tier,
     }
+
+    gray = _frame_grayscale(frame_dict)
+    heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
+    if frame_dict.get("image_b64"):
+        import base64
+
+        try:
+            raw_bytes = base64.b64decode(frame_dict["image_b64"])
+            raw_uri = store_raw_frame(inspection_id=inspection_id, recipe_id=payload.recipe_id, image_bytes=raw_bytes)
+            if raw_uri:
+                result["frame"]["stored_raw_uri"] = raw_uri
+        except Exception:
+            pass
 
     opcua = publish_to_opcua(result)
     result["opcua_publish"] = opcua.__dict__
 
-    stored_uri = store_heatmap_artifact(
+    stored_uri = store_heatmap_binary(
         inspection_id=inspection_id,
-        heatmap_uri=inference.heatmap_uri,
+        png_bytes=heatmap_png,
         anomaly_score=inference.anomaly_score,
     )
     if stored_uri:
-        result["heatmap"] = {"uri": stored_uri, "placeholder": True, "storage": "minio"}
+        result["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
 
     latency_ms = (time.perf_counter() - started) * 1000.0
     record_inspection_metrics(
@@ -301,6 +333,7 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
 
     repo.append(result)
     trend = repo.trend_summary()
+    record_process_trend(avg_score=float(trend.get("avg_score", inference.anomaly_score)))
     result["trend_warning"] = trend.get("trend_warning", False)
     trend_event = maybe_emit_trend_warning(
         _event_bus(request),

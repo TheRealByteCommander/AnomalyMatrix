@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
 from fastapi import HTTPException, Request
+
+from .production import auth_required, rbac_enforced
 
 # Permissions per BUILD_READY_SPEC (IEC 62443-oriented roles)
 ROLE_PERMISSIONS: dict[str, set[str]] = {
@@ -30,6 +31,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "models.read",
         "models.train",
         "models.promote",
+        "models.rollback",
     },
     "admin": {
         "inspection.run",
@@ -41,6 +43,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "models.read",
         "models.train",
         "models.promote",
+        "models.rollback",
         "audit.read",
         "license.admin",
     },
@@ -55,10 +58,6 @@ class AuthContext:
 
     def has_permission(self, permission: str) -> bool:
         return permission in ROLE_PERMISSIONS.get(self.role_id, set())
-
-
-def rbac_enforced() -> bool:
-    return os.getenv("RBAC_ENFORCE", "false").strip().lower() in {"1", "true", "yes"}
 
 
 def resolve_auth(request: Request, core_store) -> AuthContext:
@@ -102,6 +101,9 @@ def resolve_auth(request: Request, core_store) -> AuthContext:
             )
         if rbac_enforced():
             raise HTTPException(status_code=401, detail="Invalid API key")
+
+    if auth_required():
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     role = request.headers.get("X-AMX-Role", "operator").strip() or "operator"
     user_id = request.headers.get("X-AMX-User", "dev-operator").strip() or "dev-operator"

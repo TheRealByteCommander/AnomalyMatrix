@@ -39,6 +39,14 @@ body { margin: 0; font-family: Inter, system-ui, sans-serif; background: radial-
 .shell { max-width: 1260px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
 .topbar { display: grid; gap: .8rem; }
 .topbar-main { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.topbar-actions { display: flex; gap: .6rem; align-items: flex-start; flex-wrap: wrap; }
+.login-shell { min-height: 70vh; display: grid; place-items: center; }
+.login-card { width: min(420px, 100%); display: grid; gap: .8rem; }
+.login-card label { display: grid; gap: .35rem; color: var(--muted); font-size: .85rem; }
+.login-card input {
+  min-height: 42px; border: 1px solid var(--line); border-radius: 12px;
+  background: #111a2b; color: var(--text); padding: .5rem .7rem; font: inherit;
+}
 .lang-switcher { display: grid; gap: .25rem; min-width: 140px; }
 .lang-switcher-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .lang-switcher-select {

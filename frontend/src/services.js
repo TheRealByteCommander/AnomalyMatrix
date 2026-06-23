@@ -131,6 +131,14 @@ export async function login(userId, password) {
   return data;
 }
 
+export async function logout() {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+  } finally {
+    setStoredToken('');
+  }
+}
+
 export async function fetchAuthMe() {
   const r = await fetch(`${API_BASE}/auth/me`, { headers: withHeaders(), credentials: 'include' });
   return parseEnvelope(r);

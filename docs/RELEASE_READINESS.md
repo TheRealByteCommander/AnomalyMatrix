@@ -1,36 +1,58 @@
 # AnomalyMatrix — Release Readiness Checklist
 
-Stand: **v0.8.0** (2026-06)
+Stand: **v1.0.0** (Production)
 
 ## Build & Tests
 
-| Check | Status | Nachweis |
-|-------|--------|----------|
-| Backend `compileall` | ✅ | CI |
-| pytest (41+ Tests) | ✅ | Provider-Matrix, E2E, Auth, Training, Perf |
-| Performance < 500 ms | ✅ | `test_performance_gate.py` |
-| Frontend production build | ✅ | CI `frontend-smoke` |
-| Playwright HMI E2E | ✅ | CI `frontend-e2e` |
+| Check | Status |
+|-------|--------|
+| Backend pytest (45+ Tests) | ✅ |
+| Performance gate < 500 ms | ✅ |
+| Parallel load smoke (10 runs) | ✅ |
+| Production guard tests | ✅ |
+| Frontend build + Playwright E2E | ✅ |
+| CI: backend + frontend + e2e + prod job | ✅ |
 
 ## Security
 
 | Check | Status |
 |-------|--------|
-| RBAC + API-Key | ✅ |
-| JWT + Session Cookie | ✅ v0.8 |
-| OPC-UA Sign/Encrypt | ✅ v0.8 (self-signed, env-gated) |
-| `JWT_SECRET` in Produktion | ⚠️ Pflicht |
+| RBAC enforced in prod | ✅ |
+| JWT + Session auth | ✅ |
+| CORS allowlist (`AMX_CORS_ORIGINS`) | ✅ |
+| Rate limiting | ✅ |
+| Security headers (HSTS in prod) | ✅ |
+| No dev-header auth in prod | ✅ |
+| OPC-UA Sign/Encrypt (env-gated) | ✅ |
+| Secrets via `.env.production` | ✅ |
 
-## Produktfeatures v0.8
+## Production Stack
 
-| Feature | Status |
-|---------|--------|
-| PatchCore Memory-Bank Training | ✅ MVP |
-| Model Promotion + `ModelRetrained` | ✅ |
-| OpenCV Kamera (Webcam/Datei) | ✅ |
-| Installer v0.8.0 | ✅ |
+| Check | Status |
+|-------|--------|
+| `docker-compose.prod.yml` | ✅ |
+| Frontend nginx + API proxy | ✅ |
+| HMI login (`VITE_REQUIRE_AUTH`) | ✅ |
+| Postgres migrations incl. 004 | ✅ |
+| Backup/restore scripts | ✅ |
+| `docs/PRODUCTION_RUNBOOK.md` | ✅ |
 
-## Freigabe-Empfehlung
+## ML / Line Integration
 
-**Dev / Pilot / Demo:** freigegeben  
-**Produktion:** `RBAC_ENFORCE=true`, `JWT_SECRET` rotieren, OPC-UA-Zertifikate von PKI, echte Trainingsdaten statt Synthetic-Seed
+| Check | Status |
+|-------|--------|
+| Training from MinIO/local images | ✅ |
+| Promotion gate (samples + non-synthetic in prod) | ✅ |
+| Model rollback endpoint | ✅ |
+| Heatmap PNG to MinIO | ✅ |
+| Raw frame storage | ✅ |
+| OpenCV camera driver | ✅ |
+| GigE/GenICam industrial cameras | 🔜 optional upgrade |
+
+## Freigabe
+
+| Umgebung | Status |
+|----------|--------|
+| Development | ✅ |
+| Staging / Pilot | ✅ mit `.env.production` |
+| **Production (24/7)** | ✅ nach Checkliste + Secret-Rotation + PKI-OPC-UA |

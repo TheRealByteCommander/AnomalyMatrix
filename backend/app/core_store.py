@@ -7,6 +7,7 @@ from threading import Lock
 from uuid import uuid4
 
 from .auth_tokens import create_session_id, hash_password, verify_password
+from .production import is_production
 
 try:
     import psycopg2
@@ -45,19 +46,17 @@ class CoreStore:
 
     def _seed_json_fallback(self) -> None:
         if not self._users_file.exists():
-            default_password = hash_password("changeme")
-            self._users_file.write_text(
-                json.dumps(
-                    [
-                        {"user_id": "operator-1", "display_name": "Line Operator", "role_id": "operator", "api_key": "amx-key-operator", "password_hash": default_password, "active": True},
-                        {"user_id": "qa-1", "display_name": "QA Lead", "role_id": "qa_lead", "api_key": "amx-key-qa", "password_hash": default_password, "active": True},
-                        {"user_id": "engineer-1", "display_name": "Process Engineer", "role_id": "process_engineer", "api_key": "amx-key-engineer", "password_hash": default_password, "active": True},
-                        {"user_id": "admin-1", "display_name": "System Admin", "role_id": "admin", "api_key": "amx-key-admin", "password_hash": default_password, "active": True},
-                    ],
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
+            users = [
+                {"user_id": "operator-1", "display_name": "Line Operator", "role_id": "operator", "api_key": "amx-key-operator", "active": True},
+                {"user_id": "qa-1", "display_name": "QA Lead", "role_id": "qa_lead", "api_key": "amx-key-qa", "active": True},
+                {"user_id": "engineer-1", "display_name": "Process Engineer", "role_id": "process_engineer", "api_key": "amx-key-engineer", "active": True},
+                {"user_id": "admin-1", "display_name": "System Admin", "role_id": "admin", "api_key": "amx-key-admin", "active": True},
+            ]
+            if not is_production():
+                default_password = hash_password("changeme")
+                for user in users:
+                    user["password_hash"] = default_password
+            self._users_file.write_text(json.dumps(users, indent=2), encoding="utf-8")
         if not self._recipes_file.exists():
             self._recipes_file.write_text(
                 json.dumps(
@@ -113,6 +112,29 @@ class CoreStore:
         if not stored or not verify_password(password, stored):
             return None
         return user
+
+    def set_user_password(self, user_id: str, password: str) -> bool:
+        password_hash = hash_password(password)
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE users SET password_hash = %s WHERE user_id = %s AND active = TRUE",
+                        (password_hash, user_id),
+                    )
+                    updated = cur.rowcount > 0
+                conn.commit()
+                return updated
+        users = json.loads(self._users_file.read_text(encoding="utf-8"))
+        found = False
+        for user in users:
+            if user.get("user_id") == user_id and user.get("active", True):
+                user["password_hash"] = password_hash
+                found = True
+                break
+        if found:
+            self._users_file.write_text(json.dumps(users, indent=2), encoding="utf-8")
+        return found
 
     def create_session(self, user_id: str, *, ttl_sec: int = 28800) -> dict:
         from datetime import datetime, timedelta, timezone
@@ -280,6 +302,38 @@ class CoreStore:
             raise ValueError(f"Model not found: {model_id}")
         self._models_file.write_text(json.dumps(models, indent=2), encoding="utf-8")
         return found
+
+    def rollback_model(self) -> dict | None:
+        models = self.list_models()
+        active = next((m for m in models if m.get("status") == "active"), None)
+        if not active:
+            return None
+        previous = next((m for m in models if m.get("status") == "archived"), None)
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("UPDATE model_registry SET status = 'rolled_back' WHERE model_id = %s", (active["model_id"],))
+                    if previous:
+                        cur.execute(
+                            "UPDATE model_registry SET status = 'active' WHERE model_id = %s RETURNING *",
+                            (previous["model_id"],),
+                        )
+                        row = cur.fetchone()
+                    else:
+                        row = None
+                conn.commit()
+                return dict(row) if row else None
+        for item in models:
+            if item.get("model_id") == active.get("model_id"):
+                item["status"] = "rolled_back"
+        restored = None
+        if previous:
+            for item in models:
+                if item.get("model_id") == previous.get("model_id"):
+                    item["status"] = "active"
+                    restored = item
+        self._models_file.write_text(json.dumps(models, indent=2), encoding="utf-8")
+        return restored
 
     def append_audit(
         self,

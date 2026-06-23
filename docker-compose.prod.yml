@@ -1,0 +1,51 @@
+# Production overlay — use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  api:
+    env_file:
+      - .env.production
+    environment:
+      ANOMALYMATRIX_ENV: prod
+      RBAC_ENFORCE: "true"
+      LICENSE_ENFORCE: "true"
+      ANOMALYMATRIX_INFERENCE_PROVIDER: patchcore
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api/v1
+        VITE_REQUIRE_AUTH: "true"
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  edge-acquisition:
+    environment:
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-opencv}
+      CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    restart: unless-stopped
+
+  opcua-gateway:
+    environment:
+      OPCUA_SECURITY_ENABLED: "true"
+      OPCUA_CERT_DIR: /app/certs
+    volumes:
+      - opcua_certs:/app/certs
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  influxdb:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+
+volumes:
+  opcua_certs:

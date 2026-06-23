@@ -4,12 +4,15 @@ import InspectionDetailPage from './pages/InspectionDetailPage';
 import TrendsPage from './pages/TrendsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import HelpPage from './pages/HelpPage';
+import LoginPage from './pages/LoginPage';
 import HelpLauncher from './components/HelpLauncher';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useI18n } from './i18n/I18nProvider';
 import { SCREEN_HELP_ARTICLE, SCREEN_IDS, SCREEN_ORDER } from './i18n/screens';
 import { inspections as seed } from './data/sampleData';
-import { fetchRecentInspections } from './services';
+import { fetchAuthMe, fetchRecentInspections, getStoredToken, logout } from './services';
+
+const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true';
 
 export default function App() {
   const { t } = useI18n();
@@ -17,6 +20,8 @@ export default function App() {
   const [inspections, setInspections] = useState(seed);
   const [selectedInspectionId, setSelectedInspectionId] = useState(seed[0]?.id ?? null);
   const [apiOnline, setApiOnline] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+  const [authReady, setAuthReady] = useState(!requireAuth);
   const [helpState, setHelpState] = useState({
     articleId: null,
     categoryId: null,
@@ -26,11 +31,35 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (requireAuth || getStoredToken()) {
+        try {
+          const me = await fetchAuthMe();
+          if (!cancelled) setAuthUser(me);
+        } catch {
+          if (!cancelled) setAuthUser(null);
+        } finally {
+          if (!cancelled) setAuthReady(true);
+        }
+      } else {
+        setAuthReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (requireAuth && !authUser) return;
+    let cancelled = false;
+    (async () => {
       try {
         const latest = await fetchRecentInspections();
         if (!cancelled && latest.length) {
           setInspections(latest);
           setSelectedInspectionId(latest[0].id);
+          setApiOnline(true);
+        } else if (!cancelled) {
           setApiOnline(true);
         }
       } catch {
@@ -40,7 +69,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authUser, requireAuth]);
 
   const selectedInspection = useMemo(
     () => inspections.find((i) => i.id === selectedInspectionId) || inspections[0] || null,
@@ -56,6 +85,19 @@ export default function App() {
   function openFullHelp({ categoryId = null, query = '' } = {}) {
     setHelpState({ articleId: 'what-is-anomalymatrix', categoryId, query });
     setActive(SCREEN_IDS.help);
+  }
+
+  async function handleLogout() {
+    await logout();
+    setAuthUser(null);
+  }
+
+  if (!authReady) {
+    return <div className="shell"><p className="muted">{t('login.loading')}</p></div>;
+  }
+
+  if (requireAuth && !authUser) {
+    return <LoginPage onSuccess={setAuthUser} />;
   }
 
   const pageProps = {
@@ -91,9 +133,19 @@ export default function App() {
           <div>
             <p className="eyebrow">{t('app.eyebrow')}</p>
             <h1>{t('app.title')}</h1>
-            <p className="muted">{apiOnline ? t('app.connected') : t('app.offline')}</p>
+            <p className="muted">
+              {apiOnline ? t('app.connected') : t('app.offline')}
+              {authUser ? ` · ${authUser.display_name}` : ''}
+            </p>
           </div>
-          <LanguageSwitcher />
+          <div className="topbar-actions">
+            <LanguageSwitcher />
+            {authUser ? (
+              <button type="button" className="tab" data-testid="logout-btn" onClick={handleLogout}>
+                {t('login.logout')}
+              </button>
+            ) : null}
+          </div>
         </div>
         <nav className="tabs" aria-label={t('app.navLabel')}>
           {SCREEN_ORDER.map((screenId) => (
