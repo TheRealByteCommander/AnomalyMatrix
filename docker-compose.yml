@@ -11,6 +11,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       ANOMALYMATRIX_INFERENCE_PROVIDER: stub
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-anomaly-token}
@@ -34,6 +35,8 @@ services:
     build:
       context: ./edge-acquisition
       dockerfile: Dockerfile
+    environment:
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
     ports:
       - "8091:8091"
 
@@ -45,7 +48,8 @@ services:
       OPCUA_SERVER_ENABLED: "true"
       OPCUA_SERVER_ENDPOINT: opc.tcp://0.0.0.0:4840/anomalymatrix/server/
       ANOMALYMATRIX_API_URL: http://api:8080
-      OPCUA_API_KEY: amx-key-operator
+      OPCUA_API_KEY: ${OPCUA_API_KEY:-amx-key-operator}
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       OPCUA_PLC_STOP_ON_RED: "true"
     ports:
       - "8092:8092"

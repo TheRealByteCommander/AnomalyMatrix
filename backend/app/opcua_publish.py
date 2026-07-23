@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import httpx
 
 from .opcua_nodes import load_opcua_contract, node
+from .service_auth import service_auth_headers
 
 
 @dataclass
@@ -90,10 +91,12 @@ def publish_opcua_payload(payload: dict, endpoint: str | None = None) -> OpcUaPu
 
     if gateway:
         try:
+            headers = {"Content-Type": "application/json", **service_auth_headers()}
             with httpx.Client(timeout=5.0) as client:
                 response = client.post(
                     f"{gateway}/publish",
                     json={"endpoint": endpoint, "payload": payload},
+                    headers=headers,
                 )
                 response.raise_for_status()
                 body = response.json()

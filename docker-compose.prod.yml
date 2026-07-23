@@ -1,4 +1,4 @@
-# Production overlay — use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Production overlay — use: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 
 services:
   api:
@@ -8,7 +8,14 @@ services:
       ANOMALYMATRIX_ENV: prod
       RBAC_ENFORCE: "true"
       LICENSE_ENFORCE: "true"
+      COOKIE_SECURE: "true"
       ANOMALYMATRIX_INFERENCE_PROVIDER: patchcore
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN}
+      EDGE_ACQUISITION_URL: http://edge-acquisition:8091
+      OPCUA_GATEWAY_URL: http://opcua-gateway:8092
+    # API stays reachable via frontend nginx proxy; bind only on localhost if exposed
+    ports:
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
   frontend:
@@ -18,6 +25,7 @@ services:
       args:
         VITE_API_BASE: /api/v1
         VITE_REQUIRE_AUTH: "true"
+        VITE_DEV_AUTH_HEADERS: "false"
     ports:
       - "80:80"
     depends_on:
@@ -26,25 +34,39 @@ services:
 
   edge-acquisition:
     environment:
+      ANOMALYMATRIX_ENV: prod
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-opencv}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    # No host port — only reachable on the Docker network
+    ports: []
     restart: unless-stopped
 
   opcua-gateway:
     environment:
+      ANOMALYMATRIX_ENV: prod
+      SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN}
       OPCUA_SECURITY_ENABLED: "true"
       OPCUA_CERT_DIR: /app/certs
+      OPCUA_API_KEY: ${OPCUA_API_KEY}
+      ANOMALYMATRIX_API_URL: http://api:8080
     volumes:
       - opcua_certs:/app/certs
+    # Keep OPC-UA PLC port; drop unauthenticated HTTP host exposure
+    ports:
+      - "4840:4840"
     restart: unless-stopped
 
   postgres:
+    ports: []
     restart: unless-stopped
 
   influxdb:
+    ports: []
     restart: unless-stopped
 
   minio:
+    ports: []
     restart: unless-stopped
 
 volumes:

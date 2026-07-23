@@ -72,7 +72,7 @@ INSERT INTO roles (role_id, display_name) VALUES
   ('admin', 'Admin')
 ON CONFLICT (role_id) DO NOTHING;
 
--- Default users (api_key for X-AMX-Api-Key auth in MVP)
+-- Default users (DEV ONLY api keys — rotate before production; never reuse these in prod)
 INSERT INTO users (user_id, display_name, role_id, api_key) VALUES
   ('operator-1', 'Line Operator', 'operator', 'amx-key-operator'),
   ('qa-1', 'QA Lead', 'qa_lead', 'amx-key-qa'),

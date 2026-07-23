@@ -124,10 +124,17 @@ def _event_bus(_request: Request) -> DomainEventBus:
 
 
 def _check_admin_token(request: Request):
-    expected = os.getenv('LICENSE_ADMIN_TOKEN', '').strip()
-    provided = request.headers.get('X-License-Admin-Token', '')
-    if expected and provided != expected:
-        raise HTTPException(status_code=403, detail='Invalid admin token')
+    expected = os.getenv("LICENSE_ADMIN_TOKEN", "").strip()
+    provided = request.headers.get("X-License-Admin-Token", "").strip()
+    # Always require a configured admin token when license admin actions are used.
+    if not expected:
+        if is_production() or os.getenv("LICENSE_ENFORCE", "").strip().lower() in {"1", "true", "yes"}:
+            raise HTTPException(status_code=503, detail="LICENSE_ADMIN_TOKEN not configured")
+        return
+    import secrets
+
+    if not provided or not secrets.compare_digest(provided, expected):
+        raise HTTPException(status_code=403, detail="Invalid admin token")
 
 
 @app.middleware("http")
@@ -167,12 +174,20 @@ async def starlette_http_exception_handler(request: Request, exc: StarletteHTTPE
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
+    import logging
+
     request_id = getattr(request.state, "request_id", str(uuid4()))
+    logging.getLogger("anomalymatrix.api").exception(
+        "Unhandled exception request_id=%s: %s", request_id, exc
+    )
+    details = {"status": 500}
+    if not is_production():
+        details["exception"] = str(exc)
     payload = error_envelope(
         code="INTERNAL_ERROR",
         message="Unexpected backend error",
         request_id=request_id,
-        details={"exception": str(exc)},
+        details=details,
         retryable=True,
     )
     return JSONResponse(status_code=500, content=payload)
@@ -180,18 +195,19 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 @app.get("/api/v1/license/status")
 async def license_status(request: Request):
+    _guard(request, "license.read")
     request_id = request.state.request_id
     snap = license_manager.snapshot()
     payload = {
-        'active': bool(getattr(snap, 'active', False)),
-        'tier': getattr(snap, 'tier', 'none'),
-        'features': list(getattr(snap, 'features', [])),
-        'token_present': bool(getattr(snap, 'token_present', False)),
-        'valid_until': getattr(snap, 'valid_until', None),
-        'last_validation_at': getattr(snap, 'last_validation_at', None),
-        'offline_grace_until': getattr(snap, 'offline_grace_until', None),
-        'grace_active': bool(getattr(snap, 'grace_active', False)),
-        'last_error': getattr(snap, 'last_error', None),
+        "active": bool(getattr(snap, "active", False)),
+        "tier": getattr(snap, "tier", "none"),
+        "features": list(getattr(snap, "features", [])),
+        "token_present": bool(getattr(snap, "token_present", False)),
+        "valid_until": getattr(snap, "valid_until", None),
+        "last_validation_at": getattr(snap, "last_validation_at", None),
+        "offline_grace_until": getattr(snap, "offline_grace_until", None),
+        "grace_active": bool(getattr(snap, "grace_active", False)),
+        "last_error": getattr(snap, "last_error", None) if not is_production() else None,
     }
     return success_envelope(payload, request_id)
 
@@ -201,11 +217,14 @@ async def license_activate(request: Request, payload: dict = Body(...)):
     _guard(request, "license.admin")
     _check_admin_token(request)
     request_id = request.state.request_id
-    key = str(payload.get('license_key', '')).strip()
+    key = str(payload.get("license_key", "")).strip()
     if not key:
-        raise HTTPException(status_code=400, detail='license_key required')
+        raise HTTPException(status_code=400, detail="license_key required")
     state = license_manager.activate(key)
-    return success_envelope({'active': state.get('active', False), 'tier': state.get('tier'), 'features': state.get('features', [])}, request_id)
+    return success_envelope(
+        {"active": state.get("active", False), "tier": state.get("tier"), "features": state.get("features", [])},
+        request_id,
+    )
 
 
 @app.post("/api/v1/license/deactivate")
@@ -214,11 +233,12 @@ async def license_deactivate(request: Request):
     _check_admin_token(request)
     request_id = request.state.request_id
     state = license_manager.deactivate()
-    return success_envelope({'active': state.get('active', False)}, request_id)
+    return success_envelope({"active": state.get("active", False)}, request_id)
 
 
 @app.get("/api/v1/contracts/events")
 async def contracts_events(request: Request):
+    _guard(request, "contracts.read")
     request_id = request.state.request_id
     return success_envelope(
         {
@@ -235,12 +255,14 @@ async def contracts_events(request: Request):
 async def contracts_opcua(request: Request):
     from .opcua_nodes import load_opcua_contract
 
+    _guard(request, "contracts.read")
     request_id = request.state.request_id
     return success_envelope(load_opcua_contract(), request_id)
 
 
 @app.get("/api/v1/contracts/inspection-result")
 async def contracts_inspection_result(request: Request):
+    _guard(request, "contracts.read")
     request_id = request.state.request_id
     return success_envelope(
         {

@@ -8,6 +8,8 @@ from uuid import uuid4
 
 import httpx
 
+from .service_auth import service_auth_headers
+
 
 @dataclass
 class SyntheticFrame:
@@ -50,10 +52,12 @@ def capture_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") 
     edge_url = os.getenv("EDGE_ACQUISITION_URL", "").strip().rstrip("/")
     if edge_url:
         try:
+            headers = {"Content-Type": "application/json", **service_auth_headers()}
             with httpx.Client(timeout=3.0) as client:
                 response = client.post(
                     f"{edge_url}/capture",
                     json={"camera_id": camera_id, "recipe_id": recipe_id},
+                    headers=headers,
                 )
                 response.raise_for_status()
                 data = response.json()

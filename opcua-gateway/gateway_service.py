@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from nodes import load_contract
 from opcua_server import NODE_VALUES, apply_payload, start_opcua_background, stop_opcua_background
+from service_auth import ServiceAuthMiddleware
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,7 +39,8 @@ async def lifespan(app: FastAPI):
     await stop_opcua_background()
 
 
-app = FastAPI(title="AnomalyMatrix OPC-UA Gateway", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="AnomalyMatrix OPC-UA Gateway", version="1.0.0", lifespan=lifespan)
+app.add_middleware(ServiceAuthMiddleware)
 
 
 @app.get("/health")
@@ -46,7 +48,7 @@ def health():
     return {
         "ok": True,
         "service": "opcua-gateway",
-        "version": "0.4.0",
+        "version": "1.0.0",
         "opcua_enabled": os.getenv("OPCUA_SERVER_ENABLED", "true"),
         "api_url": os.getenv("ANOMALYMATRIX_API_URL", ""),
         "timestamp": datetime.now(timezone.utc).isoformat(),
