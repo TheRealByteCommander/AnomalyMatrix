@@ -33,6 +33,7 @@ Postgres-Migrationen (Docker-Init):
 ### Installer
 - `install.sh` — Bare-OS → Docker → Production-Stack (Secrets, Firewall, systemd)
 - `build_installer.sh` — erzeugt `dist/AnomalyMatrix-installer*.run`
+- `publish_github_release.sh` — Tag + GitHub Release inkl. Installer-Assets (`--draft` / `--dry-run`)
 
 ### Backup
 - `backup/backup.sh` / `backup/restore.sh`

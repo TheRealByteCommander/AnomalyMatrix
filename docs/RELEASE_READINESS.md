@@ -63,5 +63,16 @@ Stand: **v1.0.0** (Production-hardened)
 | Umgebung | Status |
 |----------|--------|
 | Development | ✅ |
-| Staging / Pilot | ✅ mit `.env.production` |
-| **Production (24/7)** | ✅ nach Checkliste + Secret-Rotation + PKI-OPC-UA |
+| Staging / Pilot | ✅ mit `.env.production` + Secret-Rotation |
+| **Production (24/7)** | ✅ nach Checkliste **und** Rollout-Gates unten |
+
+### Rollout-Gates vor 24/7
+
+| Gate | Status |
+|------|--------|
+| TLS / `COOKIE_SECURE=true` vor dem HMI | ⚠️ Pflicht am Zielsystem |
+| OPC-UA Kunden-PKI (statt Self-Signed) | ⚠️ Pflicht am Zielsystem |
+| Seed-API-Keys rotiert (`users.api_key`) | ✅ Installer synced `OPCUA_API_KEY` |
+| Reale Kamera (`CAMERA_DRIVER=opencv`) | ⚠️ wenn nicht Synthetic-Pilot |
+| CI baut Gateway/Edge-Images | 🔜 empfohlen |
+| Dependency-Readiness (`/health`) | 🔜 empfohlen |

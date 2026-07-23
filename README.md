@@ -2,8 +2,9 @@
 
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
-**Aktueller Stand (2026-06):** API **v1.0.0** — produktionsbereit  
-**Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`
+**Aktueller Stand (2026-07):** API **v1.0.0** — Pilot-/Deploy-ready (siehe Rollout-Gates in `docs/RELEASE_READINESS.md`)  
+**Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`  
+**GitHub Release:** `v1.0.0` — `docs/RELEASE_NOTES_v1.0.0.md`
 
 ## Ziele
 - Unüberwachte Anomalieerkennung auf Gut-Teilen
@@ -178,7 +179,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | Performance Gate < 500 ms | ✅ v0.8 |
 | OpenCV Kamera (Webcam/Datei) | ✅ v0.8 |
 | Playwright HMI E2E | ✅ v0.8 |
-| Installer v0.8.0 | ✅ |
+| Installer v1.0.0 + autonomer Linux-Setup | ✅ |
 | WebSocket Live-View, GigE/GenICam | 🔜 Folgerelease |
 
 ## Dokumente
@@ -189,20 +190,21 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz
 - `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
-- `docs/RELEASE_NOTES_v0.8.0.md` — Aktuelles Release
-- `docs/RELEASE_NOTES_v0.6.0.md` — Vorheriges Release
-- `docs/RELEASE_NOTES_v0.1.0.md` — Baseline-Installer-Release
+- `docs/RELEASE_NOTES_v1.0.0.md` — **Aktuelles Release**
+- `docs/RELEASE_NOTES_v0.8.0.md` — Vorheriges Feature-Release
+- `docs/RELEASE_NOTES_v0.6.0.md` / `docs/RELEASE_NOTES_v0.1.0.md` — Historie
 - `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
 
 ## Tests
 ```bash
 cd backend
-py -3 -m pytest -q    # 41+ Tests (Stand v0.8.0)
+py -3 -m pytest -q    # 60+ Tests (Stand v1.0.0)
 ```
 
 ## Release & Installer
-- **Aktueller Code-Stand:** `v0.8.0` (Git `master`)
-- **Installer:** `dist/AnomalyMatrix-installer-v0.8.0.run` (via `scripts/build_installer.sh`)
+- **Aktueller Code-Stand:** `v1.0.0` (Git Tag / `master`)
+- **Installer bauen:** `./scripts/build_installer.sh` → `dist/AnomalyMatrix-installer-v1.0.0.run`
+- **GitHub Release publizieren:** `./scripts/publish_github_release.sh` (optional `--draft`)
 - GitHub: [TheRealByteCommander/AnomalyMatrix](https://github.com/TheRealByteCommander/AnomalyMatrix)
 
 ## Hinweise

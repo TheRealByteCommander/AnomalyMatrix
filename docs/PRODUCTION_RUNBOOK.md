@@ -1,5 +1,7 @@
 # AnomalyMatrix v1.0.0 — Production Runbook
 
+> Release Notes: [`docs/RELEASE_NOTES_v1.0.0.md`](./RELEASE_NOTES_v1.0.0.md) · Freigabe: [`docs/RELEASE_READINESS.md`](./RELEASE_READINESS.md)
+
 ## Pre-Deploy Checklist
 
 1. Copy `.env.production.example` → `.env.production` and replace **all** `REPLACE_*` secrets
