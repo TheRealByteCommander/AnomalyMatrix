@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import logging
 import os
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
 import random
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import httpx
 
+from .production import is_production
 from .service_auth import service_auth_headers
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -48,7 +52,7 @@ def generate_synthetic_frame(camera_id: str = "cam-01", recipe_id: str = "recipe
 
 
 def capture_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") -> SyntheticFrame:
-    """Prefer edge-acquisition HTTP service; fall back to in-process synthetic capture."""
+    """Prefer edge-acquisition HTTP service; fall back to in-process synthetic capture in non-prod."""
     edge_url = os.getenv("EDGE_ACQUISITION_URL", "").strip().rstrip("/")
     if edge_url:
         try:
@@ -74,6 +78,11 @@ def capture_frame(camera_id: str = "cam-01", recipe_id: str = "recipe-default") 
                     image_height=data.get("image_height"),
                     capture_driver=data.get("capture_driver"),
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            if is_production():
+                logger.exception("Edge capture failed in production — refusing synthetic fallback")
+                raise RuntimeError(f"Edge capture failed: {exc}") from exc
+            logger.warning("Edge capture failed; using synthetic frame: %s", exc)
+    elif is_production():
+        raise RuntimeError("EDGE_ACQUISITION_URL is required in production")
     return generate_synthetic_frame(camera_id=camera_id, recipe_id=recipe_id)

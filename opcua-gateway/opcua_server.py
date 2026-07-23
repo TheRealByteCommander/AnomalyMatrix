@@ -83,6 +83,14 @@ async def _run_opcua_server(endpoint: str) -> None:
     global _ua_vars
     _ua_vars = {}
 
+    def _contract_node_id(node_key: str) -> ua.NodeId:
+        """Use contract string identifiers (ns=N;s=...) so PLCs can address published NodeIds."""
+        if ";s=" in node_key:
+            return ua.NodeId(node_key.split(";s=", 1)[1], idx)
+        if ";i=" in node_key:
+            return ua.NodeId(int(node_key.split(";i=", 1)[1]), idx)
+        return ua.NodeId(node_key, idx)
+
     async def add_var(parent, name, node_key, vtype, writable=False):
         initial = NODE_VALUES.get(node_key, "")
         if vtype == ua.VariantType.Double:
@@ -91,7 +99,7 @@ async def _run_opcua_server(endpoint: str) -> None:
             initial = bool(NODE_VALUES.get(node_key, False))
         elif vtype == ua.VariantType.Int32:
             initial = int(NODE_VALUES.get(node_key, 0))
-        var = await parent.add_variable(idx, name, initial, varianttype=vtype)
+        var = await parent.add_variable(_contract_node_id(node_key), name, initial, varianttype=vtype)
         if writable:
             await var.set_writable()
         _ua_vars[node_key] = var
@@ -129,8 +137,9 @@ async def _run_opcua_server(endpoint: str) -> None:
         await _sync_vars_from_store()
         return [ua.Variant(ok, ua.VariantType.Boolean)]
 
+    method_key = contract.get("start_inspection_method", "ns=2;s=Inspection.StartInspection")
     await inspection.add_method(
-        idx,
+        _contract_node_id(method_key),
         "StartInspection",
         start_inspection_handler,
         [ua.VariantType.String, ua.VariantType.String],

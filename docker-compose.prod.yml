@@ -18,6 +18,7 @@ services:
       AMX_ADMIN_PASSWORD: ${AMX_ADMIN_PASSWORD}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
+      MINIO_PUBLIC_BASE: ${MINIO_PUBLIC_BASE:-/artifacts}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
     volumes:
@@ -39,6 +40,7 @@ services:
       - "80:80"
     depends_on:
       - api
+      - minio
     restart: unless-stopped
 
   edge-acquisition:

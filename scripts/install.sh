@@ -381,6 +381,7 @@ INFLUX_USERNAME=anomaly
 INFLUX_PASSWORD=${influx_pw}
 
 MINIO_ENDPOINT=minio:9000
+MINIO_PUBLIC_BASE=/artifacts
 MINIO_ROOT_USER=minio
 MINIO_ROOT_PASSWORD=${minio_pw}
 MINIO_SECURE=false
@@ -472,6 +473,35 @@ wait_for_health() {
   err "API Health-Check fehlgeschlagen. Logs:"
   compose_cmd logs --tail=80 api || true
   return 1
+}
+
+sync_opcua_api_key() {
+  # Gateway authenticates with OPCUA_API_KEY; API looks up users.api_key in Postgres.
+  # Seed keys (amx-key-*) must be rotated so the generated key matches operator-1.
+  [[ "$MODE" == "prod" ]] || return 0
+  local env_file="$APP_DIR/.env.production"
+  local opcua_key qa_key eng_key adm_key
+  opcua_key="$(grep -E '^OPCUA_API_KEY=' "$env_file" | cut -d= -f2-)"
+  [[ -n "$opcua_key" ]] || {
+    warn "OPCUA_API_KEY fehlt — DB-Sync übersprungen."
+    return 0
+  }
+  # Keys are alphanumeric from rand_alnum — safe for SQL literals.
+  qa_key="$(rand_alnum 32)"
+  eng_key="$(rand_alnum 32)"
+  adm_key="$(rand_alnum 32)"
+  log "OPC-UA API-Key in Postgres synchronisieren (Seed-Keys rotieren)..."
+  if compose_cmd exec -T postgres psql -U anomaly -d anomalymatrix -v ON_ERROR_STOP=1 <<SQL >/dev/null
+UPDATE users SET api_key = '${opcua_key}' WHERE user_id = 'operator-1';
+UPDATE users SET api_key = '${qa_key}' WHERE user_id = 'qa-1';
+UPDATE users SET api_key = '${eng_key}' WHERE user_id = 'engineer-1';
+UPDATE users SET api_key = '${adm_key}' WHERE user_id = 'admin-1';
+SQL
+  then
+    ok "API-Keys in Postgres aktualisiert (operator-1 = OPCUA_API_KEY)"
+  else
+    warn "API-Key-Sync fehlgeschlagen — OPC-UA-Inspektionen ggf. 401. Manuell users.api_key setzen."
+  fi
 }
 
 activate_license() {
@@ -657,6 +687,7 @@ main() {
 
   start_stack
   wait_for_health
+  sync_opcua_api_key
   activate_license
   smoke_inspection
   configure_firewall

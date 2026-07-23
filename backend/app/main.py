@@ -306,81 +306,98 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
 
     publish_busy_state(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
 
-    frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
-    frame_dict = frame_to_dict(frame)
-    provider = get_inference_provider()
-    inference = provider.infer(frame_dict)
+    try:
+        frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+        frame_dict = frame_to_dict(frame)
+        provider = get_inference_provider()
+        inference = provider.infer(frame_dict)
 
-    decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
-    snap = license_manager.snapshot()
-    inspection_id = str(uuid4())
-    result = {
-        "inspection_id": inspection_id,
-        "frame": frame_dict,
-        "inference": inference.__dict__,
-        "decision": decision,
-        "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
-        "license_tier": snap.tier,
-    }
+        decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
+        snap = license_manager.snapshot()
+        inspection_id = str(uuid4())
+        result = {
+            "inspection_id": inspection_id,
+            "frame": frame_dict,
+            "inference": inference.__dict__,
+            "decision": decision,
+            "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
+            "license_tier": snap.tier,
+        }
 
-    gray = _frame_grayscale(frame_dict)
-    heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
-    if frame_dict.get("image_b64"):
-        import base64
+        gray = _frame_grayscale(frame_dict)
+        heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
+        if frame_dict.get("image_b64"):
+            import base64
 
+            try:
+                raw_bytes = base64.b64decode(frame_dict["image_b64"])
+                raw_uri = store_raw_frame(inspection_id=inspection_id, recipe_id=payload.recipe_id, image_bytes=raw_bytes)
+                if raw_uri:
+                    result["frame"]["stored_raw_uri"] = raw_uri
+            except Exception:
+                pass
+
+        opcua = publish_to_opcua(result)
+        result["opcua_publish"] = opcua.__dict__
+
+        stored_uri = store_heatmap_binary(
+            inspection_id=inspection_id,
+            png_bytes=heatmap_png,
+            anomaly_score=inference.anomaly_score,
+        )
+        if stored_uri:
+            result["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
+
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        record_inspection_metrics(
+            inspection_id=inspection_id,
+            score=inference.anomaly_score,
+            latency_ms=latency_ms,
+            decision=decision,
+            provider=inference.provider,
+            opcua_published=bool(opcua.published),
+        )
+        event = _event_bus(request).emit_inspection_completed(result, latency_ms=latency_ms)
+        result["domain_event_id"] = event.get("event_id")
+
+        repo.append(result)
+        trend = repo.trend_summary()
+        record_process_trend(avg_score=float(trend.get("avg_score", inference.anomaly_score)))
+        result["trend_warning"] = trend.get("trend_warning", False)
+        trend_event = maybe_emit_trend_warning(
+            _event_bus(request),
+            trend=trend,
+            recipe_id=frame.recipe_id,
+            model_version=inference.model_version,
+        )
+        if trend_event:
+            result["trend_warning_event_id"] = trend_event.get("event_id")
+
+        core_store.append_audit(
+            actor=auth.user_id,
+            action="inspection.run",
+            resource_type="inspection",
+            resource_id=inspection_id,
+            after_state={"decision": decision, "score": inference.anomaly_score},
+            request_id=request.state.request_id,
+        )
+        return success_envelope(result, request_id)
+    except Exception:
+        # Never leave PLC Busy=true if capture/inference fails after busy publish.
         try:
-            raw_bytes = base64.b64decode(frame_dict["image_b64"])
-            raw_uri = store_raw_frame(inspection_id=inspection_id, recipe_id=payload.recipe_id, image_bytes=raw_bytes)
-            if raw_uri:
-                result["frame"]["stored_raw_uri"] = raw_uri
+            from .opcua_nodes import node
+            from .opcua_publish import publish_opcua_payload
+
+            publish_opcua_payload(
+                {
+                    node("inspection.busy"): False,
+                    node("inspection.result_ready"): False,
+                    node("system_state"): "error",
+                }
+            )
         except Exception:
             pass
-
-    opcua = publish_to_opcua(result)
-    result["opcua_publish"] = opcua.__dict__
-
-    stored_uri = store_heatmap_binary(
-        inspection_id=inspection_id,
-        png_bytes=heatmap_png,
-        anomaly_score=inference.anomaly_score,
-    )
-    if stored_uri:
-        result["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
-
-    latency_ms = (time.perf_counter() - started) * 1000.0
-    record_inspection_metrics(
-        inspection_id=inspection_id,
-        score=inference.anomaly_score,
-        latency_ms=latency_ms,
-        decision=decision,
-        provider=inference.provider,
-        opcua_published=bool(opcua.published),
-    )
-    event = _event_bus(request).emit_inspection_completed(result, latency_ms=latency_ms)
-    result["domain_event_id"] = event.get("event_id")
-
-    repo.append(result)
-    trend = repo.trend_summary()
-    record_process_trend(avg_score=float(trend.get("avg_score", inference.anomaly_score)))
-    result["trend_warning"] = trend.get("trend_warning", False)
-    trend_event = maybe_emit_trend_warning(
-        _event_bus(request),
-        trend=trend,
-        recipe_id=frame.recipe_id,
-        model_version=inference.model_version,
-    )
-    if trend_event:
-        result["trend_warning_event_id"] = trend_event.get("event_id")
-
-    core_store.append_audit(
-        actor=auth.user_id,
-        action="inspection.run",
-        resource_type="inspection",
-        resource_id=inspection_id,
-        after_state={"decision": decision, "score": inference.anomaly_score},
-        request_id=request.state.request_id,
-    )
-    return success_envelope(result, request_id)
+        raise
 
 
 @app.get("/api/v1/results/latest")

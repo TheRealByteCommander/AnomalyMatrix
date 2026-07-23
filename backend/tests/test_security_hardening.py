@@ -99,9 +99,29 @@ def test_production_requires_service_auth_token(monkeypatch):
     monkeypatch.setenv("LICENSE_ENFORCE", "true")
     monkeypatch.setenv("ANOMALYMATRIX_INFERENCE_PROVIDER", "patchcore")
     monkeypatch.setenv("OPCUA_SECURITY_ENABLED", "true")
+    monkeypatch.setenv("EDGE_ACQUISITION_URL", "http://edge-acquisition:8091")
+    monkeypatch.setenv("OPCUA_API_KEY", "rotated-opcua-key-not-default")
     monkeypatch.delenv("SERVICE_AUTH_TOKEN", raising=False)
     errors = validate_production_config()
     assert any("SERVICE_AUTH_TOKEN" in e for e in errors)
+
+
+def test_production_requires_edge_url_and_opcua_key(monkeypatch):
+    monkeypatch.setenv("ANOMALYMATRIX_ENV", "prod")
+    monkeypatch.setenv("JWT_SECRET", "x" * 40)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x")
+    monkeypatch.setenv("LICENSE_ADMIN_TOKEN", "unique-admin-token")
+    monkeypatch.setenv("AMX_CORS_ORIGINS", "https://hmi.example")
+    monkeypatch.setenv("SERVICE_AUTH_TOKEN", "service-token-at-least-24-chars")
+    monkeypatch.setenv("RBAC_ENFORCE", "true")
+    monkeypatch.setenv("LICENSE_ENFORCE", "true")
+    monkeypatch.setenv("ANOMALYMATRIX_INFERENCE_PROVIDER", "patchcore")
+    monkeypatch.setenv("OPCUA_SECURITY_ENABLED", "true")
+    monkeypatch.delenv("EDGE_ACQUISITION_URL", raising=False)
+    monkeypatch.delenv("OPCUA_API_KEY", raising=False)
+    errors = validate_production_config()
+    assert any("EDGE_ACQUISITION_URL" in e for e in errors)
+    assert any("OPCUA_API_KEY" in e for e in errors)
 
 
 def test_bearer_invalid_does_not_fall_through_to_dev_headers(tmp_path, monkeypatch):
