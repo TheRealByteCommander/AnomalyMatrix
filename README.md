@@ -75,19 +75,25 @@ cp .env.production.example .env.production   # secrets ersetzen
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
-HMI: Port **80** (nginx, Login erforderlich). Runbook: `docs/PRODUCTION_RUNBOOK.md` · Freigabe: `docs/RELEASE_READINESS.md`
+Services (production overlay):
+- HMI: Port **80** (nginx, Login erforderlich)
+- API: nur `127.0.0.1:8080`
+- Edge / Postgres / Influx / MinIO: **ohne** Host-Ports
+- OPC-UA PLC: **4840**
 
-| Service | Port |
-|---------|------|
-| API | 8080 |
-| edge-acquisition | 8091 |
-| opcua-gateway (HTTP) | 8092 |
-| opcua-gateway (OPC-UA) | 4840 |
-| Postgres | 5432 |
-| InfluxDB | 8086 |
-| MinIO | 9000 / 9001 |
+Runbook: `docs/PRODUCTION_RUNBOOK.md` · Freigabe: `docs/RELEASE_READINESS.md`
 
-DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`004`).
+| Service | Dev-Port | Prod |
+|---------|----------|------|
+| API | 8080 | localhost only |
+| edge-acquisition | 8091 | internal + `X-AMX-Service-Token` |
+| opcua-gateway (HTTP) | 8092 | internal + `X-AMX-Service-Token` |
+| opcua-gateway (OPC-UA) | 4840 | 4840 |
+| Postgres | 5432 | internal |
+| InfluxDB | 8086 | internal |
+| MinIO | 9000 / 9001 | internal |
+
+DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 
 ## API v1.0.0 (Auszug)
 
@@ -121,8 +127,10 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`004`).
 | Variable | Zweck |
 |----------|--------|
 | `ANOMALYMATRIX_ENV` | `prod` = Startup-Guards, Auth-Pflicht, CORS, Rate-Limits |
+| `SERVICE_AUTH_TOKEN` | Shared Token API ↔ Edge ↔ OPC-UA Gateway (Prod-Pflicht) |
 | `AMX_CORS_ORIGINS` | Erlaubte HMI-Origins (Prod, kommagetrennt) |
 | `AMX_ADMIN_PASSWORD` | Einmaliges Admin-Passwort-Bootstrap (Prod) |
+| `COOKIE_SECURE` | Session-Cookie nur über HTTPS (Default in Prod: true) |
 | `DATABASE_URL` | Postgres (Compose); leer = JSONL-Fallback |
 | `ANOMALYMATRIX_INFERENCE_PROVIDER` | `stub` \| `opencv_ready` \| `patchcore` |
 | `EDGE_ACQUISITION_URL` | Edge-Capture HTTP |
@@ -131,7 +139,7 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`004`).
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
 
-Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod` und `RBAC_ENFORCE=false`): Header `X-AMX-Role`, `X-AMX-User` oder `X-AMX-Api-Key`.
+Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod`): Header `X-AMX-Role` / `X-AMX-User` (Frontend: `VITE_DEV_AUTH_HEADERS=true`) oder `X-AMX-Api-Key`. Unbekannte Rollen werden **abgelehnt** (kein Admin-Fallback).
 
 Produktion: `.env.production.example` · Dev: `.env.example`
 

@@ -10,7 +10,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import { useI18n } from './i18n/I18nProvider';
 import { SCREEN_HELP_ARTICLE, SCREEN_IDS, SCREEN_ORDER } from './i18n/screens';
 import { inspections as seed } from './data/sampleData';
-import { fetchAuthMe, fetchRecentInspections, getStoredToken, logout } from './services';
+import { fetchAuthMe, fetchRecentInspections, logout } from './services';
 
 const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true';
 
@@ -31,17 +31,13 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (requireAuth || getStoredToken()) {
-        try {
-          const me = await fetchAuthMe();
-          if (!cancelled) setAuthUser(me);
-        } catch {
-          if (!cancelled) setAuthUser(null);
-        } finally {
-          if (!cancelled) setAuthReady(true);
-        }
-      } else {
-        setAuthReady(true);
+      try {
+        const me = await fetchAuthMe();
+        if (!cancelled) setAuthUser(me);
+      } catch {
+        if (!cancelled) setAuthUser(null);
+      } finally {
+        if (!cancelled) setAuthReady(true);
       }
     })();
     return () => {

@@ -4,6 +4,20 @@ import os
 import sys
 
 
+_DEFAULT_SECRETS = {
+    "changeme",
+    "change-me-in-production",
+    "anomaly_pw",
+    "minio123",
+    "anomaly-token",
+    "amx-key-operator",
+    "amx-key-qa",
+    "amx-key-engineer",
+    "amx-key-admin",
+    "dev-jwt-secret-change-me-in-production-min-32b",
+}
+
+
 def is_production() -> bool:
     return os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower() in {"prod", "production"}
 
@@ -20,6 +34,14 @@ def rbac_enforced() -> bool:
     return os.getenv("RBAC_ENFORCE", "false").strip().lower() in {"1", "true", "yes"}
 
 
+def cookie_secure() -> bool:
+    if os.getenv("COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    if os.getenv("COOKIE_SECURE", "").strip().lower() in {"0", "false", "no"}:
+        return False
+    return is_production()
+
+
 def validate_production_config() -> list[str]:
     if not is_production():
         return []
@@ -30,6 +52,7 @@ def validate_production_config() -> list[str]:
         "DATABASE_URL": "Postgres DSN",
         "LICENSE_ADMIN_TOKEN": "License admin token",
         "AMX_CORS_ORIGINS": "Allowed HMI origins (comma-separated)",
+        "SERVICE_AUTH_TOKEN": "Inter-service auth token (edge/OPC-UA)",
     }
     for key, label in required.items():
         if not os.getenv(key, "").strip():
@@ -38,6 +61,10 @@ def validate_production_config() -> list[str]:
     jwt = os.getenv("JWT_SECRET", "")
     if jwt and len(jwt) < 32:
         errors.append("JWT_SECRET must be at least 32 characters")
+
+    service_token = os.getenv("SERVICE_AUTH_TOKEN", "")
+    if service_token and len(service_token) < 24:
+        errors.append("SERVICE_AUTH_TOKEN must be at least 24 characters")
 
     if os.getenv("RBAC_ENFORCE", "false").strip().lower() not in {"1", "true", "yes"}:
         errors.append("RBAC_ENFORCE must be true in production")
@@ -51,10 +78,17 @@ def validate_production_config() -> list[str]:
     if is_production() and os.getenv("OPCUA_SECURITY_ENABLED", "false").strip().lower() not in {"1", "true", "yes"}:
         errors.append("OPCUA_SECURITY_ENABLED must be true in production")
 
-    default_secrets = {"changeme", "change-me-in-production", "anomaly_pw", "minio123", "anomaly-token"}
-    for key in ("JWT_SECRET", "POSTGRES_PASSWORD", "MINIO_ROOT_PASSWORD", "LICENSE_ADMIN_TOKEN"):
+    for key in (
+        "JWT_SECRET",
+        "POSTGRES_PASSWORD",
+        "MINIO_ROOT_PASSWORD",
+        "LICENSE_ADMIN_TOKEN",
+        "SERVICE_AUTH_TOKEN",
+        "OPCUA_API_KEY",
+        "INFLUX_TOKEN",
+    ):
         val = os.getenv(key, "")
-        if val in default_secrets:
+        if val in _DEFAULT_SECRETS:
             errors.append(f"{key} uses a default/dev value — rotate for production")
 
     return errors

@@ -3,24 +3,21 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from .db_pool import pooled_connection
 from .trend_warnings import enrich_trend_summary
 
 
 class PostgresResultRepository:
-    """Postgres-backed inspection store (Phase 3). Falls back not required here."""
+    """Postgres-backed inspection store (Phase 3) with connection pooling."""
 
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn
         self._ensure_schema()
 
-    def _connect(self):
-        return psycopg2.connect(self.dsn)
-
     def _ensure_schema(self) -> None:
-        with self._connect() as conn:
+        with pooled_connection(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -38,12 +35,17 @@ class PostgresResultRepository:
                     """
                 )
                 cur.execute("ALTER TABLE inspections ADD COLUMN IF NOT EXISTS payload JSONB;")
-            conn.commit()
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_inspections_recipe_created
+                    ON inspections (recipe_id, created_at DESC);
+                    """
+                )
 
     def append(self, payload: dict) -> None:
         frame = payload.get("frame", {})
         inf = payload.get("inference", {})
-        with self._connect() as conn:
+        with pooled_connection(self.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -63,7 +65,6 @@ class PostgresResultRepository:
                         Json(payload),
                     ),
                 )
-            conn.commit()
 
     def _rows_to_items(self, rows: list[dict]) -> list[dict]:
         items: list[dict] = []
@@ -76,7 +77,7 @@ class PostgresResultRepository:
         return items
 
     def latest(self, limit: int = 20) -> list[dict]:
-        with self._connect() as conn:
+        with pooled_connection(self.dsn) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
@@ -115,14 +116,14 @@ class PostgresResultRepository:
             ORDER BY created_at DESC
             LIMIT %s
         """
-        with self._connect() as conn:
+        with pooled_connection(self.dsn) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(sql, params)
                 rows = cur.fetchall()
         return self._rows_to_items(rows)
 
     def trend_summary(self) -> dict:
-        with self._connect() as conn:
+        with pooled_connection(self.dsn) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
@@ -135,11 +136,19 @@ class PostgresResultRepository:
                     """
                 )
                 row = cur.fetchone() or {}
+                cur.execute(
+                    """
+                    SELECT payload FROM inspections
+                    ORDER BY created_at DESC
+                    LIMIT 50
+                    """
+                )
+                recent_rows = cur.fetchall()
         base = {
             "count": int(row.get("count", 0)),
             "avg_score": round(float(row.get("avg_score", 0.0)), 4),
             "max_score": round(float(row.get("max_score", 0.0)), 4),
             "anomaly_count": int(row.get("anomaly_count", 0)),
         }
-        recent = list(reversed(self.latest(limit=50)))
+        recent = list(reversed(self._rows_to_items(recent_rows)))
         return enrich_trend_summary(base, recent)

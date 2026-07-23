@@ -5,19 +5,46 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets & local env (never commit)
+.env
+.env.*
+!.env.example
+!.env.production.example
 
 # Runtime data (local)
 backend/data/*.jsonl
+backend/data/users.json
+backend/data/sessions.json
 backend/data/license_state.json
 backend/data/training-artifacts/
 opcua-gateway/certs/*.pem
+opcua-gateway/certs/*.der
+opcua-gateway/certs/*.crl
 
 # Node
 frontend/node_modules/
 frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# Installer binaries (build artifacts)
+dist/*.run
+dist/*.exe
+dist/*.msi
 
 # IDE / OS
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+*.swp
+*~
+
+# Seeded at runtime by CoreStore
+backend/data/recipes.json
+backend/data/model_registry.json

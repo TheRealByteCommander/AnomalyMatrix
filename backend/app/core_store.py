@@ -42,7 +42,9 @@ class CoreStore:
     def _connect(self):
         if not self.use_postgres:
             raise RuntimeError("Postgres not configured")
-        return psycopg2.connect(self.dsn)  # type: ignore[arg-type]
+        from .db_pool import pooled_connection
+
+        return pooled_connection(self.dsn)  # type: ignore[arg-type]
 
     def _seed_json_fallback(self) -> None:
         if not self._users_file.exists():

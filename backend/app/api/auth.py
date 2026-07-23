@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, HTTPException, Request, Response
 from ..auth_tokens import create_access_token, decode_access_token
 from ..contracts.envelope import success_envelope
 from ..core_store import CoreStore
+from ..production import cookie_secure
 from ..rbac import resolve_auth
 
 router = APIRouter(tags=["auth"])
@@ -12,6 +13,18 @@ router = APIRouter(tags=["auth"])
 
 def _store(request: Request) -> CoreStore:
     return request.app.state.core_store
+
+
+def _set_session_cookie(response: Response, session_id: str) -> None:
+    response.set_cookie(
+        key="amx_session",
+        value=session_id,
+        httponly=True,
+        samesite="lax",
+        secure=cookie_secure(),
+        max_age=28800,
+        path="/",
+    )
 
 
 @router.post("/auth/login")
@@ -31,13 +44,7 @@ async def login(request: Request, response: Response, payload: dict = Body(...))
         display_name=user.get("display_name", user["user_id"]),
     )
     session = _store(request).create_session(user["user_id"])
-    response.set_cookie(
-            key="amx_session",
-            value=session["session_id"],
-            httponly=True,
-            samesite="lax",
-            max_age=28800,
-    )
+    _set_session_cookie(response, session["session_id"])
 
     return success_envelope(
         {
@@ -59,7 +66,7 @@ async def logout(request: Request, response: Response):
     session_id = request.cookies.get("amx_session", "").strip()
     if session_id:
         _store(request).revoke_session(session_id)
-    response.delete_cookie("amx_session")
+    response.delete_cookie("amx_session", path="/", secure=cookie_secure(), samesite="lax")
     return success_envelope({"logged_out": True}, request.state.request_id)
 
 
