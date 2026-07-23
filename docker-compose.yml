@@ -6,8 +6,8 @@ version: '3.9'
 services:
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
@@ -22,6 +22,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
       MINIO_SECURE: "false"
+    volumes:
+      - api_data:/app/data
     depends_on:
       - postgres
       - influxdb
@@ -94,3 +96,4 @@ volumes:
   postgres_data:
   influx_data:
   minio_data:
+  api_data:

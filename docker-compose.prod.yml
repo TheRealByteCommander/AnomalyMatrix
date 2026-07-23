@@ -21,6 +21,8 @@ services:
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    volumes:
+      - api_data:/app/data
     # API only on localhost — HMI reaches it via nginx proxy
     ports:
       - "127.0.0.1:8080:8080"
@@ -80,3 +82,4 @@ services:
 
 volumes:
   opcua_certs:
+  api_data:

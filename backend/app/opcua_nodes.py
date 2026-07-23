@@ -4,12 +4,23 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-_CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contracts" / "opcua_nodeset_mapping_v1.json"
+
+def _contract_candidates() -> list[Path]:
+    here = Path(__file__).resolve()
+    return [
+        here.parents[2] / "contracts" / "opcua_nodeset_mapping_v1.json",  # repo root (dev)
+        here.parents[1] / "contracts" / "opcua_nodeset_mapping_v1.json",  # /app/contracts (container)
+        Path("/contracts/opcua_nodeset_mapping_v1.json"),
+    ]
 
 
 @lru_cache(maxsize=1)
 def load_opcua_contract() -> dict:
-    return json.loads(_CONTRACT_PATH.read_text(encoding="utf-8"))
+    for path in _contract_candidates():
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    searched = ", ".join(str(p) for p in _contract_candidates())
+    raise FileNotFoundError(f"opcua_nodeset_mapping_v1.json not found (tried: {searched})")
 
 
 def node(path: str) -> str:
