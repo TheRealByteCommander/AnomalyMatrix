@@ -8,5 +8,5 @@ influxdb-client==1.49.0
 minio==7.2.15
 numpy==2.2.4
 opencv-python-headless==4.11.0.86
-PyJWT==2.10.1
+PyJWT==2.13.0
 cryptography==44.0.2
