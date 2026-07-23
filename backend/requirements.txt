@@ -6,7 +6,7 @@ pytest==9.1.1
 httpx==0.28.1
 psycopg2-binary==2.9.10
 influxdb-client==1.49.0
-minio==7.2.15
+minio==7.2.20
 numpy==2.2.4
 opencv-python-headless==4.11.0.86
 PyJWT==2.13.0
