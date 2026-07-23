@@ -110,10 +110,10 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml config >/dev/null
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tls.yml config >/dev/null
       - name: Build API image
-        run: docker build -f backend/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.0.0 -t amx-api:ci .
+        run: docker build -f backend/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.1.0 -t amx-api:ci .
       - name: Build edge image
-        run: docker build -f edge-acquisition/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.0.0 -t amx-edge:ci ./edge-acquisition
+        run: docker build -f edge-acquisition/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.1.0 -t amx-edge:ci ./edge-acquisition
       - name: Build OPC-UA gateway image
-        run: docker build -f opcua-gateway/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.0.0 -t amx-opcua:ci .
+        run: docker build -f opcua-gateway/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.1.0 -t amx-opcua:ci .
       - name: Build frontend image
         run: docker build -f frontend/Dockerfile -t amx-frontend:ci ./frontend

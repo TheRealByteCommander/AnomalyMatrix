@@ -1,6 +1,6 @@
 # infra
 
-Infrastructure-Manifeste für AnomalyMatrix **v1.0.0**.
+Infrastructure-Manifeste für AnomalyMatrix **v1.1.0**.
 
 ## Compose (Repo-Root)
 - `docker-compose.yml` — Core-Stack
