@@ -181,9 +181,12 @@ from(bucket: "{bucket}")
                 if record.get_field() == "opcua_error":
                     opcua_error_rate = float(record.get_value()) * 100.0
         return {
+            "inference_latency_mean_ms": round(latency_ms, 2),
+            # Backward-compatible alias (historical name was misleading — value is mean, not p95).
             "inference_p95_ms": round(latency_ms, 2),
             "opc_ua_publish_error_rate_pct": round(opcua_error_rate, 2),
             "source": "influx",
+            "latency_aggregation": "mean",
         }
     except Exception:
         return {}

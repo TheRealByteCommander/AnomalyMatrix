@@ -69,6 +69,9 @@ class PlcBridge:
                 recipe_id=recipe_id,
             )
             if not result:
+                # Clear busy locally — API publish will not arrive on failure.
+                node_values[self._nid("busy")] = False
+                node_values[self._nid("result_ready")] = False
                 node_values[self._contract["system_state"]] = "error"
                 node_values[self._contract.get("system_health", "ns=2;s=System.Health")] = "api_error"
                 return False

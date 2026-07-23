@@ -48,7 +48,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         });
 
         setKpis({
-          cycleMsP95: summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
+          cycleMsP95: summary.inference_latency_mean_ms || summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
           anomalyRate: summary.inspection_count
             ? ((summary.anomaly_count / summary.inspection_count) * 100).toFixed(1)
             : hmiState.kpis.anomalyRate,

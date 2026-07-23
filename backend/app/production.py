@@ -78,6 +78,12 @@ def validate_production_config() -> list[str]:
     if is_production() and os.getenv("OPCUA_SECURITY_ENABLED", "false").strip().lower() not in {"1", "true", "yes"}:
         errors.append("OPCUA_SECURITY_ENABLED must be true in production")
 
+    if is_production() and not os.getenv("EDGE_ACQUISITION_URL", "").strip():
+        errors.append("EDGE_ACQUISITION_URL must be set in production")
+
+    if is_production() and not os.getenv("OPCUA_API_KEY", "").strip():
+        errors.append("OPCUA_API_KEY must be set in production")
+
     for key in (
         "JWT_SECRET",
         "POSTGRES_PASSWORD",

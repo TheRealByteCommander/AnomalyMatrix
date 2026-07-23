@@ -35,8 +35,8 @@ export default function ConfigurationPage({ openHelp }) {
   }, []);
 
   const licenseState = license?.active ? 'green' : 'amber';
-  const activeRecipe = recipes.find((r) => r.status === 'active') || recipes[0];
-  const activeModel = models.find((m) => m.status === 'active') || models[0];
+  const activeRecipe = recipes.find((r) => r.active === true || r.status === 'active') || recipes[0];
+  const activeModel = models.find((m) => m.status === 'active' || m.active === true) || models[0];
 
   return (
     <section className="page-grid">

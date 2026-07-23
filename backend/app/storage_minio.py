@@ -23,6 +23,21 @@ def _minio_client():
     return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure), endpoint, secure
 
 
+def _public_object_url(*, endpoint: str, secure: bool, bucket: str, object_name: str) -> str:
+    """Prefer browser-reachable base (MINIO_PUBLIC_ENDPOINT / MINIO_PUBLIC_BASE) over internal Docker DNS."""
+    public_base = os.getenv("MINIO_PUBLIC_BASE", "").strip().rstrip("/")
+    if public_base:
+        return f"{public_base}/{bucket}/{object_name}"
+    public_endpoint = os.getenv("MINIO_PUBLIC_ENDPOINT", "").strip()
+    host = public_endpoint or endpoint
+    scheme = "https" if secure else "http"
+    if os.getenv("MINIO_PUBLIC_SECURE", "").strip().lower() in {"1", "true", "yes"}:
+        scheme = "https"
+    elif os.getenv("MINIO_PUBLIC_SECURE", "").strip().lower() in {"0", "false", "no"}:
+        scheme = "http"
+    return f"{scheme}://{host}/{bucket}/{object_name}"
+
+
 def ensure_buckets() -> bool:
     if not _minio_enabled():
         return False
@@ -33,6 +48,24 @@ def ensure_buckets() -> bool:
     for bucket in ("heatmaps", "raw-images", "training-artifacts", "model-binaries"):
         if not client.bucket_exists(bucket):
             client.make_bucket(bucket)
+    # Heatmaps are served to the HMI via nginx /artifacts/ without MinIO credentials.
+    try:
+        heatmap_policy = json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": ["*"]},
+                        "Action": ["s3:GetObject"],
+                        "Resource": ["arn:aws:s3:::heatmaps/*"],
+                    }
+                ],
+            }
+        )
+        client.set_bucket_policy("heatmaps", heatmap_policy)
+    except Exception:
+        pass
     return True
 
 
@@ -48,8 +81,7 @@ def store_raw_frame(*, inspection_id: str, recipe_id: str, image_bytes: bytes) -
         client.make_bucket(bucket)
     object_name = f"{recipe_id}/{inspection_id}.png"
     client.put_object(bucket, object_name, io.BytesIO(image_bytes), length=len(image_bytes), content_type="image/png")
-    scheme = "https" if secure else "http"
-    return f"{scheme}://{endpoint}/{bucket}/{object_name}"
+    return _public_object_url(endpoint=endpoint, secure=secure, bucket=bucket, object_name=object_name)
 
 
 def store_heatmap_binary(*, inspection_id: str, png_bytes: bytes, anomaly_score: float) -> str | None:
@@ -74,8 +106,7 @@ def store_heatmap_binary(*, inspection_id: str, png_bytes: bytes, anomaly_score:
         }
     ).encode("utf-8")
     client.put_object(bucket, meta_name, io.BytesIO(meta), length=len(meta), content_type="application/json")
-    scheme = "https" if secure else "http"
-    return f"{scheme}://{endpoint}/{bucket}/{object_name}"
+    return _public_object_url(endpoint=endpoint, secure=secure, bucket=bucket, object_name=object_name)
 
 
 def store_heatmap_artifact(*, inspection_id: str, heatmap_uri: str, anomaly_score: float) -> str | None:
@@ -99,8 +130,7 @@ def store_heatmap_artifact(*, inspection_id: str, heatmap_uri: str, anomaly_scor
         indent=2,
     ).encode("utf-8")
     client.put_object(bucket, object_name, io.BytesIO(body), length=len(body), content_type="application/json")
-    scheme = "https" if secure else "http"
-    return f"{scheme}://{endpoint}/{bucket}/{object_name}"
+    return _public_object_url(endpoint=endpoint, secure=secure, bucket=bucket, object_name=object_name)
 
 
 def list_training_image_bytes(*, recipe_id: str, limit: int = 64) -> list[bytes]:
