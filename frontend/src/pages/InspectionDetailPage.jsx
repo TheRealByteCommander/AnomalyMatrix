@@ -76,9 +76,19 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
         </div>
         <div>
           <h3>{t('inspectionDetail.heatmapTitle')}</h3>
-          <div className="heatmap-placeholder" role="img" aria-label={t('inspectionDetail.heatmapAria')}>
-            <span>{selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}</span>
-          </div>
+          {selectedInspection.heatmapUri &&
+          (selectedInspection.heatmapUri.startsWith('/') ||
+            selectedInspection.heatmapUri.startsWith('http')) ? (
+            <img
+              className="heatmap-image"
+              src={selectedInspection.heatmapUri}
+              alt={t('inspectionDetail.heatmapAria')}
+            />
+          ) : (
+            <div className="heatmap-placeholder" role="img" aria-label={t('inspectionDetail.heatmapAria')}>
+              <span>{selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}</span>
+            </div>
+          )}
           <p className="muted">{t('inspectionDetail.heatmapHint')}</p>
         </div>
       </article>

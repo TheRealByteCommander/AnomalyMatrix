@@ -36,11 +36,26 @@ services:
         VITE_API_BASE: /api/v1
         VITE_REQUIRE_AUTH: "true"
         VITE_DEV_AUTH_HEADERS: "false"
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
     ports:
       - "80:80"
     depends_on:
-      - api
-      - minio
+      api:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: 256m
     restart: unless-stopped
 
   edge-acquisition:

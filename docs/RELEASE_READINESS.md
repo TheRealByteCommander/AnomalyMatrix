@@ -64,15 +64,15 @@ Stand: **v1.0.0** (Production-hardened)
 |----------|--------|
 | Development | ✅ |
 | Staging / Pilot | ✅ mit `.env.production` + Secret-Rotation |
-| **Production (24/7)** | ✅ nach Checkliste **und** Rollout-Gates unten |
+| **Production (24/7)** | ⚠️ nach Checkliste **und** Rollout-Gates unten |
 
 ### Rollout-Gates vor 24/7
 
 | Gate | Status |
 |------|--------|
-| TLS / `COOKIE_SECURE=true` vor dem HMI | ⚠️ Pflicht am Zielsystem |
-| OPC-UA Kunden-PKI (statt Self-Signed) | ⚠️ Pflicht am Zielsystem |
-| Seed-API-Keys rotiert (`users.api_key`) | ✅ Installer synced `OPCUA_API_KEY` |
-| Reale Kamera (`CAMERA_DRIVER=opencv`) | ⚠️ wenn nicht Synthetic-Pilot |
-| CI baut Gateway/Edge-Images | 🔜 empfohlen |
-| Dependency-Readiness (`/health`) | 🔜 empfohlen |
+| TLS / `COOKIE_SECURE=true` vor dem HMI | ⚠️ Pflicht am Zielsystem (`docker-compose.tls.yml`) |
+| OPC-UA Kunden-PKI (statt Self-Signed) | ⚠️ Zertifikate nach `/app/certs` mounten |
+| Seed-API-Keys rotiert (`users.api_key`) | ✅ Installer synced `OPCUA_API_KEY` (hard-fail) |
+| Reale Kamera (`CAMERA_DRIVER=opencv`) | ⚠️ Overlay `docker-compose.camera.yml` |
+| CI baut Gateway/Edge/Frontend-Images | ✅ Job `docker-images` |
+| Dependency-Readiness (`/api/v1/ready`) | ✅ |

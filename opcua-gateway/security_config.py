@@ -22,10 +22,13 @@ def cert_directory() -> Path:
 
 
 def ensure_dev_certificates(cert_dir: Path) -> tuple[Path, Path]:
+    """Use existing cert/key if present (customer PKI mount); otherwise generate self-signed."""
     cert_dir.mkdir(parents=True, exist_ok=True)
-    cert_path = cert_dir / "server_cert.pem"
-    key_path = cert_dir / "server_key.pem"
+    # Prefer explicitly provided customer filenames, then defaults.
+    cert_path = Path(os.getenv("OPCUA_SERVER_CERT", str(cert_dir / "server_cert.pem")))
+    key_path = Path(os.getenv("OPCUA_SERVER_KEY", str(cert_dir / "server_key.pem")))
     if cert_path.exists() and key_path.exists():
+        logger.info("Using OPC-UA certificate %s (will not overwrite)", cert_path)
         return cert_path, key_path
 
     import datetime
@@ -49,6 +52,9 @@ def ensure_dev_certificates(cert_dir: Path) -> tuple[Path, Path]:
         .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
         .sign(key, hashes.SHA256())
     )
+    # Only write into default cert_dir paths when generating.
+    cert_path = cert_dir / "server_cert.pem"
+    key_path = cert_dir / "server_key.pem"
     cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
     key_path.write_bytes(
         key.private_bytes(
@@ -57,7 +63,10 @@ def ensure_dev_certificates(cert_dir: Path) -> tuple[Path, Path]:
             encryption_algorithm=serialization.NoEncryption(),
         )
     )
-    logger.info("Generated self-signed OPC-UA certificate in %s", cert_dir)
+    logger.warning(
+        "Generated self-signed OPC-UA certificate in %s — replace with customer PKI for 24/7",
+        cert_dir,
+    )
     return cert_path, key_path
 
 

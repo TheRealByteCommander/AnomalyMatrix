@@ -48,3 +48,4 @@ Thumbs.db
 # Seeded at runtime by CoreStore
 backend/data/recipes.json
 backend/data/model_registry.json
+dist/SHA256SUMS.txt

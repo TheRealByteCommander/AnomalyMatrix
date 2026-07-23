@@ -40,21 +40,44 @@ Services (production overlay):
 
 ```bash
 curl -fsS http://127.0.0.1:8080/api/v1/health
+curl -fsS http://127.0.0.1:8080/api/v1/ready
 curl -fsS -c /tmp/amx.cookie -X POST http://127.0.0.1:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"user_id":"admin-1","password":"YOUR_ADMIN_PASSWORD"}'
 curl -fsS -b /tmp/amx.cookie http://127.0.0.1:8080/api/v1/auth/me
 ```
 
-HMI: open `/` → login → run inspection from Dashboard.
-
-## Backup (daily)
+### TLS (optional overlay)
 
 ```bash
-POSTGRES_PASSWORD=... ./scripts/backup/backup.sh
+# Certs nach ./certs/tls.crt + ./certs/tls.key, dann:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tls.yml \
+  --env-file .env.production up -d
+# Installer: --tls setzt COOKIE_SECURE=true
 ```
 
-Restore: `./scripts/backup/restore.sh backups/<timestamp>`
+### Kamera (OpenCV)
+
+```bash
+CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml \
+  --env-file .env.production up -d
+```
+
+### OPC-UA Kunden-PKI
+
+Mount vorhandene PEM-Dateien nach `OPCUA_CERT_DIR` (Default Volume `opcua_certs`):
+- `server_cert.pem` / `server_key.pem`
+- optional: `OPCUA_SERVER_CERT` / `OPCUA_SERVER_KEY` Pfade
+
+Self-Signed wird nur erzeugt, wenn keine Dateien vorhanden sind (kein Überschreiben).
+
+### Backup (Compose)
+
+```bash
+MODE=prod ./scripts/backup/backup.sh
+MODE=prod ./scripts/backup/restore.sh backups/<timestamp>
+```
 
 ## Rollback Model (< 60s)
 

@@ -1,4 +1,6 @@
 FROM python:3.11-slim
+ARG ANOMALYMATRIX_VERSION=1.0.0
+ENV ANOMALYMATRIX_VERSION=$ANOMALYMATRIX_VERSION
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt

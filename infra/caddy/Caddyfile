@@ -1,0 +1,13 @@
+# Example TLS termination for AnomalyMatrix HMI.
+# Replace {$INSTALL_HOST} or hardcode your hostname / IP.
+# For IP-only sites with local certs:
+#   {$INSTALL_HOST} {
+#     tls /certs/tls.crt /certs/tls.key
+#     reverse_proxy frontend:80
+#   }
+
+{$INSTALL_HOST:localhost} {
+	tls /certs/tls.crt /certs/tls.key
+	encode gzip
+	reverse_proxy frontend:80
+}
