@@ -3,6 +3,7 @@
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
 **Aktueller Stand (2026-07):** API **v1.0.0** — Pilot-/Deploy-ready (siehe Rollout-Gates in `docs/RELEASE_READINESS.md`)  
+**Installation:** `docs/INSTALLATION.md` · **Konfiguration:** `docs/CONFIGURATION.md`  
 **Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`  
 **GitHub Release:** `v1.0.0` — `docs/RELEASE_NOTES_v1.0.0.md`
 
@@ -85,7 +86,7 @@ cp .env.production.example .env.production   # secrets ersetzen
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
-Runbook: `docs/PRODUCTION_RUNBOOK.md` · Installation: `docs/INSTALLATION.md` · Freigabe: `docs/RELEASE_READINESS.md`
+Runbook: `docs/PRODUCTION_RUNBOOK.md` · Installation: `docs/INSTALLATION.md` · Konfiguration: `docs/CONFIGURATION.md` · Freigabe: `docs/RELEASE_READINESS.md`
 
 | Service | Dev-Port | Prod |
 |---------|----------|------|
@@ -183,16 +184,14 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | WebSocket Live-View, GigE/GenICam | 🔜 Folgerelease |
 
 ## Dokumente
-- `docs/INSTALLATION.md` — Installation (Installer + lokal)
+- `docs/INSTALLATION.md` — **Installation** (Installer + Compose + lokal)
+- `docs/CONFIGURATION.md` — **Konfiguration & Go-Live** (TLS, Kamera, OPC-UA, Rezepte)
+- `docs/PRODUCTION_RUNBOOK.md` — Betrieb, Backup, Security-Notes
 - `docs/PRODUCT_APPLICATION.md` — Anwendung, Einsatzgebiete, Zielgruppen
 - `docs/BUILD_READY_SPEC_V1.md` — Ziel-Spezifikation
-- `docs/IMPLEMENTATION_NOTES_MVP_SCAFFOLD.md` — Umsetzungsnotizen
-- `docs/PHASE3_REAL_PATH.md` — Real-Path / Provider / Persistenz
-- `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose
+- `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose-Übersicht
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
-- `docs/RELEASE_NOTES_v1.0.0.md` — **Aktuelles Release**
-- `docs/RELEASE_NOTES_v0.8.0.md` — Vorheriges Feature-Release
-- `docs/RELEASE_NOTES_v0.6.0.md` / `docs/RELEASE_NOTES_v0.1.0.md` — Historie
+- `docs/RELEASE_NOTES_v1.0.0.md` — Aktuelles Release
 - `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
 
 ## Tests

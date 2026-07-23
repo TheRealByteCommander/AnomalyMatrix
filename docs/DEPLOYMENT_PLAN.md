@@ -63,19 +63,33 @@ SERVICE_AUTH_TOKEN=...
 ## Rollout-Checkliste
 
 1. [ ] Secrets (`.env.production`) nicht in Git
-2. [ ] `RBAC_ENFORCE=true` in Staging/Prod
-3. [ ] Volume `api_data` für License-State vorhanden
-4. [ ] Backup Postgres + Volumes
-5. [ ] Smoke: Login + `POST /api/v1/inspections/run` + HMI Dashboard
-6. [ ] OPC-UA: Trigger-Test mit SPS-Simulator
+2. [ ] `RBAC_ENFORCE=true` / `SERVICE_AUTH_TOKEN` gesetzt
+3. [ ] `/api/v1/health` und `/api/v1/ready` grün
+4. [ ] Volume `api_data` + `opcua_certs` vorhanden
+5. [ ] TLS (`docker-compose.tls.yml` oder Reverse-Proxy) + `COOKIE_SECURE=true`
+6. [ ] Kamera konfiguriert (`synthetic` bewusst oder `docker-compose.camera.yml`)
+7. [ ] OPC-UA: Kunden-PKI + SPS-Trigger-Test
+8. [ ] Backup Postgres (`MODE=prod ./scripts/backup/backup.sh`)
+9. [ ] Smoke: Login + Inspektion + HMI Dashboard
+
+## Dokumentation
+
+| Dokument | Inhalt |
+|----------|--------|
+| [`INSTALLATION.md`](./INSTALLATION.md) | Install (Installer / Compose / lokal) |
+| [`CONFIGURATION.md`](./CONFIGURATION.md) | **Konfiguration & Go-Live** |
+| [`PRODUCTION_RUNBOOK.md`](./PRODUCTION_RUNBOOK.md) | Betrieb, Backup, Security |
+| [`RELEASE_READINESS.md`](./RELEASE_READINESS.md) | Freigabe-Status |
 
 ## Rollback
 
 - Compose: vorheriges Image-Tag / `git checkout` + `compose up -d --build`
-- Daten: Postgres-Snapshot / Volume-Restore
+- Daten: `MODE=prod ./scripts/backup/restore.sh backups/<timestamp>`
 
 ## Monitoring
 
 - `GET /api/v1/observability/summary`
 - Domain-Events: `GET /api/v1/events/recent`
 - Logs: `docker compose ... logs -f api`
+- Readiness: `GET /api/v1/ready`
+

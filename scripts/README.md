@@ -17,6 +17,10 @@ sudo ./scripts/install.sh --mode prod --host <SERVER-IP>
 
 Details: `docs/INSTALLATION.md`
 
+## Konfiguration (nach Install)
+
+Siehe **`docs/CONFIGURATION.md`** (TLS, Kamera, OPC-UA, Rezepte, Go-Live).
+
 ## Verzeichnisse
 
 ### `scripts/db/`
