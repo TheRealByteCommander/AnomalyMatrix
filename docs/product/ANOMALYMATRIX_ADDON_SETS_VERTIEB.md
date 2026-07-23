@@ -163,6 +163,8 @@ Das Einstiegspaket für Kunden, die **schnell einen belastbaren Proof of Value**
 
 Das **Kernpaket für Produktionslinien**: Alles aus **Vision Start**, plus **OPC-UA-Gateway** mit dokumentiertem NodeSet für die SPS-Integration. Die Prüfung läuft **im Linientakt** — manuell am HMI oder vollautomatisch per PLC-Trigger.
 
+**Hardware-Einkauf:** [`EINKAUFSLISTE_LINIE.md`](./EINKAUFSLISTE_LINIE.md)
+
 ### Lieferumfang (zusätzlich zu Vision Start)
 
 | Kategorie | Inhalt |
