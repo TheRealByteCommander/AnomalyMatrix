@@ -47,6 +47,10 @@ curl -fsS -c /tmp/amx.cookie -X POST http://127.0.0.1:8080/api/v1/auth/login \
 curl -fsS -b /tmp/amx.cookie http://127.0.0.1:8080/api/v1/auth/me
 ```
 
+HMI: `/` → Login → Dashboard-Inspektion.
+
+**Vollständige Konfiguration:** [`CONFIGURATION.md`](./CONFIGURATION.md) · **Installation:** [`INSTALLATION.md`](./INSTALLATION.md)
+
 ### TLS (optional overlay)
 
 ```bash

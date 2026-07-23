@@ -20,7 +20,7 @@ OPC-UA-Gateway für AnomalyMatrix (**v1.0.0**) — SPS-Anbindung, Sign/Encrypt i
 - Vorhandene `server_cert.pem` / `server_key.pem` werden **nicht** überschrieben
 - Optional: `OPCUA_SERVER_CERT` / `OPCUA_SERVER_KEY` auf Kunden-PEMs zeigen
 
-Siehe `docs/PRODUCTION_RUNBOOK.md`.
+Siehe `docs/CONFIGURATION.md` (Abschnitt OPC-UA) und `docs/PRODUCTION_RUNBOOK.md`.
 
 
 ## PLC-Schnittstelle (Überblick)
