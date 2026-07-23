@@ -12,7 +12,14 @@ mkdir -p "$DIST_DIR"
 
 cat > "$INSTALLER" <<'EOF'
 #!/usr/bin/env bash
+# AnomalyMatrix self-extracting installer
+# Empfohlenes Host-OS: Ubuntu Server 24.04 LTS
 set -euo pipefail
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "[AnomalyMatrix] Bitte als root ausführen: sudo $0 ..." >&2
+  exit 1
+fi
 
 MARKER="__ANOMALYMATRIX_PAYLOAD_BELOW__"
 line_no=$(awk "/$MARKER/{print NR + 1; exit 0;}" "$0")
@@ -26,7 +33,11 @@ EOF
 
 cat "$PAYLOAD" >> "$INSTALLER"
 chmod +x "$INSTALLER"
-cp "$INSTALLER" "$LEGACY_INSTALLER"
+cp -f "$INSTALLER" "$LEGACY_INSTALLER"
 
 echo "Built installer: $INSTALLER"
-echo "Version: $VERSION"
+echo "Legacy link:     $LEGACY_INSTALLER"
+echo "Version:         $VERSION"
+echo
+echo "Run on a fresh Ubuntu Server 24.04 LTS:"
+echo "  sudo $INSTALLER --host <SERVER-IP>"

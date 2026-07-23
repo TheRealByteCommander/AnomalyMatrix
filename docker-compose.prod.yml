@@ -1,4 +1,5 @@
-# Production overlay — use: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Production overlay — use:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 
 services:
   api:
@@ -8,12 +9,19 @@ services:
       ANOMALYMATRIX_ENV: prod
       RBAC_ENFORCE: "true"
       LICENSE_ENFORCE: "true"
-      COOKIE_SECURE: "true"
-      ANOMALYMATRIX_INFERENCE_PROVIDER: patchcore
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      AMX_BOOTSTRAP_FORCE: ${AMX_BOOTSTRAP_FORCE:-true}
+      ANOMALYMATRIX_INFERENCE_PROVIDER: ${ANOMALYMATRIX_INFERENCE_PROVIDER:-patchcore}
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN}
+      JWT_SECRET: ${JWT_SECRET}
+      LICENSE_ADMIN_TOKEN: ${LICENSE_ADMIN_TOKEN}
+      AMX_CORS_ORIGINS: ${AMX_CORS_ORIGINS}
+      AMX_ADMIN_PASSWORD: ${AMX_ADMIN_PASSWORD}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
-    # API stays reachable via frontend nginx proxy; bind only on localhost if exposed
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
+      CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    # API only on localhost — HMI reaches it via nginx proxy
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
@@ -36,10 +44,8 @@ services:
     environment:
       ANOMALYMATRIX_ENV: prod
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN}
-      CAMERA_DRIVER: ${CAMERA_DRIVER:-opencv}
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
-    # No host port — only reachable on the Docker network
-    ports: []
     restart: unless-stopped
 
   opcua-gateway:
@@ -52,21 +58,24 @@ services:
       ANOMALYMATRIX_API_URL: http://api:8080
     volumes:
       - opcua_certs:/app/certs
-    # Keep OPC-UA PLC port; drop unauthenticated HTTP host exposure
     ports:
       - "4840:4840"
     restart: unless-stopped
 
   postgres:
-    ports: []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     restart: unless-stopped
 
   influxdb:
-    ports: []
+    environment:
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN}
     restart: unless-stopped
 
   minio:
-    ports: []
+    environment:
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     restart: unless-stopped
 
 volumes:

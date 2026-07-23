@@ -20,6 +20,13 @@
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
+Oder autonom vom frischen Ubuntu Server 24.04 LTS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/master/scripts/install.sh \
+  | sudo bash -s -- --host <SERVER-IP>
+```
+
 Services (production overlay):
 - HMI: port **80** (nginx → API proxy `/api/`)
 - API: **127.0.0.1:8080** only (not public)
