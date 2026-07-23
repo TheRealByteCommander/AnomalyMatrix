@@ -188,6 +188,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/CONFIGURATION.md` — **Konfiguration & Go-Live** (TLS, Kamera, OPC-UA, Rezepte)
 - `docs/PRODUCTION_RUNBOOK.md` — Betrieb, Backup, Security-Notes
 - `docs/PRODUCT_APPLICATION.md` — Anwendung, Einsatzgebiete, Zielgruppen
+- `docs/product/EINKAUFSLISTE_LINIE.md` — Hardware-Einkaufsliste Linien-Setup
 - `docs/BUILD_READY_SPEC_V1.md` — Ziel-Spezifikation
 - `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose-Übersicht
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
