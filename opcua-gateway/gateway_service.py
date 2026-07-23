@@ -39,7 +39,24 @@ async def lifespan(app: FastAPI):
     await stop_opcua_background()
 
 
-app = FastAPI(title="AnomalyMatrix OPC-UA Gateway", version="1.0.0", lifespan=lifespan)
+def _app_version() -> str:
+    return os.getenv("ANOMALYMATRIX_VERSION", "1.0.0").strip() or "1.0.0"
+
+
+def _is_production() -> bool:
+    return os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower() in {"prod", "production"}
+
+
+_docs = {}
+if _is_production():
+    _docs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(
+    title="AnomalyMatrix OPC-UA Gateway",
+    version=_app_version(),
+    lifespan=lifespan,
+    **_docs,
+)
 app.add_middleware(ServiceAuthMiddleware)
 
 
@@ -48,7 +65,7 @@ def health():
     return {
         "ok": True,
         "service": "opcua-gateway",
-        "version": "1.0.0",
+        "version": _app_version(),
         "opcua_enabled": os.getenv("OPCUA_SERVER_ENABLED", "true"),
         "api_url": os.getenv("ANOMALYMATRIX_API_URL", ""),
         "timestamp": datetime.now(timezone.utc).isoformat(),

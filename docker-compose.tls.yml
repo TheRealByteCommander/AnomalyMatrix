@@ -1,0 +1,23 @@
+# TLS termination example (Caddy) in front of the HMI nginx on port 80.
+# Usage (after install with --tls so COOKIE_SECURE=true):
+#   1. Put certs in ./certs/tls.crt and ./certs/tls.key (or use Caddy auto-HTTPS)
+#   2. docker compose ... -f docker-compose.tls.yml up -d
+#
+# This publishes 443 and proxies to the internal frontend:80 service.
+
+services:
+  caddy:
+    image: caddy:2.9.1-alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy_data:

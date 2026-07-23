@@ -36,7 +36,8 @@ SKIP_CLONE="false"
 SKIP_DOCKER_INSTALL="false"
 FORCE_SECRETS="false"       # overwrite existing .env.production
 NON_INTERACTIVE="true"
-CAMERA_DRIVER_DEFAULT="synthetic"  # safe on machines without cameras
+CAMERA_DRIVER_DEFAULT="synthetic"  # safe without host camera; use docker-compose.camera.yml for opencv
+
 COMPOSE_PROJECT="anomalymatrix"
 
 CREDENTIALS_FILE=""
@@ -461,11 +462,17 @@ start_stack() {
 
 wait_for_health() {
   local url="http://127.0.0.1:8080/api/v1/health"
+  local ready="http://127.0.0.1:8080/api/v1/ready"
   log "Warte auf API-Health ($url)..."
   local i
   for i in $(seq 1 60); do
     if curl -fsS "$url" >/dev/null 2>&1; then
       ok "API healthy"
+      if curl -fsS "$ready" >/dev/null 2>&1; then
+        ok "API ready"
+      else
+        warn "API /ready noch nicht grün — Dependencies prüfen (Edge/Postgres)."
+      fi
       return 0
     fi
     sleep 3
@@ -483,25 +490,35 @@ sync_opcua_api_key() {
   local opcua_key qa_key eng_key adm_key
   opcua_key="$(grep -E '^OPCUA_API_KEY=' "$env_file" | cut -d= -f2-)"
   [[ -n "$opcua_key" ]] || {
-    warn "OPCUA_API_KEY fehlt — DB-Sync übersprungen."
-    return 0
+    err "OPCUA_API_KEY fehlt in .env.production — Installation abgebrochen."
+    return 1
   }
   # Keys are alphanumeric from rand_alnum — safe for SQL literals.
   qa_key="$(rand_alnum 32)"
   eng_key="$(rand_alnum 32)"
   adm_key="$(rand_alnum 32)"
   log "OPC-UA API-Key in Postgres synchronisieren (Seed-Keys rotieren)..."
-  if compose_cmd exec -T postgres psql -U anomaly -d anomalymatrix -v ON_ERROR_STOP=1 <<SQL >/dev/null
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    if compose_cmd exec -T postgres psql -U anomaly -d anomalymatrix -v ON_ERROR_STOP=1 <<SQL >/dev/null
 UPDATE users SET api_key = '${opcua_key}' WHERE user_id = 'operator-1';
 UPDATE users SET api_key = '${qa_key}' WHERE user_id = 'qa-1';
 UPDATE users SET api_key = '${eng_key}' WHERE user_id = 'engineer-1';
 UPDATE users SET api_key = '${adm_key}' WHERE user_id = 'admin-1';
 SQL
-  then
-    ok "API-Keys in Postgres aktualisiert (operator-1 = OPCUA_API_KEY)"
-  else
-    warn "API-Key-Sync fehlgeschlagen — OPC-UA-Inspektionen ggf. 401. Manuell users.api_key setzen."
-  fi
+    then
+      local verified
+      verified="$(compose_cmd exec -T postgres psql -U anomaly -d anomalymatrix -tAc \
+        "SELECT api_key FROM users WHERE user_id = 'operator-1';" | tr -d '[:space:]')"
+      if [[ "$verified" == "$opcua_key" ]]; then
+        ok "API-Keys in Postgres aktualisiert (operator-1 = OPCUA_API_KEY)"
+        return 0
+      fi
+    fi
+    sleep 2
+  done
+  err "API-Key-Sync fehlgeschlagen — Installation abgebrochen (OPC-UA würde 401 liefern)."
+  return 1
 }
 
 activate_license() {
@@ -645,6 +662,7 @@ print_summary() {
  Modus:              $MODE
  HMI:                ${scheme}://${INSTALL_HOST}/
  API-Health:         http://127.0.0.1:8080/api/v1/health
+ API-Ready:          http://127.0.0.1:8080/api/v1/ready
  Credentials:        $CREDENTIALS_FILE
 
  Nützliche Befehle:
@@ -653,9 +671,13 @@ print_summary() {
    $compose_hint logs -f api
    systemctl status anomalymatrix
 
- Kamera später aktivieren:
-   In .env.production: CAMERA_DRIVER=opencv  und  CAMERA_SOURCE=0|/dev/video0|Pfad
-   Dann: $compose_hint up -d --build edge-acquisition
+ Kamera (OpenCV) aktivieren:
+   $compose_hint -f docker-compose.camera.yml up -d --build edge-acquisition
+   (CAMERA_DRIVER=opencv, Device /dev/video0 — siehe docker-compose.camera.yml)
+
+ TLS-Termination (Caddy):
+   Certs nach ./certs/tls.crt + tls.key, dann:
+   $compose_hint -f docker-compose.tls.yml up -d
 ================================================================================
 EOF
 

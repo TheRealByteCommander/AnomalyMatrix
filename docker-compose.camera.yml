@@ -1,0 +1,15 @@
+# Optional camera device passthrough for OpenCV capture.
+# Usage:
+#   CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     -f docker-compose.camera.yml --env-file .env.production up -d
+#
+# Set CAMERA_DEVICE=/dev/video0 (default) or another V4L2 path.
+
+services:
+  edge-acquisition:
+    environment:
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-opencv}
+      CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    devices:
+      - "${CAMERA_DEVICE:-/dev/video0}:${CAMERA_DEVICE:-/dev/video0}"

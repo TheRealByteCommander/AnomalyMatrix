@@ -14,12 +14,14 @@ def service_auth_token() -> str:
     return os.getenv("SERVICE_AUTH_TOKEN", "").strip()
 
 
+def _is_production() -> bool:
+    return os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower() in {"prod", "production"}
+
+
 def require_service_auth_or_raise(headers) -> None:
     expected = service_auth_token()
-    env = os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower()
-    production = env in {"prod", "production"}
     if not expected:
-        if production:
+        if _is_production():
             raise HTTPException(status_code=503, detail="Service auth not configured")
         return
     provided = ""
@@ -34,11 +36,14 @@ def require_service_auth_or_raise(headers) -> None:
 class ServiceAuthMiddleware(BaseHTTPMiddleware):
     """Protect mutating and sensitive HTTP routes with a shared service token."""
 
-    PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+    # In production only /health stays public; OpenAPI is disabled on the app.
+    PUBLIC_PATHS_PROD = {"/health"}
+    PUBLIC_PATHS_DEV = {"/health", "/docs", "/openapi.json", "/redoc"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path.rstrip("/") or "/"
-        if path in self.PUBLIC_PATHS or path.endswith("/health"):
+        public = self.PUBLIC_PATHS_PROD if _is_production() else self.PUBLIC_PATHS_DEV
+        if path in public or path.endswith("/health"):
             return await call_next(request)
         try:
             require_service_auth_or_raise(request.headers)

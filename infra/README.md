@@ -1,13 +1,20 @@
 # infra
 
-Infrastructure-Manifeste für AnomalyMatrix.
+Infrastructure-Manifeste für AnomalyMatrix **v1.0.0**.
 
-## Stand v0.6.0
-- **Produktions-Runtime:** Docker Compose im Repo-Root (`docker-compose.yml`)
-- Services: api, postgres, influxdb, minio, edge-acquisition, opcua-gateway
-- Kubernetes/Helm: noch nicht implementiert (optional für Folgerelease)
+## Compose (Repo-Root)
+- `docker-compose.yml` — Core-Stack
+- `docker-compose.dev.yml` — Dev-Ports
+- `docker-compose.prod.yml` — Produktion
+- `docker-compose.camera.yml` — OpenCV-Gerätedurchreichung
+- `docker-compose.tls.yml` — Caddy TLS-Termination
 
-## Volumes (Compose)
-- `postgres_data`, `influx_data`, `minio_data`
+## Caddy TLS
+Beispiel-Config: `infra/caddy/Caddyfile` (Certs unter `./certs/tls.crt` + `tls.key`).
 
-Siehe `docs/INSTALLATION.md` und `README.md`.
+## Volumes
+- `postgres_data`, `influx_data`, `minio_data`, `api_data`, `opcua_certs`
+
+Kubernetes/Helm: noch nicht implementiert (optional für Folgerelease).
+
+Siehe `docs/INSTALLATION.md`, `docs/PRODUCTION_RUNBOOK.md`.

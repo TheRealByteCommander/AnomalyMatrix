@@ -3,12 +3,21 @@ version: '3.9'
 # Core stack — no host port publishing (safe default for production).
 # For local development ports, also use: -f docker-compose.dev.yml
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   api:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
     environment:
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
@@ -33,9 +42,17 @@ services:
       minio:
         condition: service_started
       edge-acquisition:
-        condition: service_started
+        condition: service_healthy
       opcua-gateway:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/v1/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *default-logging
+    mem_limit: 1g
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080
     restart: unless-stopped
 
@@ -43,17 +60,31 @@ services:
     build:
       context: ./edge-acquisition
       dockerfile: Dockerfile
+      args:
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
     environment:
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+    logging: *default-logging
+    mem_limit: 512m
     restart: unless-stopped
 
   opcua-gateway:
     build:
       context: .
       dockerfile: opcua-gateway/Dockerfile
+      args:
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
     environment:
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.0.0}
       OPCUA_SERVER_ENABLED: "true"
       OPCUA_SERVER_ENDPOINT: opc.tcp://0.0.0.0:4840/anomalymatrix/server/
       ANOMALYMATRIX_API_URL: http://api:8080
@@ -62,10 +93,18 @@ services:
       OPCUA_PLC_STOP_ON_RED: "true"
       OPCUA_SECURITY_ENABLED: ${OPCUA_SECURITY_ENABLED:-false}
       OPCUA_CERT_DIR: ${OPCUA_CERT_DIR:-/app/certs}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+    logging: *default-logging
+    mem_limit: 512m
     restart: unless-stopped
 
   postgres:
-    image: postgres:16
+    image: postgres:16.9
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-anomalymatrix}
       POSTGRES_USER: ${POSTGRES_USER:-anomaly}
@@ -79,10 +118,12 @@ services:
       timeout: 5s
       retries: 12
       start_period: 5s
+    logging: *default-logging
+    mem_limit: 1g
     restart: unless-stopped
 
   influxdb:
-    image: influxdb:2.7
+    image: influxdb:2.7.11
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USERNAME:-anomaly}
@@ -92,16 +133,27 @@ services:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-anomaly-token}
     volumes:
       - influx_data:/var/lib/influxdb2
+    logging: *default-logging
+    mem_limit: 1g
     restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    # Pin last widely published official tag (MinIO community is source-only for newer releases).
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+    logging: *default-logging
+    mem_limit: 512m
     restart: unless-stopped
 
 volumes:

@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .api.auth import router as auth_router
 from .api.catalog import router as catalog_router
-from .api.health import router as health_router
+from .api.health import app_version, router as health_router
 from .api.training import router as training_router
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
@@ -85,11 +85,16 @@ async def lifespan(app: FastAPI):
             await task
 
 
+_docs_kwargs = {}
+if is_production():
+    _docs_kwargs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
 app = FastAPI(
     title="AnomalyMatrix API",
-    version="1.0.0",
+    version=app_version(),
     description="v1.0: Production-ready inspection platform",
     lifespan=lifespan,
+    **_docs_kwargs,
 )
 
 configure_production_middleware(app)

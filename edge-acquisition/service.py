@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -9,7 +10,24 @@ from pydantic import BaseModel
 from camera_drivers import encode_image_b64, get_camera_driver
 from service_auth import ServiceAuthMiddleware
 
-app = FastAPI(title="AnomalyMatrix Edge Acquisition", version="1.0.0")
+
+def _app_version() -> str:
+    return os.getenv("ANOMALYMATRIX_VERSION", "1.0.0").strip() or "1.0.0"
+
+
+def _is_production() -> bool:
+    return os.getenv("ANOMALYMATRIX_ENV", "dev").strip().lower() in {"prod", "production"}
+
+
+_docs = {}
+if _is_production():
+    _docs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(
+    title="AnomalyMatrix Edge Acquisition",
+    version=_app_version(),
+    **_docs,
+)
 app.add_middleware(ServiceAuthMiddleware)
 
 
@@ -20,7 +38,7 @@ class CaptureRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "service": "edge-acquisition", "version": "1.0.0"}
+    return {"ok": True, "service": "edge-acquisition", "version": _app_version()}
 
 
 @app.post("/capture")
