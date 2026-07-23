@@ -14,7 +14,7 @@ async def health(request: Request) -> dict:
         {
             "service": "anomalymatrix-api",
             "status": "ok",
-            "version": "0.1.0",
+            "version": "1.0.0",
         },
         request_id,
     )

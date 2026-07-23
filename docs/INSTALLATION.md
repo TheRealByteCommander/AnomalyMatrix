@@ -1,156 +1,177 @@
 # AnomalyMatrix Installation
 
-Stand: **v0.6.0** (API + HMI + Gateway)
+Stand: **v1.0.0** (Production-hardened)
+
+## Welches Linux?
+
+| Distro | Empfehlung | Kommentar |
+|--------|------------|-----------|
+| **Ubuntu Server 24.04 LTS** | **Primär empfohlen** | Beste Docker-Unterstützung, 5 Jahre Updates, üblich an OT/Edge-Geräten |
+| Ubuntu Server 22.04 LTS | Unterstützt | Ebenfalls LTS, etwas ältere Pakete |
+| Debian 12 (bookworm) | Unterstützt | Minimaler Footprint, etwas mehr manuelle Pflege |
+
+**Nicht empfohlen:** Desktop-Varianten (unötig), Rolling Releases, Alpine als Host (Docker-Engine-Repo).
+
+Hardware-Minimum (Pilot): 4 vCPU, 8 GB RAM, 40 GB SSD, x86_64 oder aarch64.
+
+---
+
+## Autonome Installation (frisches OS)
+
+Ab einem neu installierten Ubuntu Server (nur SSH-Zugang):
+
+```bash
+# Öffentliches Repo / Release-Branch
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/master/scripts/install.sh \
+  | sudo bash
+
+# Mit Host-IP/DNS und ohne Firewall-Änderung
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/master/scripts/install.sh \
+  | sudo bash -s -- --host 192.168.10.50 --no-firewall
+
+# Privates Repo
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/master/scripts/install.sh \
+  | sudo GITHUB_TOKEN=ghp_xxx bash -s -- --host anomalymatrix.factory.local
+```
+
+Aus einem bereits ausgecheckten Repo:
+
+```bash
+sudo ./scripts/install.sh --mode prod --host 192.168.10.50
+```
+
+### Was das Skript macht
+
+1. OS prüfen (Ubuntu 22.04/24.04, Debian 12)
+2. Basispakete + **Docker Engine + Compose Plugin** installieren
+3. Repo nach `/opt/anomalymatrix` klonen bzw. synchronisieren
+4. Starke Secrets generieren → `.env.production` + `CREDENTIALS.txt` (Mode 600)
+5. Production-Stack bauen & starten (`docker-compose.yml` + `docker-compose.prod.yml`)
+6. Health-Check, Admin-Bootstrap, Lizenz-Aktivierung, Smoke-Inspektion
+7. UFW (22/80/4840) + `systemd`-Unit `anomalymatrix` für Autostart
+
+Nach dem Lauf:
+
+| Was | Wo |
+|-----|-----|
+| HMI | `http://<HOST>/` |
+| Admin | `admin-1` / Passwort in `/opt/anomalymatrix/CREDENTIALS.txt` |
+| API | `http://127.0.0.1:8080/api/v1/health` |
+| Install-Log | `/var/log/anomalymatrix-install.log` |
+
+### Installer-Optionen
+
+```
+--mode prod|dev     Standard: prod
+--host HOST         IP/DNS für CORS und Anzeige-URLs
+--app-dir DIR       Standard: /opt/anomalymatrix
+--branch BRANCH     Standard: master
+--repo-url URL      Git-Remote
+--skip-clone        Vorhandenen Code nutzen
+--skip-docker       Docker nicht neu installieren
+--force-secrets     .env.production neu generieren (gefährlich — bricht DB-Volumes)
+--no-firewall       UFW nicht anfassen
+--tls               HTTPS erwartet (COOKIE_SECURE=true)
+```
+
+> Re-Install **ohne** `--force-secrets` behält `.env.production` und bestehende Postgres-Volumes.
+---
 
 ## Option A: One-file installer (.run)
 
-Build installer from repository root:
-
 ```bash
 ./scripts/build_installer.sh
+sudo ./dist/AnomalyMatrix-installer.run --host 192.168.10.50
 ```
 
-Run installer:
+Der `.run`-Wrapper entpackt `scripts/install.sh` und führt es aus.
+
+---
+
+## Option B: Docker Compose manuell
+
+### Produktion
 
 ```bash
-./dist/AnomalyMatrix-installer.run
+cp .env.production.example .env.production   # Secrets ersetzen
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  --env-file .env.production up -d --build
 ```
 
-Optional env overrides:
+### Entwicklung (Ports auf dem Host)
 
 ```bash
-APP_DIR=/opt/anomalymatrix BRANCH=master ./dist/AnomalyMatrix-installer.run
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.dev.yml \
+  --env-file .env up --build
 ```
 
-> Der Installer basiert auf Release **v0.1.0**. Für den neuesten Code-Stand: Option B/C oder `git pull` + Docker Compose.
+| Service | Dev-Port | Prod |
+|---------|----------|------|
+| HMI (nginx) | — | **80** |
+| API | 8080 | localhost:8080 |
+| edge-acquisition | 8091 | nur Docker-Netz |
+| opcua-gateway HTTP | 8092 | nur Docker-Netz |
+| OPC-UA | 4840 | **4840** |
+| Postgres / Influx / MinIO | 5432 / 8086 / 9000 | nur Docker-Netz |
 
-## Option B: Direct install script
+---
 
-```bash
-./scripts/install.sh
-```
-
-## Option C: Lokale Entwicklung (Windows)
+## Option C: Lokale Entwicklung (ohne Docker)
 
 ### Voraussetzungen
-- **Python 3.12+** (`py -3`)
-- **Node.js 18+** (z. B. `winget install OpenJS.NodeJS.18` — Paket-ID `OpenJS.NodeJS.18`, nicht `OpenJS.NodeJS.LTS`)
-- Optional: **Docker Desktop** für vollständigen Stack
+- **Python 3.11+**
+- **Node.js 18+**
 
 ### Backend
-```powershell
+```bash
 cd backend
-py -3 -m pip install -r requirements.txt
-copy ..\.env.example ..\.env
-py -3 -m uvicorn app.main:app --reload --port 8080
+python3 -m pip install -r requirements.txt
+cp ../.env.example ../.env
+python3 -m uvicorn app.main:app --reload --port 8080
 ```
 
-Health-Check: `curl http://127.0.0.1:8080/api/v1/health`
-
 ### Frontend
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-UI: [http://localhost:5173](http://localhost:5173)
-
-**Häufiger Fehler:** `ERR_CONNECTION_REFUSED` auf Port 5173 → `npm run dev` läuft nicht oder Terminal wurde geschlossen.
-
-Falls `localhost` nicht antwortet: [http://127.0.0.1:5173](http://127.0.0.1:5173) oder `npm run dev -- --host 127.0.0.1`
-
-### Edge + OPC-UA (optional, ohne Docker)
-```powershell
-# Terminal: edge-acquisition (8091)
-cd edge-acquisition
-py -3 -m pip install -r requirements.txt
-py -3 -m uvicorn service:app --port 8091
-
-# Terminal: opcua-gateway (8092 HTTP, 4840 OPC-UA)
-cd opcua-gateway
-py -3 -m pip install -r requirements.txt
-py -3 -m uvicorn gateway_service:app --port 8092
-```
-
-In `.env`: `EDGE_ACQUISITION_URL=http://127.0.0.1:8091`, `OPCUA_GATEWAY_URL=http://127.0.0.1:8092`
-
-## Option D: Docker Compose (empfohlen für Integration)
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-Startet API, Postgres (mit `scripts/db/*.sql`), InfluxDB, MinIO, edge-acquisition, opcua-gateway.
-
-| Service | URL |
-|---------|-----|
-| API | http://localhost:8080 |
-| Frontend (lokal) | http://localhost:5173 (`npm run dev` separat) |
-| OPC-UA | `opc.tcp://localhost:4840/anomalymatrix/server/` |
-| MinIO Console | http://localhost:9001 |
+---
 
 ## Datenbank-Migrationen
 
-Bei Docker: automatisch via `scripts/db/` → `/docker-entrypoint-initdb.d`.
+Bei Docker: automatisch via `scripts/db/` → `/docker-entrypoint-initdb.d` (`001`–`005`).
 
-Manuell (Postgres läuft):
-```bash
-./scripts/db/apply_migrations.sh
-```
+Manuell: `./scripts/db/apply_migrations.sh`
 
-Skripte:
-- `001_init.sql` — Inspection-Ergebnisse
-- `002_payload_jsonb.sql` — JSONB-Payload
-- `003_core_schema.sql` — recipes, users, roles, audit_log, feedback_events, model_registry
-
-Ohne `DATABASE_URL` nutzt die API JSONL unter `backend/data/`.
-
-## RBAC & Feedback (Dev)
-
-`.env`: `RBAC_ENFORCE=false` (Standard) — Header `X-AMX-Role` / `X-AMX-User` für Tests.
-
-Mit Postgres-Seed (`003_core_schema.sql`):
-- `amx-key-operator`, `amx-key-qa`, `amx-key-engineer`, `amx-key-admin`
-
-Feedback erfordert Rolle `qa_lead` oder `admin` (wenn `RBAC_ENFORCE=true`).
-
-## Inferenz-Provider
-
-```env
-ANOMALYMATRIX_INFERENCE_PROVIDER=stub          # Default
-ANOMALYMATRIX_INFERENCE_PROVIDER=opencv_ready
-ANOMALYMATRIX_INFERENCE_PROVIDER=patchcore     # OpenCV-Textur + Hash-Proxy
-```
-
-## What installer does
-1. Validates required tooling (`git`, `docker`, `docker compose`, `curl`)
-2. Clones/updates repo to target directory
-3. Creates `.env` from `.env.example` if missing
-4. Starts stack via Docker Compose
-5. Runs DB migration script (if available)
-6. Performs API health check
+---
 
 ## Data safety
-- Persistent data uses Docker named volumes (`postgres_data`, `influx_data`, `minio_data`).
-- Re-running installer updates code but does not wipe volumes.
-- To remove stack without deleting volumes:
+
+- Persistenz über Docker-Volumes (`postgres_data`, `influx_data`, `minio_data`, `opcua_certs`)
+- Installer überschreibt Volumes **nicht**
+- Credentials: `/opt/anomalymatrix/CREDENTIALS.txt` nach Übernahme in den Vault löschen
 
 ```bash
-docker compose -f /opt/anomalymatrix/docker-compose.yml --env-file /opt/anomalymatrix/.env down
+# Stack stoppen (Daten behalten)
+sudo systemctl stop anomalymatrix
+
+# Stack inkl. Volumes löschen (destruktiv)
+cd /opt/anomalymatrix
+docker compose -p anomalymatrix -f docker-compose.yml -f docker-compose.prod.yml \
+  --env-file .env.production down -v
 ```
 
-- To fully wipe data (destructive):
+## Verifikation
 
 ```bash
-docker compose -f /opt/anomalymatrix/docker-compose.yml --env-file /opt/anomalymatrix/.env down -v
+curl -fsS http://127.0.0.1:8080/api/v1/health
+sudo cat /opt/anomalymatrix/CREDENTIALS.txt
+curl -fsS -c /tmp/amx.cookie -X POST http://127.0.0.1:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"admin-1","password":"<AUS_CREDENTIALS>"}'
 ```
 
-## Verifikation nach Installation
-
-```bash
-cd backend && py -3 -m pytest -q
-curl http://127.0.0.1:8080/api/v1/health
-curl http://127.0.0.1:8092/health
-```
+Siehe auch: `docs/PRODUCTION_RUNBOOK.md`, `docs/RELEASE_READINESS.md`.

@@ -1,0 +1,33 @@
+version: '3.9'
+
+# Development host-port publishing — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env up --build
+
+services:
+  api:
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+
+  edge-acquisition:
+    ports:
+      - "8091:8091"
+
+  opcua-gateway:
+    ports:
+      - "8092:8092"
+      - "4840:4840"
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  influxdb:
+    ports:
+      - "8086:8086"
+
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"

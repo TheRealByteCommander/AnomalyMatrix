@@ -1,18 +1,19 @@
 version: '3.9'
 
+# Core stack — no host port publishing (safe default for production).
+# For local development ports, also use: -f docker-compose.dev.yml
+
 services:
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file:
-      - .env.example
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
-      ANOMALYMATRIX_INFERENCE_PROVIDER: stub
+      ANOMALYMATRIX_INFERENCE_PROVIDER: ${ANOMALYMATRIX_INFERENCE_PROVIDER:-stub}
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-anomaly-token}
       INFLUX_ORG: ${INFLUX_ORG:-anomalymatrix}
@@ -21,8 +22,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
       MINIO_SECURE: "false"
-    ports:
-      - "8080:8080"
+    volumes:
+      - api_data:/app/data
     depends_on:
       - postgres
       - influxdb
@@ -30,6 +31,7 @@ services:
       - edge-acquisition
       - opcua-gateway
     command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+    restart: unless-stopped
 
   edge-acquisition:
     build:
@@ -37,8 +39,9 @@ services:
       dockerfile: Dockerfile
     environment:
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
-    ports:
-      - "8091:8091"
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
+      CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+    restart: unless-stopped
 
   opcua-gateway:
     build:
@@ -51,9 +54,9 @@ services:
       OPCUA_API_KEY: ${OPCUA_API_KEY:-amx-key-operator}
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       OPCUA_PLC_STOP_ON_RED: "true"
-    ports:
-      - "8092:8092"
-      - "4840:4840"
+      OPCUA_SECURITY_ENABLED: ${OPCUA_SECURITY_ENABLED:-false}
+      OPCUA_CERT_DIR: ${OPCUA_CERT_DIR:-/app/certs}
+    restart: unless-stopped
 
   postgres:
     image: postgres:16
@@ -61,16 +64,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-anomalymatrix}
       POSTGRES_USER: ${POSTGRES_USER:-anomaly}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anomaly_pw}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/db:/docker-entrypoint-initdb.d
+    restart: unless-stopped
 
   influxdb:
     image: influxdb:2.7
-    ports:
-      - "8086:8086"
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USERNAME:-anomaly}
@@ -80,6 +80,7 @@ services:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-anomaly-token}
     volumes:
       - influx_data:/var/lib/influxdb2
+    restart: unless-stopped
 
   minio:
     image: minio/minio:latest
@@ -87,13 +88,12 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     volumes:
       - minio_data:/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   influx_data:
   minio_data:
+  api_data:

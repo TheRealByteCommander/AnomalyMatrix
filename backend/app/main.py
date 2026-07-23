@@ -53,10 +53,16 @@ async def lifespan(app: FastAPI):
         logger = logging.getLogger(__name__)
         admin_pw = os.getenv("AMX_ADMIN_PASSWORD", "").strip()
         if admin_pw:
-            user = core_store.get_user_by_id("admin-1")
-            if user and not user.get("password_hash"):
+            user = core_store.get_user_by_id("admin-1") or {}
+            stored = str(user.get("password_hash") or "").strip()
+            # Seed migration may leave 'dev-placeholder' — treat as unset.
+            # Never overwrite a real password on container restart.
+            needs_bootstrap = (not stored) or stored == "dev-placeholder"
+            if needs_bootstrap:
                 if core_store.set_user_password("admin-1", admin_pw):
                     logger.info("Admin password bootstrapped from AMX_ADMIN_PASSWORD")
+                else:
+                    logger.warning("Failed to bootstrap admin-1 password")
         elif not (core_store.get_user_by_id("admin-1") or {}).get("password_hash"):
             logger.warning("Production: set AMX_ADMIN_PASSWORD or configure admin-1 password_hash in database")
     license_manager.validate_once()

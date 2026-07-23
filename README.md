@@ -65,27 +65,31 @@ Details: `docs/INSTALLATION.md`
 
 ## Docker Compose (Development)
 ```bash
-docker compose up --build
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env up --build
 ```
 
-## Production Deploy
+## Production Deploy (autonom vom frischen OS)
 
+**Empfohlenes Host-OS: Ubuntu Server 24.04 LTS**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/master/scripts/install.sh \
+  | sudo bash -s -- --host <SERVER-IP>
+```
+
+Manuell:
 ```bash
 cp .env.production.example .env.production   # secrets ersetzen
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
-Services (production overlay):
-- HMI: Port **80** (nginx, Login erforderlich)
-- API: nur `127.0.0.1:8080`
-- Edge / Postgres / Influx / MinIO: **ohne** Host-Ports
-- OPC-UA PLC: **4840**
-
-Runbook: `docs/PRODUCTION_RUNBOOK.md` · Freigabe: `docs/RELEASE_READINESS.md`
+Runbook: `docs/PRODUCTION_RUNBOOK.md` · Installation: `docs/INSTALLATION.md` · Freigabe: `docs/RELEASE_READINESS.md`
 
 | Service | Dev-Port | Prod |
 |---------|----------|------|
-| API | 8080 | localhost only |
+| HMI (nginx) | — | **80** |
+| API | 8080 | localhost:8080 |
 | edge-acquisition | 8091 | internal + `X-AMX-Service-Token` |
 | opcua-gateway (HTTP) | 8092 | internal + `X-AMX-Service-Token` |
 | opcua-gateway (OPC-UA) | 4840 | 4840 |
