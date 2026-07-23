@@ -100,6 +100,11 @@ jobs:
       - uses: actions/checkout@v7
       - name: Validate compose files
         run: |
+          # Compose overlays reference env files that are gitignored.
+          cp .env.example .env
+          cp .env.production.example .env.production
+          # Replace placeholders so compose config accepts values
+          sed -i 's/REPLACE_[A-Z0-9_]*/ci-placeholder-value-with-enough-length/g' .env.production
           docker compose -f docker-compose.yml -f docker-compose.dev.yml config >/dev/null
           docker compose -f docker-compose.yml -f docker-compose.prod.yml config >/dev/null
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml config >/dev/null
