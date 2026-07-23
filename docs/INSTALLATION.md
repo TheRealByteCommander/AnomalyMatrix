@@ -69,10 +69,12 @@ Nach dem Lauf:
 --repo-url URL      Git-Remote
 --skip-clone        Vorhandenen Code nutzen
 --skip-docker       Docker nicht neu installieren
+--force-secrets     .env.production neu generieren (gefährlich — bricht DB-Volumes)
 --no-firewall       UFW nicht anfassen
 --tls               HTTPS erwartet (COOKIE_SECURE=true)
 ```
 
+> Re-Install **ohne** `--force-secrets` behält `.env.production` und bestehende Postgres-Volumes.
 ---
 
 ## Option A: One-file installer (.run)
