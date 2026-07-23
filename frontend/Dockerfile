@@ -1,5 +1,5 @@
 # Build stage — Debian (not Alpine): Vite 8 / rolldown needs glibc native bindings
-FROM node:20-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
