@@ -12,7 +12,7 @@ from service_auth import ServiceAuthMiddleware
 
 
 def _app_version() -> str:
-    return os.getenv("ANOMALYMATRIX_VERSION", "1.0.0").strip() or "1.0.0"
+    return os.getenv("ANOMALYMATRIX_VERSION", "1.1.0").strip() or "1.1.0"
 
 
 def _is_production() -> bool:

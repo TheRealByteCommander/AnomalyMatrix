@@ -1,6 +1,6 @@
 # AnomalyMatrix — Konfiguration
 
-Stand: **v1.0.0** (nach Full-Release-Hardening)
+Stand: **v1.1.0** (nach Full-Release-Hardening)
 
 Diese Anleitung folgt **nach** der Installation (`docs/INSTALLATION.md`).  
 Ziel: aus einem laufenden Stack ein **linienfähiges** System machen.

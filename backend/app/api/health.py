@@ -23,10 +23,10 @@ def app_version() -> str:
     ):
         try:
             if candidate.exists():
-                return candidate.read_text(encoding="utf-8").strip() or "1.0.0"
+                return candidate.read_text(encoding="utf-8").strip() or "1.1.0"
         except OSError:
             continue
-    return "1.0.0"
+    return "1.1.0"
 
 
 def _check_postgres() -> dict:
