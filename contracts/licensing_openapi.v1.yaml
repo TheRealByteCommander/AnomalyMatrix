@@ -1,0 +1,424 @@
+openapi: 3.0.3
+info:
+  title: Byte Commander Licensing API
+  version: 1.0.0
+  description: |
+    Versioned public integration contract for license lifecycle and 2FA activation.
+
+    Note: The server endpoints are implemented as tRPC procedures and therefore use
+    procedure-style paths under `/api/trpc/*` and wrapped response envelopes.
+servers:
+  - url: https://your-license-server.com
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Licensing
+  - name: 2FA
+paths:
+  /api/trpc/api.activate:
+    post:
+      tags: [Licensing]
+      summary: Activate a license on a device
+      operationId: activateLicense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/ActivateRequest'
+      responses:
+        '200':
+          description: Activation success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivateResponseEnvelope'
+        '4XX':
+          description: Activation failed (functional error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/trpc/api.validate:
+    post:
+      tags: [Licensing]
+      summary: Validate an issued license token
+      operationId: validateLicenseToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/ValidateRequest'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponseEnvelope'
+        '4XX':
+          description: Validation transport/procedure error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/trpc/api.deactivate:
+    post:
+      tags: [Licensing]
+      summary: Deactivate a license on a device
+      operationId: deactivateLicense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/DeactivateRequest'
+      responses:
+        '200':
+          description: Deactivation success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeactivateResponseEnvelope'
+        '4XX':
+          description: Deactivation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/trpc/twoFA.initiateActivation:
+    post:
+      tags: [2FA]
+      summary: Initiate 2FA activation flow
+      operationId: initiateTwoFAActivation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/Initiate2FARequest'
+      responses:
+        '200':
+          description: 2FA activation initiation success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Initiate2FAResponseEnvelope'
+        '4XX':
+          description: 2FA initiation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/trpc/twoFA.confirmActivationWith2FA:
+    post:
+      tags: [2FA]
+      summary: Confirm activation with TOTP code
+      operationId: confirmTwoFAActivation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/Confirm2FARequest'
+      responses:
+        '200':
+          description: 2FA confirmation success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Confirm2FAResponseEnvelope'
+        '4XX':
+          description: 2FA confirmation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+components:
+  schemas:
+    TRPCSuccessEnvelope:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [json]
+              properties:
+                json:
+                  description: Procedure return payload (superjson wire format)
+                  nullable: false
+
+    TRPCInputEnvelope:
+      type: object
+      required: [json]
+      properties:
+        json:
+          description: Procedure input payload (superjson wire format)
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [json]
+          properties:
+            json:
+              type: object
+              required: [message]
+              properties:
+                code:
+                  oneOf:
+                    - type: string
+                    - type: integer
+                  description: Transport-level tRPC code
+                message:
+                  type: string
+                data:
+                  type: object
+                  nullable: true
+                  properties:
+                    code:
+                      type: string
+                      description: Semantic error code (e.g., BAD_REQUEST, NOT_FOUND, FORBIDDEN)
+                  additionalProperties: true
+
+    ActivateRequest:
+      type: object
+      required: [licenseKey, deviceId]
+      properties:
+        licenseKey:
+          type: string
+        deviceId:
+          type: string
+        deviceInfo:
+          type: string
+          description: Optional JSON string describing client device
+
+    ActivateData:
+      type: object
+      required: [success, token, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        token:
+          type: string
+        message:
+          type: string
+
+    ActivateResponseEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/TRPCSuccessEnvelope'
+        - type: object
+          properties:
+            result:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/ActivateData'
+
+    ValidateRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    ValidLicense:
+      type: object
+      required: [productId, type, expiresAt, features]
+      properties:
+        productId:
+          type: integer
+        type:
+          type: string
+          enum: [subscription, perpetual, node_locked, user_based, feature_based]
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        features:
+          type: array
+          items:
+            type: string
+
+    ValidateData:
+      oneOf:
+        - type: object
+          required: [valid, license]
+          properties:
+            valid:
+              type: boolean
+              enum: [true]
+            license:
+              $ref: '#/components/schemas/ValidLicense'
+        - type: object
+          required: [valid, message]
+          properties:
+            valid:
+              type: boolean
+              enum: [false]
+            message:
+              type: string
+
+    ValidateResponseEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/TRPCSuccessEnvelope'
+        - type: object
+          properties:
+            result:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/ValidateData'
+
+    DeactivateRequest:
+      type: object
+      required: [licenseKey, deviceId]
+      properties:
+        licenseKey:
+          type: string
+        deviceId:
+          type: string
+
+    DeactivateData:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+
+    DeactivateResponseEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/TRPCSuccessEnvelope'
+        - type: object
+          properties:
+            result:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/DeactivateData'
+
+    Initiate2FARequest:
+      type: object
+      required: [licenseKey, deviceId]
+      properties:
+        licenseKey:
+          type: string
+        deviceId:
+          type: string
+        deviceInfo:
+          type: string
+
+    Initiate2FAData:
+      type: object
+      required: [success, activationToken, expiresIn]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        activationToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Lifetime in seconds
+
+    Initiate2FAResponseEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/TRPCSuccessEnvelope'
+        - type: object
+          properties:
+            result:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/Initiate2FAData'
+
+    Confirm2FARequest:
+      type: object
+      required: [activationToken, totpCode]
+      properties:
+        activationToken:
+          type: string
+        totpCode:
+          type: string
+          minLength: 6
+          maxLength: 6
+
+    Confirm2FAData:
+      type: object
+      required: [success, token, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        token:
+          type: string
+        message:
+          type: string
+
+    Confirm2FAResponseEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/TRPCSuccessEnvelope'
+        - type: object
+          properties:
+            result:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/Confirm2FAData'

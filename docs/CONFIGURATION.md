@@ -35,6 +35,8 @@ Datei: `.env.production` (Vorlage: `.env.production.example`)
 | `JWT_SECRET` | ja | ≥32 Zeichen |
 | `SERVICE_AUTH_TOKEN` | ja | ≥24 Zeichen, API↔Edge↔Gateway |
 | `LICENSE_ADMIN_TOKEN` | ja | Lizenz-Admin-Aktionen |
+| `LICENSE_SERVER_URL` | empfohlen Prod | Byte-Commander License Server |
+| `LICENSE_PRODUCT_ID` | mit Server | Integer-Product-ID |
 | `AMX_CORS_ORIGINS` | ja | HMI-URL(s), kommagetrennt |
 | `AMX_ADMIN_PASSWORD` | erstes Setup | Bootstrap Admin-Login |
 | `COOKIE_SECURE` | ja bei HTTPS | `true` hinter TLS |
@@ -163,7 +165,10 @@ Training braucht Gut-Teil-Bilder (MinIO `raw-images` und/oder lokal).
 
 ## 7. Lizenz
 
-Installer aktiviert eine Bootstrap-Lizenz (Key in `CREDENTIALS.txt`).
+Mit `LICENSE_SERVER_URL` + `LICENSE_PRODUCT_ID` (Integer) gegen den
+[Byte-Commander License Server](https://github.com/TheRealByteCommander/software-licensing-concept).
+Ohne Server-URL: Installer-Bootstrap (`AMX-INSTALL-…` in `CREDENTIALS.txt`).
+Details: [`LICENSE_INTEGRATION.md`](./LICENSE_INTEGRATION.md).
 
 | Aktion | Header / Hinweis |
 |--------|------------------|

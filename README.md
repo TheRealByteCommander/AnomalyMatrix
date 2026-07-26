@@ -144,6 +144,7 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 | `INFLUX_URL`, `MINIO_ENDPOINT` | Optionale Metriken/Heatmap-Persistenz |
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
+| `LICENSE_SERVER_URL`, `LICENSE_PRODUCT_ID` | Byte-Commander License Server (Integer-ID) |
 
 Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod`): Header `X-AMX-Role` / `X-AMX-User` (Frontend: `VITE_DEV_AUTH_HEADERS=true`) oder `X-AMX-Api-Key`. Unbekannte Rollen werden **abgelehnt** (kein Admin-Fallback).
 

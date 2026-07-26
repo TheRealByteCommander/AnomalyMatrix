@@ -354,6 +354,11 @@ JWT_SECRET=${jwt}
 RBAC_ENFORCE=true
 LICENSE_ENFORCE=true
 LICENSE_ADMIN_TOKEN=${license_admin}
+LICENSE_SERVER_URL=${LICENSE_SERVER_URL:-}
+LICENSE_PRODUCT_ID=${LICENSE_PRODUCT_ID:-}
+LICENSE_ALLOW_LOCAL_KEYS=${LICENSE_ALLOW_LOCAL_KEYS:-false}
+LICENSE_OFFLINE_GRACE_HOURS=${LICENSE_OFFLINE_GRACE_HOURS:-72}
+LICENSE_VALIDATE_INTERVAL_SEC=${LICENSE_VALIDATE_INTERVAL_SEC:-300}
 SERVICE_AUTH_TOKEN=${service_token}
 COOKIE_SECURE=${cookie_secure}
 
@@ -524,10 +529,22 @@ SQL
 activate_license() {
   [[ "$MODE" == "prod" ]] || return 0
   local env_file="$APP_DIR/.env.production"
-  local admin_pw license_admin license_key cookie_jar
+  local admin_pw license_admin license_key cookie_jar server_url
   admin_pw="$(grep -E '^AMX_ADMIN_PASSWORD=' "$env_file" | cut -d= -f2-)"
   license_admin="$(grep -E '^LICENSE_ADMIN_TOKEN=' "$env_file" | cut -d= -f2-)"
-  license_key="AMX-INSTALL-$(rand_alnum 16)"
+  server_url="$(grep -E '^LICENSE_SERVER_URL=' "$env_file" | cut -d= -f2-)"
+  # Prefer explicit bootstrap key; otherwise local AMX key only when no license server.
+  if [[ -n "${LICENSE_BOOTSTRAP_KEY:-}" ]]; then
+    license_key="$LICENSE_BOOTSTRAP_KEY"
+  elif [[ -n "$server_url" ]]; then
+    warn "LICENSE_SERVER_URL gesetzt — kein lokaler Bootstrap-Key. Aktivierung mit echtem Key:"
+    warn "  POST /api/v1/license/activate  (Header X-License-Admin-Token)"
+    echo "License server: ${server_url}" >> "$CREDENTIALS_FILE"
+    echo "Activate with real license key via /api/v1/license/activate" >> "$CREDENTIALS_FILE"
+    return 0
+  else
+    license_key="AMX-INSTALL-$(rand_alnum 16)"
+  fi
   cookie_jar="$(mktemp)"
 
   log "Admin-Login + Lizenz-Aktivierung..."
