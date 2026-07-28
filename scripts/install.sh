@@ -23,7 +23,7 @@ APP_NAME="AnomalyMatrix"
 APP_DIR_DEFAULT="/opt/anomalymatrix"
 REPO_URL_DEFAULT="https://github.com/TheRealByteCommander/AnomalyMatrix.git"
 BRANCH_DEFAULT="master"
-VERSION_DEFAULT="1.1.0"
+VERSION_DEFAULT="1.2.0"
 
 MODE="prod"                 # prod | dev
 APP_DIR="${APP_DIR:-$APP_DIR_DEFAULT}"

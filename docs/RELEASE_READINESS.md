@@ -1,6 +1,6 @@
 # AnomalyMatrix — Release Readiness Checklist
 
-Stand: **v1.1.0** (Production-hardened)
+Stand: **v1.2.0** (Production-hardened)
 
 ## Build & Tests
 

@@ -1,6 +1,6 @@
 # AnomalyMatrix — Konfiguration
 
-Stand: **v1.1.x** (Multi-Kamera Case-Prüfung + Per-Camera-Drift)
+Stand: **v1.2.0** (Multi-Kamera Case-Prüfung + Per-Camera-Drift)
 
 Diese Anleitung folgt **nach** der Installation (`docs/INSTALLATION.md`).  
 Ziel: aus einem laufenden Stack ein **linienfähiges** System machen.

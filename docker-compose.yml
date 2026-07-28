@@ -15,9 +15,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
       args:
-        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
     environment:
-      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
       DATABASE_URL: postgresql://${POSTGRES_USER:-anomaly}:${POSTGRES_PASSWORD:-anomaly_pw}@postgres:5432/${POSTGRES_DB:-anomalymatrix}
       EDGE_ACQUISITION_URL: http://edge-acquisition:8091
       OPCUA_GATEWAY_URL: http://opcua-gateway:8092
@@ -61,9 +61,9 @@ services:
       context: ./edge-acquisition
       dockerfile: Dockerfile
       args:
-        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
     environment:
-      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
@@ -82,9 +82,9 @@ services:
       context: .
       dockerfile: opcua-gateway/Dockerfile
       args:
-        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+        ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
     environment:
-      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.1.0}
+      ANOMALYMATRIX_VERSION: ${ANOMALYMATRIX_VERSION:-1.2.0}
       OPCUA_SERVER_ENABLED: "true"
       OPCUA_SERVER_ENDPOINT: opc.tcp://0.0.0.0:4840/anomalymatrix/server/
       ANOMALYMATRIX_API_URL: http://api:8080

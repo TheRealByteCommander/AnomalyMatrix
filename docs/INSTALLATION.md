@@ -1,6 +1,6 @@
 # AnomalyMatrix Installation
 
-Stand: **v1.1.0** (Production-hardened)
+Stand: **v1.2.0** (Production-hardened)
 
 **Konfiguration nach dem Install:** [`docs/CONFIGURATION.md`](./CONFIGURATION.md)  
 **Betrieb / Go-Live:** [`docs/PRODUCTION_RUNBOOK.md`](./PRODUCTION_RUNBOOK.md)
@@ -52,8 +52,8 @@ sudo ./scripts/install.sh --mode prod --host 192.168.10.50
 Release-Tag statt `master`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/v1.1.0/scripts/install.sh \
-  | sudo bash -s -- --host 192.168.10.50 --branch v1.1.0
+curl -fsSL https://raw.githubusercontent.com/TheRealByteCommander/AnomalyMatrix/v1.2.0/scripts/install.sh \
+  | sudo bash -s -- --host 192.168.10.50 --branch v1.2.0
 ```
 
 ### Was das Skript macht
@@ -99,7 +99,7 @@ Nach dem Lauf:
 
 ```bash
 ./scripts/build_installer.sh
-sudo ./dist/AnomalyMatrix-installer-v1.1.0.run --host 192.168.10.50
+sudo ./dist/AnomalyMatrix-installer-v1.2.0.run --host 192.168.10.50
 # oder Release-Asset von GitHub Releases
 ```
 

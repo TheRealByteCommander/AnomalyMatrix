@@ -9,4 +9,4 @@ Versioned schemas used across services. **Stand API v0.6.0.**
 
 Events **emittiert** in v0.6.0: `InspectionCompleted`, `FeedbackSubmitted`.
 
-**OPC UA v1.1.0:** PLC trigger (`ExternalTrigger`, `StartInspection`), Stop/Reject outputs on red — siehe `opcua-gateway/README.md` und `GET /api/v1/contracts/opcua`.
+**OPC UA v1.2.0:** PLC trigger (`ExternalTrigger`, `StartInspection`), Stop/Reject outputs on red — siehe `opcua-gateway/README.md` und `GET /api/v1/contracts/opcua`.

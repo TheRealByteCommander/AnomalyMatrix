@@ -1,6 +1,6 @@
 # AnomalyMatrix — Deployment Plan
 
-Stand: **v1.1.0**
+Stand: **v1.2.0**
 
 ## Zielumgebungen
 
