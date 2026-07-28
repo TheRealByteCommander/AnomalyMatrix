@@ -69,7 +69,13 @@ def ensure_buckets() -> bool:
     return True
 
 
-def store_raw_frame(*, inspection_id: str, recipe_id: str, image_bytes: bytes) -> str | None:
+def store_raw_frame(
+    *,
+    inspection_id: str,
+    recipe_id: str,
+    image_bytes: bytes,
+    camera_id: str | None = None,
+) -> str | None:
     if not _minio_enabled() or not image_bytes:
         return None
     try:
@@ -79,12 +85,19 @@ def store_raw_frame(*, inspection_id: str, recipe_id: str, image_bytes: bytes) -
     bucket = os.getenv("MINIO_RAW_BUCKET", "raw-images").strip()
     if not client.bucket_exists(bucket):
         client.make_bucket(bucket)
-    object_name = f"{recipe_id}/{inspection_id}.png"
+    suffix = f"_{camera_id}" if camera_id else ""
+    object_name = f"{recipe_id}/{inspection_id}{suffix}.png"
     client.put_object(bucket, object_name, io.BytesIO(image_bytes), length=len(image_bytes), content_type="image/png")
     return _public_object_url(endpoint=endpoint, secure=secure, bucket=bucket, object_name=object_name)
 
 
-def store_heatmap_binary(*, inspection_id: str, png_bytes: bytes, anomaly_score: float) -> str | None:
+def store_heatmap_binary(
+    *,
+    inspection_id: str,
+    png_bytes: bytes,
+    anomaly_score: float,
+    camera_id: str | None = None,
+) -> str | None:
     if not _minio_enabled() or not png_bytes:
         return store_heatmap_artifact(inspection_id=inspection_id, heatmap_uri="", anomaly_score=anomaly_score)
     try:
@@ -94,12 +107,14 @@ def store_heatmap_binary(*, inspection_id: str, png_bytes: bytes, anomaly_score:
     bucket = os.getenv("MINIO_HEATMAP_BUCKET", "heatmaps").strip()
     if not client.bucket_exists(bucket):
         client.make_bucket(bucket)
-    object_name = f"{inspection_id}/overlay.png"
+    view = camera_id or "primary"
+    object_name = f"{inspection_id}/{view}/overlay.png"
     client.put_object(bucket, object_name, io.BytesIO(png_bytes), length=len(png_bytes), content_type="image/png")
-    meta_name = f"{inspection_id}/metadata.json"
+    meta_name = f"{inspection_id}/{view}/metadata.json"
     meta = json.dumps(
         {
             "inspection_id": inspection_id,
+            "camera_id": camera_id,
             "anomaly_score": anomaly_score,
             "stored_at": datetime.now(timezone.utc).isoformat(),
             "overlay": object_name,

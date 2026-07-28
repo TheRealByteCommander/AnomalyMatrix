@@ -16,6 +16,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "trends.read",
         "contracts.read",
         "license.read",
+        "cameras.read",
     },
     "qa_lead": {
         "inspection.run",
@@ -25,6 +26,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "trends.read",
         "contracts.read",
         "license.read",
+        "cameras.read",
     },
     "process_engineer": {
         "inspection.run",
@@ -38,6 +40,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "models.rollback",
         "contracts.read",
         "license.read",
+        "cameras.read",
+        "cameras.configure",
     },
     "admin": {
         "inspection.run",
@@ -54,6 +58,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "license.admin",
         "license.read",
         "contracts.read",
+        "cameras.read",
+        "cameras.configure",
     },
 }
 

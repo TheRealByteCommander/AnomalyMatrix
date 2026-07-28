@@ -104,6 +104,17 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compos
 
 Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mounten).
 
+### Multi-Kamera (gleicher Case, 1–4)
+
+- Hardware-Erkennung: `GET /api/v1/cameras` (Edge: `GET /cameras`)
+- Auswahl speichern: `PUT /api/v1/cameras/selection` — Body `{"camera_ids":["video0","video1"]}`  
+  Rollen: Admin / Prozessingenieur (HMI → Konfiguration)
+- Grenzen: **min. 1**, **max. 4** Kameras
+- Inspektion nutzt die gespeicherte Auswahl; Entscheidung: **worst view wins**
+- Override pro Request: `POST /api/v1/inspections/run` mit `camera_ids`
+- Mehrere Host-Geräte in `docker-compose.camera.yml` freischalten; optional  
+  `CAMERA_SOURCES_JSON='{"video0":"0","video1":"1"}'`
+
 GigE/GenICam: noch nicht enthalten (Folgerelease).
 
 ---
