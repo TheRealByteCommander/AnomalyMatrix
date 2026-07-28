@@ -197,10 +197,11 @@ def _guard(request: Request, permission: str) -> None:
     auth = _auth(request)
     request.state.auth = auth
     require_permission(auth, permission)
+    # license.admin must NOT be feature-gated — otherwise activate is impossible
+    # on a fresh enforced install.
     license_map = {
         "inspection.run": "inspection.run",
         "inspection.read": "inspection.read",
-        "license.admin": "inspection.run",
     }
     lic = license_map.get(permission)
     if lic:
@@ -286,15 +287,20 @@ async def license_status(request: Request):
     _guard(request, "license.read")
     request_id = request.state.request_id
     snap = license_manager.snapshot()
+    features = getattr(snap, "enabled_features", None)
+    if features is None:
+        raw = getattr(snap, "features", [])
+        features = list(raw.keys()) if isinstance(raw, dict) else list(raw or [])
     payload = {
         "active": bool(getattr(snap, "active", False)),
         "tier": getattr(snap, "tier", "none"),
-        "features": list(getattr(snap, "features", [])),
+        "features": features,
         "token_present": bool(getattr(snap, "token_present", False)),
         "valid_until": getattr(snap, "valid_until", None),
         "last_validation_at": getattr(snap, "last_validation_at", None),
         "offline_grace_until": getattr(snap, "offline_grace_until", None),
         "grace_active": bool(getattr(snap, "grace_active", False)),
+        "mode": "server" if license_manager.server_configured else "local",
         "last_error": getattr(snap, "last_error", None) if not is_production() else None,
     }
     return success_envelope(payload, request_id)
@@ -308,9 +314,19 @@ async def license_activate(request: Request, payload: dict = Body(...)):
     key = str(payload.get("license_key", "")).strip()
     if not key:
         raise HTTPException(status_code=400, detail="license_key required")
-    state = license_manager.activate(key)
+    try:
+        state = license_manager.activate(key)
+    except PermissionError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return success_envelope(
-        {"active": state.get("active", False), "tier": state.get("tier"), "features": state.get("features", [])},
+        {
+            "active": state.get("active", False),
+            "tier": state.get("tier"),
+            "features": state.get("features", []),
+            "mode": state.get("mode"),
+        },
         request_id,
     )
 
