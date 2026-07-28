@@ -4,6 +4,7 @@
 **Produkt:** AnomalyMatrix v1.0  
 **Zielgruppe:** Endkunden, Produktionsleiter, QS, Automatisierung, Einkauf  
 **Verwendung:** Marketing, Vertrieb, Angebotsgrundlage, Messe & Kundengespräche  
+**Ergänzung Marketing:** [Funktionen & USP](./MARKETING_FUNKTIONEN_USP.md) — vollständige Feature-Liste und Alleinstellungsmerkmale für Kommunikation  
 
 ---
 
