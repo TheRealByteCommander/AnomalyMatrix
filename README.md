@@ -210,7 +210,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 ## Tests
 ```bash
 cd backend
-py -3 -m pytest -q    # 75+ Tests (Stand v1.2.0)
+py -3 -m pytest -q    # 80 Tests (Stand v1.2.0)
 ```
 
 ## Release & Installer

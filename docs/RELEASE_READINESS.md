@@ -6,7 +6,7 @@ Stand: **v1.2.0** (Production-hardened)
 
 | Check | Status |
 |-------|--------|
-| Backend pytest (75+ Tests inkl. Security / Multi-Kamera / License) | ✅ |
+| Backend pytest (80 Tests inkl. Security / Multi-Kamera / License) | ✅ |
 | Performance gate < 500 ms | ✅ |
 | Parallel load smoke (10 runs) | ✅ |
 | Production guard + hardening tests | ✅ |
