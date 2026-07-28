@@ -1,6 +1,6 @@
 # Multi-Kamera Case-Prüfung & Drift
 
-Stand: **v1.2.0** (Branch / nach Merge von Multi-View)
+Stand: **v1.2.0**
 
 Mehrere Kameras (Hardware-erkannt) prüfen **denselben Case**. Ergebnis-Aggregation: **worst view wins**. Drift wird **pro Kamera** ausgewiesen.
 
