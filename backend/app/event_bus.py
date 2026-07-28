@@ -35,12 +35,26 @@ class DomainEventBus:
         frame = result.get("frame", {})
         inference = result.get("inference", {})
         opcua = result.get("opcua_publish", {})
+        views = result.get("views") if isinstance(result.get("views"), list) else []
+        compact_views = [
+            {
+                "camera_id": v.get("camera_id"),
+                "anomaly_score": (v.get("inference") or {}).get("anomaly_score"),
+                "decision": v.get("decision"),
+            }
+            for v in views
+        ]
         return self.emit(
             "InspectionCompleted",
             {
                 "inspection_id": result.get("inspection_id"),
                 "recipe_id": frame.get("recipe_id"),
                 "camera_id": frame.get("camera_id"),
+                "worst_view_camera_id": result.get("worst_view_camera_id") or frame.get("camera_id"),
+                "camera_ids": result.get("camera_ids") or ([frame.get("camera_id")] if frame.get("camera_id") else []),
+                "view_count": result.get("view_count") or max(1, len(compact_views)),
+                "decision_policy": result.get("decision_policy") or "single",
+                "views": compact_views,
                 "anomaly_score": inference.get("anomaly_score"),
                 "decision": result.get("decision"),
                 "model_version": inference.get("model_version"),
@@ -48,6 +62,8 @@ class DomainEventBus:
                 "latency_ms": round(latency_ms, 2),
                 "opcua_published": bool(opcua.get("published")),
                 "heatmap_uri": result.get("heatmap", {}).get("uri"),
+                "trend_warning": bool(result.get("trend_warning")),
+                "drifting_camera_id": result.get("drifting_camera_id"),
             },
         )
 

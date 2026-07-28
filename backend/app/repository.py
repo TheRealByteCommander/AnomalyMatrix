@@ -36,15 +36,32 @@ class ResultRepository:
         out = self._read_all()
         return list(reversed(out[-limit:]))
 
-    def query(self, *, recipe_id: str | None = None, min_score: float | None = None, max_score: float | None = None, limit: int = 50) -> list[dict]:
+    def query(
+        self,
+        *,
+        recipe_id: str | None = None,
+        camera_id: str | None = None,
+        min_score: float | None = None,
+        max_score: float | None = None,
+        limit: int = 50,
+    ) -> list[dict]:
         items = self._read_all()
         filtered = []
         for item in items:
-            frame = item.get('frame', {})
-            inf = item.get('inference', {})
-            score = inf.get('anomaly_score', 0.0)
-            if recipe_id and frame.get('recipe_id') != recipe_id:
+            frame = item.get("frame", {})
+            inf = item.get("inference", {})
+            score = inf.get("anomaly_score", 0.0)
+            if recipe_id and frame.get("recipe_id") != recipe_id:
                 continue
+            if camera_id:
+                cams = set(item.get("camera_ids") or [])
+                if frame.get("camera_id"):
+                    cams.add(frame.get("camera_id"))
+                for view in item.get("views") or []:
+                    if view.get("camera_id"):
+                        cams.add(view.get("camera_id"))
+                if camera_id not in cams:
+                    continue
             if min_score is not None and score < min_score:
                 continue
             if max_score is not None and score > max_score:

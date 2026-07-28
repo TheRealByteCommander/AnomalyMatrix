@@ -105,6 +105,14 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
                 <label>{view.cameraId}</label>
                 <strong>{view.score}</strong>
                 <StatusBadge state={view.decision}>{t(`decision.${view.decision}`)}</StatusBadge>
+                {view.heatmapUri &&
+                (view.heatmapUri.startsWith('/') || view.heatmapUri.startsWith('http')) ? (
+                  <img
+                    className="heatmap-image"
+                    src={view.heatmapUri}
+                    alt={`${t('inspectionDetail.viewsHeatmap')} ${view.cameraId}`}
+                  />
+                ) : null}
               </div>
             ))}
           </div>

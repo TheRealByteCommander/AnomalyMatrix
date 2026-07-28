@@ -112,8 +112,12 @@ Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mo
 - Grenzen: **min. 1**, **max. 4** Kameras
 - Inspektion nutzt die gespeicherte Auswahl; Entscheidung: **worst view wins**
 - Override pro Request: `POST /api/v1/inspections/run` mit `camera_ids`
+- OPC-UA: leeres `Request.CameraId` → Stationsauswahl; `LastResult` liefert `CameraIds`, `ViewCount`, `WorstViewCameraId`
+- Drift: `GET /results/trend-summary` enthält `by_camera[]`, `drifting_camera_id`, `drift_score`, `score_delta`
 - Mehrere Host-Geräte in `docker-compose.camera.yml` freischalten; optional  
   `CAMERA_SOURCES_JSON='{"video0":"0","video1":"1"}'`
+
+> Hinweis: Capture ist derzeit **sequentiell** (kein Hardware-Trigger-Sync). Für bewegte Teile Sync separat planen.
 
 GigE/GenICam: noch nicht enthalten (Folgerelease).
 

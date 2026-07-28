@@ -84,6 +84,9 @@ export function mapApiInspection(item) {
     heatmapUri: item.heatmap?.uri || inf.heatmap_uri || null,
     cameraIds: item.camera_ids || (frame.camera_id ? [frame.camera_id] : []),
     viewCount: item.view_count || views.length || 1,
+    worstViewCameraId: item.worst_view_camera_id || frame.camera_id || null,
+    driftingCameraId: item.drifting_camera_id || null,
+    byCamera: item.by_camera || [],
     views,
     raw: item,
   };

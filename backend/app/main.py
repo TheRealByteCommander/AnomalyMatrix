@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import os
 import time
 from contextlib import asynccontextmanager
@@ -351,10 +352,34 @@ async def contracts_opcua(request: Request):
 async def contracts_inspection_result(request: Request):
     _guard(request, "contracts.read")
     request_id = request.state.request_id
+    schema_path = Path(__file__).resolve().parents[2] / "contracts" / "inspection_result_v1.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8")) if schema_path.exists() else {}
     return success_envelope(
         {
-            "schema_version": "1.1.0",
-            "fields": ["inspection_id", "frame", "inference", "decision", "heatmap", "opcua_publish", "license_tier"],
+            "schema_version": schema.get("version") or "1.2.0",
+            "schema": schema,
+            "fields": [
+                "inspection_id",
+                "frame",
+                "inference",
+                "decision",
+                "heatmap",
+                "camera_ids",
+                "view_count",
+                "views",
+                "decision_policy",
+                "worst_view_camera_id",
+                "trend_warning",
+                "by_camera",
+                "drifting_camera_id",
+                "opcua_publish",
+                "license_tier",
+            ],
+            "notes": {
+                "frame_inference_heatmap": "Worst-view projection for backward compatibility",
+                "decision_policy": "worst_view",
+                "by_camera": "Per-camera drift / trend breakdown",
+            },
         },
         request_id,
     )
@@ -492,7 +517,36 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
             "view_count": len(views),
             "views": views,
             "decision_policy": "worst_view",
+            "worst_view_camera_id": primary.get("camera_id"),
         }
+
+        # Trend enrichment BEFORE persist/OPC-UA so interfaces stay consistent
+        from .trend_warnings import enrich_trend_summary
+
+        prior = list(reversed(repo.latest(limit=49)))
+        window_items = prior + [result]
+        scores = [float(i.get("inference", {}).get("anomaly_score", 0.0)) for i in window_items]
+        trend = enrich_trend_summary(
+            {
+                "count": len(window_items),
+                "avg_score": round(sum(scores) / len(scores), 4) if scores else 0.0,
+                "max_score": round(max(scores), 4) if scores else 0.0,
+                "anomaly_count": sum(
+                    1 for i in window_items if i.get("inference", {}).get("status") == "anomaly"
+                ),
+            },
+            window_items,
+        )
+
+        result["trend_warning"] = bool(trend.get("trend_warning", False))
+        result["trend_severity"] = trend.get("trend_severity", "green")
+        result["trend_reason"] = trend.get("trend_reason")
+        result["by_camera"] = trend.get("by_camera") or []
+        result["drifting_camera_id"] = trend.get("drifting_camera_id")
+        result["drifting_cameras"] = trend.get("drifting_cameras") or []
+        result["score_delta"] = trend.get("score_delta")
+        result["drift_score"] = trend.get("drift_score")
+        result["baseline_avg_score"] = trend.get("baseline_avg_score")
 
         opcua = publish_to_opcua(result)
         result["opcua_publish"] = opcua.__dict__
@@ -510,9 +564,7 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
         result["domain_event_id"] = event.get("event_id")
 
         repo.append(result)
-        trend = repo.trend_summary()
         record_process_trend(avg_score=float(trend.get("avg_score", primary["inference"].get("anomaly_score", 0.0))))
-        result["trend_warning"] = trend.get("trend_warning", False)
         trend_event = maybe_emit_trend_warning(
             _event_bus(request),
             trend=trend,
@@ -532,6 +584,8 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
                 "score": primary["inference"].get("anomaly_score"),
                 "camera_ids": camera_ids,
                 "view_count": len(views),
+                "worst_view_camera_id": primary.get("camera_id"),
+                "drifting_camera_id": result.get("drifting_camera_id"),
             },
             request_id=request.state.request_id,
         )
@@ -567,13 +621,20 @@ async def results_latest(request: Request, limit: int = 20):
 async def results_query(
     request: Request,
     recipe_id: str | None = None,
+    camera_id: str | None = None,
     min_score: float | None = Query(default=None, ge=0.0, le=1.0),
     max_score: float | None = Query(default=None, ge=0.0, le=1.0),
     limit: int = Query(default=50, ge=1, le=200),
 ):
     _guard(request, "inspection.read")
     request_id = request.state.request_id
-    data = repo.query(recipe_id=recipe_id, min_score=min_score, max_score=max_score, limit=limit)
+    data = repo.query(
+        recipe_id=recipe_id,
+        camera_id=camera_id,
+        min_score=min_score,
+        max_score=max_score,
+        limit=limit,
+    )
     return success_envelope({"items": data, "count": len(data)}, request_id)
 
 
@@ -598,6 +659,14 @@ async def observability_summary(request: Request):
         "trend_warning": trend.get("trend_warning", False),
         "trend_severity": trend.get("trend_severity", "green"),
         "trend_reason": trend.get("trend_reason"),
+        "by_camera": trend.get("by_camera") or [],
+        "drifting_camera_id": trend.get("drifting_camera_id"),
+        "drifting_cameras": trend.get("drifting_cameras") or [],
+        "score_delta": trend.get("score_delta"),
+        "drift_score": trend.get("drift_score"),
+        "baseline_avg_score": trend.get("baseline_avg_score"),
+        "camera_count": trend.get("camera_count", 0),
+        "view_sample_count": trend.get("view_sample_count", 0),
         "inference_p95_ms": influx.get("inference_p95_ms", 0.0),
         "opc_ua_publish_error_rate_pct": influx.get("opc_ua_publish_error_rate_pct", 0.0),
         "metrics_source": influx.get("source", "repository"),

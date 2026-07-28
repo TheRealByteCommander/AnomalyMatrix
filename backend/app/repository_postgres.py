@@ -94,6 +94,7 @@ class PostgresResultRepository:
         self,
         *,
         recipe_id: str | None = None,
+        camera_id: str | None = None,
         min_score: float | None = None,
         max_score: float | None = None,
         limit: int = 50,
@@ -103,6 +104,14 @@ class PostgresResultRepository:
         if recipe_id:
             clauses.append("recipe_id = %s")
             params.append(recipe_id)
+        if camera_id:
+            # Match scalar column OR any view camera_id inside JSONB payload
+            clauses.append(
+                "(camera_id = %s OR payload->'camera_ids' ? %s OR EXISTS ("
+                "SELECT 1 FROM jsonb_array_elements(COALESCE(payload->'views', '[]'::jsonb)) v "
+                "WHERE v->>'camera_id' = %s))"
+            )
+            params.extend([camera_id, camera_id, camera_id])
         if min_score is not None:
             clauses.append("anomaly_score >= %s")
             params.append(min_score)

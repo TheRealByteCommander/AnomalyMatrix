@@ -80,6 +80,9 @@ def test_run_with_explicit_camera_ids():
     data = run.json()["data"]
     assert data["view_count"] == 3
     assert data["camera_ids"] == ["cam-01", "cam-02", "cam-04"]
+    assert data.get("worst_view_camera_id") in data["camera_ids"]
+    assert "by_camera" in data
+    assert "trend_warning" in data
 
 
 def test_reject_more_than_four_cameras():
@@ -88,3 +91,15 @@ def test_reject_more_than_four_cameras():
         json={"camera_ids": ["cam-01", "cam-02", "cam-03", "cam-04", "cam-05"]},
     )
     assert run.status_code == 422
+
+
+def test_results_query_filters_any_view_camera():
+    run = client.post(
+        "/api/v1/inspections/run",
+        json={"camera_ids": ["cam-02", "cam-04"], "recipe_id": "recipe-default"},
+    )
+    assert run.status_code == 200
+    q = client.get("/api/v1/results/query?camera_id=cam-04")
+    assert q.status_code == 200
+    items = q.json()["data"]["items"]
+    assert any("cam-04" in (i.get("camera_ids") or []) for i in items)

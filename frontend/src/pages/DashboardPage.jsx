@@ -172,7 +172,11 @@ export default function DashboardPage({ inspections, setInspections, setSelected
             >
               <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
               <span>{i.id}</span>
-              <span>{i.part}</span>
+              <span>
+                {i.viewCount > 1
+                  ? `${i.viewCount}×cam`
+                  : (i.cameraIds?.[0] || i.part)}
+              </span>
               <StatusBadge state={i.decision}>{t(`decision.${i.decision}`)}</StatusBadge>
             </button>
           ))}

@@ -25,7 +25,8 @@ class PublishRequest(BaseModel):
 
 
 class TriggerRequest(BaseModel):
-    camera_id: str = "cam-01"
+    # Empty camera_id => backend uses station multi-camera selection
+    camera_id: str = ""
     recipe_id: str = "recipe-default"
 
 
