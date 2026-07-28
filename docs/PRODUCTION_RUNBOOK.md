@@ -1,6 +1,6 @@
-# AnomalyMatrix v1.1.0 — Production Runbook
+# AnomalyMatrix v1.2.0 — Production Runbook
 
-> Release Notes: [`docs/RELEASE_NOTES_v1.1.0.md`](./RELEASE_NOTES_v1.1.0.md) · Freigabe: [`docs/RELEASE_READINESS.md`](./RELEASE_READINESS.md)
+> Release Notes: [`docs/RELEASE_NOTES_v1.2.0.md`](./RELEASE_NOTES_v1.2.0.md) · Freigabe: [`docs/RELEASE_READINESS.md`](./RELEASE_READINESS.md)
 
 ## Pre-Deploy Checklist
 

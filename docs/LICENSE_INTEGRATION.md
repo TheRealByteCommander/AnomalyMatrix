@@ -1,6 +1,6 @@
 # License Integration — Byte Commander License Server
 
-Stand: **v1.1.0** · Upstream: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)  
+Stand: **v1.2.0** · Upstream: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)  
 API-Contract: [`contracts/licensing_openapi.v1.yaml`](../contracts/licensing_openapi.v1.yaml) · Guide: Upstream `INTEGRATION_GUIDE.md`
 
 ## Modi

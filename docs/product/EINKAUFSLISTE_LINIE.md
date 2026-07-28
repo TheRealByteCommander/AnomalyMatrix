@@ -1,6 +1,6 @@
 # Einkaufsliste — AnomalyMatrix Linien-Setup (Line Connect)
 
-Stand: **v1.1.0** · Ziel: **eine Prüfstelle** mit Kamera, Edge-IPC, Operator-HMI und **OPC-UA-SPS-Anbindung**
+Stand: **v1.2.0** · Ziel: **eine Prüfstelle** mit Kamera, Edge-IPC, Operator-HMI und **OPC-UA-SPS-Anbindung**
 
 > Keine Markenbindung. Angaben sind **Produktklassen** für Einkauf / Ausschreibung.  
 > Software-Kamerapfad heute: **OpenCV / V4L2 (USB)**. GigE/GenICam: Folgerelease — siehe Hinweise.
@@ -54,7 +54,7 @@ Software-Lizenz, Inbetriebnahme und SPS-Workshop separat.
 
 > Software wählt 1–4 erkannte Kameras (HMI Konfiguration). Siehe `docs/MULTI_CAMERA.md`.
 
-### Bewusst nicht in v1.1.0 einkaufen (ohne Integrationsprojekt)
+### Bewusst nicht in v1.2.0 einkaufen (ohne Integrationsprojekt)
 
 | Artikel | Status |
 |---------|--------|
@@ -191,4 +191,4 @@ Edge, Postgres, MinIO, Influx: **nur Docker-Netz** (keine Host-Ports nötig).
 | Compose-Overlays (Prod, Camera, TLS) | OT-Netz, Zertifikate, SPS-Programm |
 | Docs & NodeSet-Contract | Montage, Schaltschrank, Abnahme |
 
-*Dokumentversion: 1.0 · Juli 2026 · Basis: AnomalyMatrix v1.1.0 / Add-on Set Line Connect*
+*Dokumentversion: 1.0 · Juli 2026 · Basis: AnomalyMatrix v1.2.0 / Add-on Set Line Connect*

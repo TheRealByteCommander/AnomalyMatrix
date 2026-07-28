@@ -1,6 +1,6 @@
 # Ops Runbook: Licensing
 
-Stand: **v1.1.0** · Server: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)
+Stand: **v1.2.0** · Server: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)
 
 ## Status
 
