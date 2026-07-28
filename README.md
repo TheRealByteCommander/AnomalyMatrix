@@ -204,6 +204,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/DEPLOYMENT_PLAN.md` — Rollout & Compose-Übersicht
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
 - `docs/RELEASE_NOTES_v1.2.0.md` — Aktuelles Release
+- `docs/MCP_CODEBASE_MEMORY.md` — MCP Code-Intelligence (Cursor / Team)
 - `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
 
 ## Tests

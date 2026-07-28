@@ -41,6 +41,8 @@ dist/*.msi
 # IDE / OS
 .idea/
 .vscode/
+.cursor/projects/
+.codebase-memory/
 .DS_Store
 Thumbs.db
 *.swp
