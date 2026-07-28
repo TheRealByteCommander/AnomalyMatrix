@@ -275,7 +275,7 @@ Für Presse, Release-Mailings und Website-Updates:
 2. **Drift pro Kamera** — Prozessverschlechterung wird der **konkreten Kamera** zugeordnet, nicht nur dem Gesamtscore.  
 3. **OPC-UA Contract v1.2** — Multi-View LastResult und Drift-Nodes für Automatisierung.  
 4. **Byte-Commander License Server** — zentrale Lizenzverwaltung für Mehrstandort-Rollouts.  
-5. **75+ automatisierte Tests** — Production-ready Qualitätssicherung in CI.
+5. **80 automatisierte Tests** — Production-ready Qualitätssicherung in CI.
 
 **Presse-Zeile (Vorschlag):**  
 *AnomalyMatrix v1.2.0 bringt Multi-Kamera-Inline-Prüfung und kameraweise Drift-Erkennung in bestehende Fertigungslinien — ohne Neubau, mit OPC-UA-Anbindung.*
