@@ -93,6 +93,32 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
         </div>
       </article>
 
+      {selectedInspection.viewCount > 1 && (
+        <article className="card">
+          <h3>{t('inspectionDetail.viewsTitle')}</h3>
+          <p className="muted">
+            {t('inspectionDetail.viewsHint', { count: selectedInspection.viewCount })}
+          </p>
+          <div className="kpi-grid">
+            {(selectedInspection.views || []).map((view) => (
+              <div key={view.cameraId}>
+                <label>{view.cameraId}</label>
+                <strong>{view.score}</strong>
+                <StatusBadge state={view.decision}>{t(`decision.${view.decision}`)}</StatusBadge>
+                {view.heatmapUri &&
+                (view.heatmapUri.startsWith('/') || view.heatmapUri.startsWith('http')) ? (
+                  <img
+                    className="heatmap-image"
+                    src={view.heatmapUri}
+                    alt={`${t('inspectionDetail.viewsHeatmap')} ${view.cameraId}`}
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
+
       <article className="card">
         <h3>{t('inspectionDetail.feedbackTitle')}</h3>
         <p className="muted">{t('inspectionDetail.feedbackHint')}</p>

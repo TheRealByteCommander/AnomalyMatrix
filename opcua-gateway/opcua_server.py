@@ -130,6 +130,28 @@ async def _run_opcua_server(endpoint: str) -> None:
     await add_var(last_result, "ModelVersion", lr["model_version"], ua.VariantType.String)
     await add_var(last_result, "InspectionId", lr["inspection_id"], ua.VariantType.String)
     await add_var(last_result, "Timestamp", lr["timestamp"], ua.VariantType.String)
+    if "worst_view_camera_id" in lr:
+        await add_var(last_result, "WorstViewCameraId", lr["worst_view_camera_id"], ua.VariantType.String)
+    if "camera_ids" in lr:
+        await add_var(last_result, "CameraIds", lr["camera_ids"], ua.VariantType.String)
+    if "view_count" in lr:
+        await add_var(last_result, "ViewCount", lr["view_count"], ua.VariantType.Int32)
+    if "decision_policy" in lr:
+        await add_var(last_result, "DecisionPolicy", lr["decision_policy"], ua.VariantType.String)
+
+    trend = contract.get("trend") or {}
+    if trend:
+        trend_folder = await inspection.add_object(idx, "Trend")
+        if "severity" in trend:
+            await add_var(trend_folder, "Severity", trend["severity"], ua.VariantType.String)
+        if "reason" in trend:
+            await add_var(trend_folder, "Reason", trend["reason"], ua.VariantType.String)
+        if "drifting_camera_id" in trend:
+            await add_var(trend_folder, "DriftingCameraId", trend["drifting_camera_id"], ua.VariantType.String)
+        if "drift_score" in trend:
+            await add_var(trend_folder, "DriftScore", trend["drift_score"], ua.VariantType.Double)
+        if "score_delta" in trend:
+            await add_var(trend_folder, "ScoreDelta", trend["score_delta"], ua.VariantType.Double)
 
     async def start_inspection_handler(parent, camera_id: str, recipe_id: str):
         await _sync_store_from_plc_inputs()

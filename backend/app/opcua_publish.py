@@ -47,7 +47,8 @@ def map_inspection_to_opcua_payload(result: dict, *, busy: bool = False) -> dict
         node("last_result.pass_fail_bool"): decision == "green",
         node("last_result.anomaly_score"): float(inference.get("anomaly_score", 0.0)),
         node("last_result.defect_class"): _defect_class(result),
-        node("last_result.heatmap_uri"): inference.get("heatmap_uri", ""),
+        node("last_result.heatmap_uri"): inference.get("heatmap_uri")
+        or (result.get("heatmap") or {}).get("uri", ""),
         node("last_result.model_version"): inference.get("model_version", ""),
         node("last_result.inspection_id"): result.get("inspection_id", ""),
         node("last_result.timestamp"): datetime.now(timezone.utc).isoformat(),
@@ -63,9 +64,29 @@ def map_inspection_to_opcua_payload(result: dict, *, busy: bool = False) -> dict
     if frame.get("recipe_id"):
         payload[node("active_recipe")] = str(frame["recipe_id"])
 
+    camera_ids = result.get("camera_ids") or ([frame.get("camera_id")] if frame.get("camera_id") else [])
+    try:
+        payload[node("last_result.worst_view_camera_id")] = str(
+            result.get("worst_view_camera_id") or frame.get("camera_id") or ""
+        )
+        payload[node("last_result.camera_ids")] = ",".join(str(c) for c in camera_ids)
+        payload[node("last_result.view_count")] = int(result.get("view_count") or len(camera_ids) or 1)
+        payload[node("last_result.decision_policy")] = str(result.get("decision_policy") or "worst_view")
+    except KeyError:
+        pass
+
     trend = result.get("trend_warning")
     if trend is not None:
         payload[node("trend_warning")] = bool(trend)
+    try:
+        payload[node("trend.warning")] = bool(result.get("trend_warning", False))
+        payload[node("trend.severity")] = str(result.get("trend_severity") or "green")
+        payload[node("trend.reason")] = str(result.get("trend_reason") or "")
+        payload[node("trend.drifting_camera_id")] = str(result.get("drifting_camera_id") or "")
+        payload[node("trend.drift_score")] = float(result.get("drift_score") or 0.0)
+        payload[node("trend.score_delta")] = float(result.get("score_delta") or 0.0)
+    except KeyError:
+        pass
 
     return payload
 

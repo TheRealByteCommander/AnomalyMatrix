@@ -41,8 +41,8 @@ class PlcBridge:
         self._last_start = start_req
 
         if rising and not self._running:
-            camera = str(node_values.get(self._nid("camera_id"), "cam-01"))
-            recipe = str(node_values.get(self._nid("recipe_id"), "recipe-default"))
+            camera = str(node_values.get(self._nid("camera_id"), "") or "").strip()
+            recipe = str(node_values.get(self._nid("recipe_id"), "recipe-default") or "recipe-default")
             node_values[self._nid("external_trigger")] = False
             node_values[self._nid("start_request")] = False
             await self._run_inspection(node_values, camera, recipe)
@@ -50,7 +50,11 @@ class PlcBridge:
     async def run_method(self, node_values: dict, camera_id: str, recipe_id: str) -> bool:
         if self._running:
             return False
-        return await self._run_inspection(node_values, camera_id or "cam-01", recipe_id or "recipe-default")
+        return await self._run_inspection(
+            node_values,
+            (camera_id or "").strip(),
+            (recipe_id or "recipe-default").strip() or "recipe-default",
+        )
 
     async def _run_inspection(self, node_values: dict, camera_id: str, recipe_id: str) -> bool:
         if self._running:
@@ -62,10 +66,14 @@ class PlcBridge:
             node_values[self._contract["system_state"]] = "busy"
             node_values[self._contract.get("system_health", "ns=2;s=System.Health")] = "ok"
 
-            logger.info("OPC UA inspection trigger camera=%s recipe=%s", camera_id, recipe_id)
+            logger.info(
+                "OPC UA inspection trigger camera=%s recipe=%s",
+                camera_id or "<station-selection>",
+                recipe_id,
+            )
             result = await asyncio.to_thread(
                 run_inspection_sync,
-                camera_id=camera_id,
+                camera_id=camera_id or None,
                 recipe_id=recipe_id,
             )
             if not result:

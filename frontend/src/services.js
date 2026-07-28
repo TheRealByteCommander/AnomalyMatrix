@@ -64,6 +64,15 @@ export function mapApiInspection(item) {
   const decision =
     item.decision ||
     (score >= 0.85 ? 'red' : score >= 0.55 ? 'amber' : 'green');
+  const views = Array.isArray(item.views)
+    ? item.views.map((v) => ({
+        cameraId: v.camera_id,
+        score: Number(v.inference?.anomaly_score ?? 0),
+        decision: v.decision,
+        heatmapUri: v.heatmap?.uri || v.inference?.heatmap_uri || null,
+        source: v.source || v.frame?.source || null,
+      }))
+    : [];
 
   return {
     id: item.inspection_id || item.id,
@@ -73,17 +82,29 @@ export function mapApiInspection(item) {
     defect: inf.status === 'anomaly' ? inf.defect_class || 'anomaly detected' : 'none',
     timestamp: frame.captured_at || new Date().toISOString(),
     heatmapUri: item.heatmap?.uri || inf.heatmap_uri || null,
+    cameraIds: item.camera_ids || (frame.camera_id ? [frame.camera_id] : []),
+    viewCount: item.view_count || views.length || 1,
+    worstViewCameraId: item.worst_view_camera_id || frame.camera_id || null,
+    driftingCameraId: item.drifting_camera_id || null,
+    byCamera: item.by_camera || [],
+    views,
     raw: item,
   };
 }
 
-export async function runInspection(cameraId = 'cam-01', recipeId = 'recipe-default') {
+export async function runInspection(cameraId = null, recipeId = 'recipe-default', cameraIds = null) {
+  const body = { recipe_id: recipeId };
+  if (Array.isArray(cameraIds) && cameraIds.length) {
+    body.camera_ids = cameraIds;
+  } else if (cameraId) {
+    body.camera_id = cameraId;
+  }
   const r = await fetch(
     `${API_BASE}/inspections/run`,
     withCredentials({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ camera_id: cameraId, recipe_id: recipeId }),
+      body: JSON.stringify(body),
     })
   );
   return mapApiInspection(await parseEnvelope(r));
@@ -165,6 +186,28 @@ export async function logout() {
 
 export async function fetchAuthMe() {
   const r = await fetch(`${API_BASE}/auth/me`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function fetchCameras() {
+  const r = await fetch(`${API_BASE}/cameras`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function fetchCameraSelection() {
+  const r = await fetch(`${API_BASE}/cameras/selection`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function saveCameraSelection(cameraIds) {
+  const r = await fetch(
+    `${API_BASE}/cameras/selection`,
+    withCredentials({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ camera_ids: cameraIds }),
+    })
+  );
   return parseEnvelope(r);
 }
 

@@ -96,6 +96,11 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
   background: #0d1627; color: var(--text); padding: .55rem .65rem; font: inherit;
 }
 .feedback-form button[type="submit"] { justify-self: start; }
+.camera-select-list { list-style: none; padding: 0; margin: .75rem 0; display: grid; gap: .55rem; }
+.camera-select-list label { display: flex; gap: .65rem; align-items: flex-start; cursor: pointer; }
+.camera-select-list input { margin-top: .25rem; }
+.ok { color: var(--green); }
+.error { color: var(--red); }
 .error-text { color: var(--red); margin-top: .5rem; }
 
 /* Context help */

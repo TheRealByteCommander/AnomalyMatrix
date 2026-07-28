@@ -3,7 +3,7 @@
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
 **Aktueller Stand (2026-07):** API **v1.1.0** — Pilot-/Deploy-ready (siehe Rollout-Gates in `docs/RELEASE_READINESS.md`)  
-**Installation:** `docs/INSTALLATION.md` · **Konfiguration:** `docs/CONFIGURATION.md`  
+**Installation:** `docs/INSTALLATION.md` · **Konfiguration:** `docs/CONFIGURATION.md` · **Multi-Kamera:** `docs/MULTI_CAMERA.md`  
 **Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`  
 **GitHub Release:** `v1.1.0` — `docs/RELEASE_NOTES_v1.1.0.md`
 
@@ -24,7 +24,7 @@ AnomalyMatrix ist eine **Inline-Qualitätslösung** für die Produktion: Sie pr�
 | **SPS-Integration** | Automatischer Trigger, Stop/Ausschleusen bei rot über OPC UA |
 | **Operator-HMI** | Ampel, Score, letzte Inspektionen — schnelle Entscheidung am Band |
 | **QA-Feedback** | Falschmeldungen markieren, echte Defekte dokumentieren |
-| **Trends** | Prozessdrift früh erkennen, bevor Serienfehler entstehen |
+| **Trends** | Prozessdrift früh erkennen — bei Multi-View **pro Kamera** |
 
 Ausführliche Beschreibung (DE/EN): **Hilfe & FAQ** im HMI oder `docs/PRODUCT_APPLICATION.md`.
 
@@ -33,8 +33,8 @@ Ausführliche Beschreibung (DE/EN): **Hilfe & FAQ** im HMI oder `docs/PRODUCT_AP
 |------|--------|
 | `backend/` | FastAPI API (Inspection, RBAC, License, Observability) |
 | `frontend/` | React/Vite HMI (Dashboard, Detail, Trends, Config) |
-| `edge-acquisition/` | HTTP Capture-Service (synthetisch / Stub) |
-| `opcua-gateway/` | HTTP `/publish` + asyncua OPC-UA-Server (Port 4840) |
+| `edge-acquisition/` | HTTP Capture + Kamera-Discovery (`GET /cameras`) |
+| `opcua-gateway/` | HTTP `/publish` + asyncua OPC-UA-Server (Port 4840, Multi-View LastResult) |
 | `infra/` | Infra-Manifeste (Platzhalter) |
 | `scripts/` | DB-Migrationen, Installer, Automation |
 | `tests/` | Top-Level Integration-Test-Workspace |
@@ -108,11 +108,16 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 - `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`, `POST /api/v1/models/rollback`
 
 ### Inspection & Ergebnisse
-- `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`)
+- `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`) — optional `camera_ids` (1–4)
 - `GET /api/v1/inspections/recent` (Alias: `/results/latest`)
-- `GET /api/v1/results/query`
-- `GET /api/v1/results/trend-summary`
+- `GET /api/v1/results/query` — Filter `camera_id` (jede View)
+- `GET /api/v1/results/trend-summary` — inkl. `by_camera` Drift
 - `POST /api/v1/edge/capture`, `POST /api/v1/ai/infer`
+
+### Kameras (Multi-View)
+- `GET /api/v1/cameras` — Hardware-Erkennung + Auswahl
+- `GET` / `PUT /api/v1/cameras/selection` — 1–4 Kameras speichern
+- Details: `docs/MULTI_CAMERA.md`
 
 ### Catalog, Feedback, Audit
 - `GET /api/v1/recipes`, `GET /api/v1/models`
@@ -144,7 +149,11 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 | `INFLUX_URL`, `MINIO_ENDPOINT` | Optionale Metriken/Heatmap-Persistenz |
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
+<<<<<<< HEAD
 | `LICENSE_SERVER_URL`, `LICENSE_PRODUCT_ID` | Byte-Commander License Server (Integer-ID) |
+=======
+| `CAMERA_DRIVER`, `CAMERA_SOURCE`, `CAMERA_SOURCES_JSON` | Edge-Capture / Multi-Kamera-Mapping |
+>>>>>>> origin/master
 
 Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod`): Header `X-AMX-Role` / `X-AMX-User` (Frontend: `VITE_DEV_AUTH_HEADERS=true`) oder `X-AMX-Api-Key`. Unbekannte Rollen werden **abgelehnt** (kein Admin-Fallback).
 
@@ -152,7 +161,7 @@ Produktion: `.env.production.example` · Dev: `.env.example`
 
 ## Frontend (HMI)
 
-Seiten: **Dashboard**, **Inspection Detail** (inkl. QA-Feedback), **Trends**, **Configuration** (Recipes/Models aus API).
+Seiten: **Dashboard**, **Inspection Detail** (Multi-View + QA-Feedback), **Trends** (Drift je Kamera), **Configuration** (Kameraauswahl 1–4).
 
 ```bash
 cd frontend
@@ -187,6 +196,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 ## Dokumente
 - `docs/INSTALLATION.md` — **Installation** (Installer + Compose + lokal)
 - `docs/CONFIGURATION.md` — **Konfiguration & Go-Live** (TLS, Kamera, OPC-UA, Rezepte)
+- `docs/MULTI_CAMERA.md` — Multi-Kamera Case-Prüfung & Per-Camera-Drift
 - `docs/PRODUCTION_RUNBOOK.md` — Betrieb, Backup, Security-Notes
 - `docs/PRODUCT_APPLICATION.md` — Anwendung, Einsatzgebiete, Zielgruppen
 - `docs/product/EINKAUFSLISTE_LINIE.md` — Hardware-Einkaufsliste Linien-Setup

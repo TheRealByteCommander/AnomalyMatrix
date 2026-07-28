@@ -1,15 +1,22 @@
 # Optional camera device passthrough for OpenCV capture.
 # Usage:
-#   CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
+#   CAMERA_DRIVER=opencv \
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 #     -f docker-compose.camera.yml --env-file .env.production up -d
 #
-# Set CAMERA_DEVICE=/dev/video0 (default) or another V4L2 path.
+# Multi-camera (same case, up to 4): pass additional host devices and optional map, e.g.
+#   CAMERA_SOURCES_JSON='{"video0":"0","video1":"1"}'
+#   and add more `devices:` entries for /dev/video1 … /dev/video3.
 
 services:
   edge-acquisition:
     environment:
       CAMERA_DRIVER: ${CAMERA_DRIVER:-opencv}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+      CAMERA_SOURCES_JSON: ${CAMERA_SOURCES_JSON:-}
     devices:
-      - "${CAMERA_DEVICE:-/dev/video0}:${CAMERA_DEVICE:-/dev/video0}"
+      - "${CAMERA_DEVICE_0:-${CAMERA_DEVICE:-/dev/video0}}:/dev/video0"
+      # Uncomment / extend for more cameras on the host:
+      # - "${CAMERA_DEVICE_1:-/dev/video1}:/dev/video1"
+      # - "${CAMERA_DEVICE_2:-/dev/video2}:/dev/video2"
+      # - "${CAMERA_DEVICE_3:-/dev/video3}:/dev/video3"

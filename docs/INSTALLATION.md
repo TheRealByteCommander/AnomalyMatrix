@@ -130,14 +130,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 | Overlay | Zweck |
 |---------|--------|
 | `docker-compose.tls.yml` | Caddy TLS → HMI (`infra/caddy/Caddyfile`) |
-| `docker-compose.camera.yml` | OpenCV + `/dev/video0` |
+| `docker-compose.camera.yml` | OpenCV / V4L2 (bis 4 Geräte, siehe `docs/MULTI_CAMERA.md`) |
 
 ```bash
 # TLS
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tls.yml \
   --env-file .env.production up -d
 
-# Kamera
+# Kamera (1–4; weitere /dev/videoN in Overlay freischalten)
 CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml \
   --env-file .env.production up -d --build

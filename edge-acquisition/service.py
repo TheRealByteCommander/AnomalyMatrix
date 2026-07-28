@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from camera_discover import discover_cameras
 from camera_drivers import encode_image_b64, get_camera_driver
 from service_auth import ServiceAuthMiddleware
 
@@ -34,6 +35,7 @@ app.add_middleware(ServiceAuthMiddleware)
 class CaptureRequest(BaseModel):
     camera_id: str = "cam-01"
     recipe_id: str = "recipe-default"
+    source: str | None = Field(default=None, description="Optional device index/path override")
 
 
 @app.get("/health")
@@ -41,12 +43,22 @@ def health():
     return {"ok": True, "service": "edge-acquisition", "version": _app_version()}
 
 
+@app.get("/cameras")
+def cameras():
+    """List hardware-detected (or synthetic) cameras available for selection."""
+    return discover_cameras()
+
+
 @app.post("/capture")
 def capture(payload: CaptureRequest):
     frame_id = str(uuid4())
     driver = get_camera_driver()
     try:
-        image, meta = driver.capture(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+        image, meta = driver.capture(
+            camera_id=payload.camera_id,
+            recipe_id=payload.recipe_id,
+            source=payload.source,
+        )
         image_b64 = encode_image_b64(image)
         return {
             "frame_id": frame_id,
@@ -60,6 +72,7 @@ def capture(payload: CaptureRequest):
             "exposure_ms": float(meta.get("exposure_ms", 10.0)),
             "gain_db": float(meta.get("gain_db", 0.0)),
             "capture_driver": meta.get("driver", "unknown"),
+            "source": meta.get("source"),
         }
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Capture failed") from exc
