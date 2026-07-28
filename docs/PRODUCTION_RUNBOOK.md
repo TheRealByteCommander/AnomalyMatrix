@@ -49,7 +49,7 @@ curl -fsS -b /tmp/amx.cookie http://127.0.0.1:8080/api/v1/auth/me
 
 HMI: `/` → Login → Dashboard-Inspektion.
 
-**Vollständige Konfiguration:** [`CONFIGURATION.md`](./CONFIGURATION.md) · **Installation:** [`INSTALLATION.md`](./INSTALLATION.md)
+**Vollständige Konfiguration:** [`CONFIGURATION.md`](./CONFIGURATION.md) · **Installation:** [`INSTALLATION.md`](./INSTALLATION.md) · **Multi-Kamera:** [`MULTI_CAMERA.md`](./MULTI_CAMERA.md)
 
 ### TLS (optional overlay)
 
@@ -60,13 +60,17 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compos
 # Installer: --tls setzt COOKIE_SECURE=true
 ```
 
-### Kamera (OpenCV)
+### Kamera (OpenCV, optional Multi-View 1–4)
 
 ```bash
 CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml \
   --env-file .env.production up -d
 ```
+
+Auswahl im HMI (Konfiguration) oder `PUT /api/v1/cameras/selection`.  
+Drift je Kamera: `GET /api/v1/results/trend-summary` → `by_camera`, `drifting_camera_id`.  
+Siehe [`MULTI_CAMERA.md`](./MULTI_CAMERA.md).
 
 ### OPC-UA Kunden-PKI
 

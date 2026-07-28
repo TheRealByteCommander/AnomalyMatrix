@@ -1,6 +1,6 @@
 # AnomalyMatrix — Konfiguration
 
-Stand: **v1.1.0** (nach Full-Release-Hardening)
+Stand: **v1.1.x** (Multi-Kamera Case-Prüfung + Per-Camera-Drift)
 
 Diese Anleitung folgt **nach** der Installation (`docs/INSTALLATION.md`).  
 Ziel: aus einem laufenden Stack ein **linienfähiges** System machen.
@@ -226,6 +226,8 @@ Nutzt `docker compose exec` gegen den Postgres-Container (kein Host-Port nötig)
 - [ ] TLS aktiv, `COOKIE_SECURE=true`, CORS = HTTPS-URL  
 - [ ] OPC-UA: Kunden-Zertifikate, SPS-Trigger + Ergebnis-Nodes  
 - [ ] Kamera: `opencv` + Gerät **oder** bewusst synthetic für Demo  
+- [ ] Multi-Kamera: Auswahl 1–4 gespeichert; Testlauf `view_count` ok (`docs/MULTI_CAMERA.md`)  
+- [ ] Drift: `trend-summary.by_camera` / `drifting_camera_id` nachvollziehbar  
 - [ ] `OPCUA_API_KEY` = `operator-1.api_key`  
 - [ ] PatchCore-Modell trainiert/promoted (falls Live-Linie)  
 - [ ] Backup getestet  
