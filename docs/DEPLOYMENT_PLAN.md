@@ -67,10 +67,10 @@ SERVICE_AUTH_TOKEN=...
 3. [ ] `/api/v1/health` und `/api/v1/ready` grün
 4. [ ] Volume `api_data` + `opcua_certs` vorhanden
 5. [ ] TLS (`docker-compose.tls.yml` oder Reverse-Proxy) + `COOKIE_SECURE=true`
-6. [ ] Kamera konfiguriert (`synthetic` bewusst oder `docker-compose.camera.yml`)
-7. [ ] OPC-UA: Kunden-PKI + SPS-Trigger-Test
+6. [ ] Kamera konfiguriert (`synthetic` bewusst oder `docker-compose.camera.yml`; Station 1–4 Kameras, siehe [`MULTI_CAMERA.md`](./MULTI_CAMERA.md))
+7. [ ] OPC-UA: Kunden-PKI + SPS-Trigger-Test (v1.2 Multi-View / Drift-Nodes)
 8. [ ] Backup Postgres (`MODE=prod ./scripts/backup/backup.sh`)
-9. [ ] Smoke: Login + Inspektion + HMI Dashboard
+9. [ ] Smoke: Login + Inspektion + HMI Dashboard (+ Multi-View / Trends Drift)
 
 ## Dokumentation
 
@@ -78,6 +78,7 @@ SERVICE_AUTH_TOKEN=...
 |----------|--------|
 | [`INSTALLATION.md`](./INSTALLATION.md) | Install (Installer / Compose / lokal) |
 | [`CONFIGURATION.md`](./CONFIGURATION.md) | **Konfiguration & Go-Live** |
+| [`MULTI_CAMERA.md`](./MULTI_CAMERA.md) | Multi-Kamera Case-Prüfung & Drift |
 | [`PRODUCTION_RUNBOOK.md`](./PRODUCTION_RUNBOOK.md) | Betrieb, Backup, Security |
 | [`RELEASE_READINESS.md`](./RELEASE_READINESS.md) | Freigabe-Status |
 

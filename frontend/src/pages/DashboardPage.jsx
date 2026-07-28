@@ -39,10 +39,15 @@ export default function DashboardPage({ inspections, setInspections, setSelected
 
         const activeRecipe = (recipeData.items || []).find((r) => r.status === 'active') || recipeData.items?.[0];
         const activeModel = (modelData.items || []).find((m) => m.status === 'active') || modelData.items?.[0];
-        const latestCamera = inspections[0]?.raw?.frame?.camera_id;
+        const latestCameras = inspections[0]?.cameraIds || [];
+        const latestCamera = latestCameras[0] || inspections[0]?.raw?.frame?.camera_id;
 
         setContext({
-          line: latestCamera ? `Camera ${latestCamera}` : activeRecipe?.name || hmiState.line,
+          line: latestCameras.length > 1
+            ? `Cameras ${latestCameras.join('+')}`
+            : latestCamera
+              ? `Camera ${latestCamera}`
+              : activeRecipe?.name || hmiState.line,
           recipe: activeRecipe?.recipe_id || activeRecipe?.name || hmiState.recipe,
           modelVersion: activeModel?.model_version || activeModel?.name || hmiState.modelVersion,
         });
@@ -167,7 +172,11 @@ export default function DashboardPage({ inspections, setInspections, setSelected
             >
               <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
               <span>{i.id}</span>
-              <span>{i.part}</span>
+              <span>
+                {i.viewCount > 1
+                  ? `${i.viewCount}×cam`
+                  : (i.cameraIds?.[0] || i.part)}
+              </span>
               <StatusBadge state={i.decision}>{t(`decision.${i.decision}`)}</StatusBadge>
             </button>
           ))}

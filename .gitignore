@@ -21,6 +21,7 @@ backend/data/*.jsonl
 backend/data/users.json
 backend/data/sessions.json
 backend/data/license_state.json
+backend/data/station_cameras.json
 backend/data/training-artifacts/
 opcua-gateway/certs/*.pem
 opcua-gateway/certs/*.der

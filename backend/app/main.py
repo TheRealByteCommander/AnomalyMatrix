@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import os
 import time
 from contextlib import asynccontextmanager
@@ -16,6 +17,7 @@ from .api.auth import router as auth_router
 from .api.catalog import router as catalog_router
 from .api.health import app_version, router as health_router
 from .api.training import router as training_router
+from .camera_station import MAX_CAMERAS, MIN_CAMERAS, CameraSelectionError, CameraStationStore
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
 from .core_store import CoreStore
@@ -25,12 +27,12 @@ from .inference_provider import _frame_grayscale, get_inference_provider
 from .licensing import LicenseManager
 from .metrics_influx import query_observability_summary, record_inspection_metrics, record_process_trend
 from .middleware_production import configure_production_middleware
-from .models import CaptureRequest, InferRequest, RunInspectionRequest
+from .models import CameraSelectionRequest, CaptureRequest, InferRequest, RunInspectionRequest
 from .opcua_publish import publish_busy_state, publish_to_opcua
 from .production import enforce_production_config, is_production
 from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
-from .services_edge import capture_frame, frame_to_dict
+from .services_edge import capture_frame, frame_to_dict, list_edge_cameras
 from .storage_minio import ensure_buckets, store_heatmap_binary, store_raw_frame
 from .trend_warnings import maybe_emit_trend_warning
 
@@ -40,6 +42,81 @@ repo = build_repository(_data_root)
 core_store = CoreStore(_data_root, dsn=_dsn)
 license_manager = LicenseManager()
 event_bus = DomainEventBus(_data_root)
+camera_station = CameraStationStore(_data_root / "station_cameras.json")
+
+_DECISION_RANK = {"green": 0, "amber": 1, "red": 2}
+
+
+def _score_to_decision(score: float) -> str:
+    if score >= 0.85:
+        return "red"
+    if score >= 0.55:
+        return "amber"
+    return "green"
+
+
+def _resolve_run_cameras(payload: RunInspectionRequest) -> tuple[list[str], dict[str, str]]:
+    """Priority: camera_ids → single camera_id → station selection → cam-01."""
+    selection = camera_station.load()
+    sources = dict(selection.get("sources") or {})
+    if payload.camera_ids:
+        return list(payload.camera_ids), sources
+    if payload.camera_id:
+        return [payload.camera_id], sources
+    if selection.get("camera_ids"):
+        return list(selection["camera_ids"]), sources
+    return ["cam-01"], sources
+
+
+def _run_single_view(
+    *,
+    inspection_id: str,
+    camera_id: str,
+    recipe_id: str,
+    source: str | None,
+    provider,
+) -> dict:
+    frame = capture_frame(camera_id=camera_id, recipe_id=recipe_id, source=source)
+    frame_dict = frame_to_dict(frame)
+    inference = provider.infer(frame_dict)
+    decision = _score_to_decision(float(inference.anomaly_score))
+    view = {
+        "camera_id": camera_id,
+        "source": source or frame_dict.get("source"),
+        "frame": frame_dict,
+        "inference": inference.__dict__,
+        "decision": decision,
+        "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
+    }
+
+    gray = _frame_grayscale(frame_dict)
+    heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
+    if frame_dict.get("image_b64"):
+        import base64
+
+        try:
+            raw_bytes = base64.b64decode(frame_dict["image_b64"])
+            raw_uri = store_raw_frame(
+                inspection_id=inspection_id,
+                recipe_id=recipe_id,
+                image_bytes=raw_bytes,
+                camera_id=camera_id,
+            )
+            if raw_uri:
+                view["frame"]["stored_raw_uri"] = raw_uri
+        except Exception:
+            pass
+
+    stored_uri = store_heatmap_binary(
+        inspection_id=inspection_id,
+        png_bytes=heatmap_png,
+        anomaly_score=inference.anomaly_score,
+        camera_id=camera_id,
+    )
+    if stored_uri:
+        view["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
+    return view
+
 
 
 @asynccontextmanager
@@ -275,10 +352,34 @@ async def contracts_opcua(request: Request):
 async def contracts_inspection_result(request: Request):
     _guard(request, "contracts.read")
     request_id = request.state.request_id
+    schema_path = Path(__file__).resolve().parents[2] / "contracts" / "inspection_result_v1.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8")) if schema_path.exists() else {}
     return success_envelope(
         {
-            "schema_version": "1.1.0",
-            "fields": ["inspection_id", "frame", "inference", "decision", "heatmap", "opcua_publish", "license_tier"],
+            "schema_version": schema.get("version") or "1.2.0",
+            "schema": schema,
+            "fields": [
+                "inspection_id",
+                "frame",
+                "inference",
+                "decision",
+                "heatmap",
+                "camera_ids",
+                "view_count",
+                "views",
+                "decision_policy",
+                "worst_view_camera_id",
+                "trend_warning",
+                "by_camera",
+                "drifting_camera_id",
+                "opcua_publish",
+                "license_tier",
+            ],
+            "notes": {
+                "frame_inference_heatmap": "Worst-view projection for backward compatibility",
+                "decision_policy": "worst_view",
+                "by_camera": "Per-camera drift / trend breakdown",
+            },
         },
         request_id,
     )
@@ -288,8 +389,76 @@ async def contracts_inspection_result(request: Request):
 async def edge_capture(payload: CaptureRequest, request: Request):
     _guard(request, "inspection.run")
     request_id = request.state.request_id
-    frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+    frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id, source=payload.source)
     return success_envelope(frame_to_dict(frame), request_id)
+
+
+@app.get("/api/v1/cameras")
+async def cameras_list(request: Request):
+    _guard(request, "cameras.read")
+    request_id = request.state.request_id
+    discovered = list_edge_cameras()
+    selection = camera_station.load()
+    selected = set(selection.get("camera_ids") or [])
+    cameras = []
+    for cam in discovered.get("cameras") or []:
+        item = dict(cam)
+        item["selected"] = item.get("camera_id") in selected
+        cameras.append(item)
+    return success_envelope(
+        {
+            "cameras": cameras,
+            "driver": discovered.get("driver"),
+            "host": discovered.get("host"),
+            "min_selectable": MIN_CAMERAS,
+            "max_selectable": MAX_CAMERAS,
+            "selection": selection,
+        },
+        request_id,
+    )
+
+
+@app.get("/api/v1/cameras/selection")
+async def cameras_selection_get(request: Request):
+    _guard(request, "cameras.read")
+    request_id = request.state.request_id
+    return success_envelope(camera_station.load(), request_id)
+
+
+@app.put("/api/v1/cameras/selection")
+async def cameras_selection_put(request: Request, payload: CameraSelectionRequest):
+    _guard(request, "cameras.configure")
+    request_id = request.state.request_id
+    discovered = list_edge_cameras()
+    available = {
+        str(c.get("camera_id")): c
+        for c in (discovered.get("cameras") or [])
+        if c.get("camera_id") and c.get("available", True)
+    }
+    sources = {
+        cid: str(available[cid].get("source") or cid)
+        for cid in payload.camera_ids
+        if cid in available
+    }
+    try:
+        saved = camera_station.save(
+            camera_ids=payload.camera_ids,
+            sources=sources,
+            available_ids=set(available.keys()),
+        )
+    except CameraSelectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    auth = request.state.auth
+    core_store.append_audit(
+        actor=auth.user_id,
+        action="cameras.configure",
+        resource_type="camera_station",
+        resource_id="default",
+        after_state={"camera_ids": saved["camera_ids"]},
+        request_id=request_id,
+    )
+    return success_envelope(saved, request_id)
 
 
 @app.post("/api/v1/ai/infer")
@@ -309,71 +478,98 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     request_id = request.state.request_id
     started = time.perf_counter()
 
-    publish_busy_state(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
+    camera_ids, sources = _resolve_run_cameras(payload)
+    primary_camera = camera_ids[0]
+    publish_busy_state(camera_id=primary_camera, recipe_id=payload.recipe_id)
 
     try:
-        frame = capture_frame(camera_id=payload.camera_id, recipe_id=payload.recipe_id)
-        frame_dict = frame_to_dict(frame)
-        provider = get_inference_provider()
-        inference = provider.infer(frame_dict)
-
-        decision = 'red' if inference.anomaly_score >= 0.85 else ('amber' if inference.anomaly_score >= 0.55 else 'green')
-        snap = license_manager.snapshot()
         inspection_id = str(uuid4())
+        provider = get_inference_provider()
+        views: list[dict] = []
+        for camera_id in camera_ids:
+            view = _run_single_view(
+                inspection_id=inspection_id,
+                camera_id=camera_id,
+                recipe_id=payload.recipe_id,
+                source=sources.get(camera_id),
+                provider=provider,
+            )
+            views.append(view)
+
+        # Aggregate: worst-view wins (highest anomaly severity)
+        primary = max(
+            views,
+            key=lambda v: (
+                _DECISION_RANK.get(v["decision"], 0),
+                float(v["inference"].get("anomaly_score", 0.0)),
+            ),
+        )
+        decision = primary["decision"]
+        snap = license_manager.snapshot()
         result = {
             "inspection_id": inspection_id,
-            "frame": frame_dict,
-            "inference": inference.__dict__,
+            "frame": primary["frame"],
+            "inference": primary["inference"],
             "decision": decision,
-            "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
+            "heatmap": primary["heatmap"],
             "license_tier": snap.tier,
+            "camera_ids": camera_ids,
+            "view_count": len(views),
+            "views": views,
+            "decision_policy": "worst_view",
+            "worst_view_camera_id": primary.get("camera_id"),
         }
 
-        gray = _frame_grayscale(frame_dict)
-        heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
-        if frame_dict.get("image_b64"):
-            import base64
+        # Trend enrichment BEFORE persist/OPC-UA so interfaces stay consistent
+        from .trend_warnings import enrich_trend_summary
 
-            try:
-                raw_bytes = base64.b64decode(frame_dict["image_b64"])
-                raw_uri = store_raw_frame(inspection_id=inspection_id, recipe_id=payload.recipe_id, image_bytes=raw_bytes)
-                if raw_uri:
-                    result["frame"]["stored_raw_uri"] = raw_uri
-            except Exception:
-                pass
+        prior = list(reversed(repo.latest(limit=49)))
+        window_items = prior + [result]
+        scores = [float(i.get("inference", {}).get("anomaly_score", 0.0)) for i in window_items]
+        trend = enrich_trend_summary(
+            {
+                "count": len(window_items),
+                "avg_score": round(sum(scores) / len(scores), 4) if scores else 0.0,
+                "max_score": round(max(scores), 4) if scores else 0.0,
+                "anomaly_count": sum(
+                    1 for i in window_items if i.get("inference", {}).get("status") == "anomaly"
+                ),
+            },
+            window_items,
+        )
+
+        result["trend_warning"] = bool(trend.get("trend_warning", False))
+        result["trend_severity"] = trend.get("trend_severity", "green")
+        result["trend_reason"] = trend.get("trend_reason")
+        result["by_camera"] = trend.get("by_camera") or []
+        result["drifting_camera_id"] = trend.get("drifting_camera_id")
+        result["drifting_cameras"] = trend.get("drifting_cameras") or []
+        result["score_delta"] = trend.get("score_delta")
+        result["drift_score"] = trend.get("drift_score")
+        result["baseline_avg_score"] = trend.get("baseline_avg_score")
 
         opcua = publish_to_opcua(result)
         result["opcua_publish"] = opcua.__dict__
 
-        stored_uri = store_heatmap_binary(
-            inspection_id=inspection_id,
-            png_bytes=heatmap_png,
-            anomaly_score=inference.anomaly_score,
-        )
-        if stored_uri:
-            result["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
-
         latency_ms = (time.perf_counter() - started) * 1000.0
         record_inspection_metrics(
             inspection_id=inspection_id,
-            score=inference.anomaly_score,
+            score=float(primary["inference"].get("anomaly_score", 0.0)),
             latency_ms=latency_ms,
             decision=decision,
-            provider=inference.provider,
+            provider=primary["inference"].get("provider"),
             opcua_published=bool(opcua.published),
         )
         event = _event_bus(request).emit_inspection_completed(result, latency_ms=latency_ms)
         result["domain_event_id"] = event.get("event_id")
 
         repo.append(result)
-        trend = repo.trend_summary()
-        record_process_trend(avg_score=float(trend.get("avg_score", inference.anomaly_score)))
-        result["trend_warning"] = trend.get("trend_warning", False)
+        record_process_trend(avg_score=float(trend.get("avg_score", primary["inference"].get("anomaly_score", 0.0))))
         trend_event = maybe_emit_trend_warning(
             _event_bus(request),
             trend=trend,
-            recipe_id=frame.recipe_id,
-            model_version=inference.model_version,
+            recipe_id=payload.recipe_id,
+            model_version=primary["inference"].get("model_version"),
         )
         if trend_event:
             result["trend_warning_event_id"] = trend_event.get("event_id")
@@ -383,7 +579,14 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
             action="inspection.run",
             resource_type="inspection",
             resource_id=inspection_id,
-            after_state={"decision": decision, "score": inference.anomaly_score},
+            after_state={
+                "decision": decision,
+                "score": primary["inference"].get("anomaly_score"),
+                "camera_ids": camera_ids,
+                "view_count": len(views),
+                "worst_view_camera_id": primary.get("camera_id"),
+                "drifting_camera_id": result.get("drifting_camera_id"),
+            },
             request_id=request.state.request_id,
         )
         return success_envelope(result, request_id)
@@ -418,13 +621,20 @@ async def results_latest(request: Request, limit: int = 20):
 async def results_query(
     request: Request,
     recipe_id: str | None = None,
+    camera_id: str | None = None,
     min_score: float | None = Query(default=None, ge=0.0, le=1.0),
     max_score: float | None = Query(default=None, ge=0.0, le=1.0),
     limit: int = Query(default=50, ge=1, le=200),
 ):
     _guard(request, "inspection.read")
     request_id = request.state.request_id
-    data = repo.query(recipe_id=recipe_id, min_score=min_score, max_score=max_score, limit=limit)
+    data = repo.query(
+        recipe_id=recipe_id,
+        camera_id=camera_id,
+        min_score=min_score,
+        max_score=max_score,
+        limit=limit,
+    )
     return success_envelope({"items": data, "count": len(data)}, request_id)
 
 
@@ -449,6 +659,14 @@ async def observability_summary(request: Request):
         "trend_warning": trend.get("trend_warning", False),
         "trend_severity": trend.get("trend_severity", "green"),
         "trend_reason": trend.get("trend_reason"),
+        "by_camera": trend.get("by_camera") or [],
+        "drifting_camera_id": trend.get("drifting_camera_id"),
+        "drifting_cameras": trend.get("drifting_cameras") or [],
+        "score_delta": trend.get("score_delta"),
+        "drift_score": trend.get("drift_score"),
+        "baseline_avg_score": trend.get("baseline_avg_score"),
+        "camera_count": trend.get("camera_count", 0),
+        "view_sample_count": trend.get("view_sample_count", 0),
         "inference_p95_ms": influx.get("inference_p95_ms", 0.0),
         "opc_ua_publish_error_rate_pct": influx.get("opc_ua_publish_error_rate_pct", 0.0),
         "metrics_source": influx.get("source", "repository"),

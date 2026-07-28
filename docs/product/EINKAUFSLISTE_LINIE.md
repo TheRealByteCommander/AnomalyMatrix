@@ -46,11 +46,13 @@ Software-Lizenz, Inbetriebnahme und SPS-Workshop separat.
 
 | Pos. | Menge | Artikel | Spezifikation | Hinweis |
 |------|------:|---------|---------------|---------|
-| 2.1 | 1 | **USB3 / UVC-Industriekamera** | Global Shutter bevorzugt, ≥ **2 MP**, V4L2-fähig, fester USB3-Anschluss | Host-Gerät: `/dev/video0` via `docker-compose.camera.yml` |
-| 2.2 | 1 | Objektiv | C-/CS-Mount, Brennweite nach Sichtfeld & Arbeitsabstand | erst FOV/Abstand messen, dann kaufen |
-| 2.3 | 1 | Filter (optional) | IR-Cut / Bandpass je nach Licht | reduziert Blendung / Drift |
-| 2.4 | 1 | USB3-Kabel industriell | geschirmt, verriegelt, Länge ≤ 3–5 m | aktive Repeater nur wenn nötig |
-| 2.5 | 1 | Kamerahalterung | schwingungsarm, justierbar (X/Y/Z/Winkel) | nach Erstsetup fest arretieren |
+| 2.1 | **1–4** | **USB3 / UVC-Industriekamera** | Global Shutter bevorzugt, ≥ **2 MP**, V4L2-fähig | Software: Multi-View gleicher Case (max. 4); Host `/dev/video0`… |
+| 2.2 | 1 je Kamera | Objektiv | C-/CS-Mount, Brennweite nach Sichtfeld & Arbeitsabstand | erst FOV/Abstand messen, dann kaufen |
+| 2.3 | 0–1 je Kamera | Filter (optional) | IR-Cut / Bandpass je nach Licht | reduziert Blendung / Drift |
+| 2.4 | 1 je Kamera | USB3-Kabel industriell | geschirmt, verriegelt, Länge ≤ 3–5 m | aktive Repeater nur wenn nötig |
+| 2.5 | 1 je Kamera | Kamerahalterung | schwingungsarm, justierbar (X/Y/Z/Winkel) | nach Erstsetup fest arretieren |
+
+> Software wählt 1–4 erkannte Kameras (HMI Konfiguration). Siehe `docs/MULTI_CAMERA.md`.
 
 ### Bewusst nicht in v1.1.0 einkaufen (ohne Integrationsprojekt)
 
@@ -133,7 +135,7 @@ Edge, Postgres, MinIO, Influx: **nur Docker-Netz** (keine Host-Ports nötig).
 
 | Richtung | Beispiele |
 |----------|-----------|
-| SPS → AMX | `ExternalTrigger` / `StartInspection`, Rezept/Kamera-ID |
+| SPS → AMX | `ExternalTrigger` / `StartInspection`; CameraId leer = Multi-View |
 | AMX → SPS | Ampel/Score, `StopLineRequest`, `RejectPart` |
 | Operator/SPS | `AcknowledgeStop` |
 

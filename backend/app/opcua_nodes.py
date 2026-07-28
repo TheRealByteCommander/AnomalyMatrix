@@ -48,6 +48,9 @@ def all_result_node_ids() -> list[str]:
             ids.append(insp[key])
     if "trend_warning" in contract:
         ids.append(contract["trend_warning"])
+    for value in (contract.get("trend") or {}).values():
+        if isinstance(value, str):
+            ids.append(value)
     if "system_state" in contract:
         ids.append(contract["system_state"])
     return ids

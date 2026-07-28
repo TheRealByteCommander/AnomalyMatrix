@@ -6,7 +6,7 @@ Stand: **v1.1.0** (Production-hardened)
 
 | Check | Status |
 |-------|--------|
-| Backend pytest (52+ Tests inkl. Security) | ✅ |
+| Backend pytest (70+ Tests inkl. Security / Multi-Kamera) | ✅ |
 | Performance gate < 500 ms | ✅ |
 | Parallel load smoke (10 runs) | ✅ |
 | Production guard + hardening tests | ✅ |
@@ -56,6 +56,8 @@ Stand: **v1.1.0** (Production-hardened)
 | Heatmap PNG to MinIO | ✅ |
 | Raw frame storage | ✅ |
 | OpenCV camera driver | ✅ |
+| Multi-Kamera gleicher Case (1–4, worst-view) | ✅ |
+| Drift pro Kamera (`by_camera`, OPC-UA Trend-Nodes) | ✅ |
 | GigE/GenICam industrial cameras | 🔜 optional upgrade |
 
 ## Freigabe
@@ -74,5 +76,7 @@ Stand: **v1.1.0** (Production-hardened)
 | OPC-UA Kunden-PKI (statt Self-Signed) | ⚠️ Zertifikate nach `/app/certs` mounten |
 | Seed-API-Keys rotiert (`users.api_key`) | ✅ Installer synced `OPCUA_API_KEY` (hard-fail) |
 | Reale Kamera (`CAMERA_DRIVER=opencv`) | ⚠️ Overlay `docker-compose.camera.yml` |
+| Multi-Kamera-Auswahl gespeichert (1–4) | ⚠️ HMI Konfiguration / `PUT /cameras/selection` |
+| OPC-UA CameraId leer = Stationsauswahl | ⚠️ für Multi-View an SPS abstimmen |
 | CI baut Gateway/Edge/Frontend-Images | ✅ Job `docker-images` |
 | Dependency-Readiness (`/api/v1/ready`) | ✅ |

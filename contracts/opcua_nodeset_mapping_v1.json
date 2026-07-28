@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "namespace_uri": "http://anomalymatrix.local/opcua",
-  "description": "Machine Vision companion — PLC inputs (trigger/ack) and outputs (result/stop/reject)",
+  "description": "Machine Vision companion — PLC inputs/outputs with multi-view + drift context",
   "system_state": "ns=2;s=System.State",
   "system_health": "ns=2;s=System.Health",
   "active_recipe": "ns=2;s=Recipe.Active",
@@ -26,9 +26,21 @@
     "heatmap_uri": "ns=2;s=Inspection.LastResult.HeatmapUri",
     "model_version": "ns=2;s=Inspection.LastResult.ModelVersion",
     "inspection_id": "ns=2;s=Inspection.LastResult.InspectionId",
-    "timestamp": "ns=2;s=Inspection.LastResult.Timestamp"
+    "timestamp": "ns=2;s=Inspection.LastResult.Timestamp",
+    "worst_view_camera_id": "ns=2;s=Inspection.LastResult.WorstViewCameraId",
+    "camera_ids": "ns=2;s=Inspection.LastResult.CameraIds",
+    "view_count": "ns=2;s=Inspection.LastResult.ViewCount",
+    "decision_policy": "ns=2;s=Inspection.LastResult.DecisionPolicy"
   },
   "trend_warning": "ns=2;s=Inspection.Trend.Warning",
+  "trend": {
+    "warning": "ns=2;s=Inspection.Trend.Warning",
+    "severity": "ns=2;s=Inspection.Trend.Severity",
+    "reason": "ns=2;s=Inspection.Trend.Reason",
+    "drifting_camera_id": "ns=2;s=Inspection.Trend.DriftingCameraId",
+    "drift_score": "ns=2;s=Inspection.Trend.DriftScore",
+    "score_delta": "ns=2;s=Inspection.Trend.ScoreDelta"
+  },
   "decision_codes": {
     "green": 0,
     "amber": 1,

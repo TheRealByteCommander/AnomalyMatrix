@@ -1,12 +1,13 @@
 # opcua-gateway
 
-OPC-UA-Gateway für AnomalyMatrix (**v1.1.0**) — SPS-Anbindung, Sign/Encrypt in Produktion.
+OPC-UA-Gateway für AnomalyMatrix (**v1.1.x**) — SPS-Anbindung, Sign/Encrypt, Multi-View LastResult + Drift-Nodes.
 
 ## Funktion
 - **asyncua** OPC-UA-Server (Port **4840**)
 - **PLC → AnomalyMatrix:** automatische Inspektion per Trigger oder Methode
 - **AnomalyMatrix → PLC:** Ergebnis, Stop-Linie, Ausschleusen bei rot
-- Node-Mapping: `contracts/opcua_nodeset_mapping_v1.json` (String-NodeIds `ns=2;s=…`)
+- **Multi-View:** leeres `Request.CameraId` → Stationsauswahl (1–4 Kameras)
+- Node-Mapping: `contracts/opcua_nodeset_mapping_v1.json` (v1.2, String-NodeIds `ns=2;s=…`)
 
 ## Ports
 | Port | Protokoll |
@@ -30,7 +31,7 @@ Siehe `docs/CONFIGURATION.md` (Abschnitt OPC-UA) und `docs/PRODUCTION_RUNBOOK.md
 |------|-----|----------|
 | `Inspection.ExternalTrigger` | Boolean | Flanke → Inspektion starten |
 | `Inspection.StartRequest` | Boolean | Alternative Trigger-Flanke |
-| `Inspection.Request.CameraId` | String | Kamera (optional) |
+| `Inspection.Request.CameraId` | String | Kamera-Override; **leer** = Stations-Multi-View |
 | `Inspection.Request.RecipeId` | String | Rezept (optional) |
 | `Inspection.AcknowledgeStop` | Boolean | Quittiert Stop — löscht `StopLineRequest` |
 
@@ -43,11 +44,21 @@ Siehe `docs/CONFIGURATION.md` (Abschnitt OPC-UA) und `docs/PRODUCTION_RUNBOOK.md
 | `Inspection.RejectPart` | Boolean | **TRUE bei rot** → Teil ausschleusen |
 | `LastResult.DecisionCode` | Int32 | 0=grün, 1=gelb, 2=rot |
 | `LastResult.PassFailBool` | Boolean | TRUE nur bei grün |
+| `LastResult.CameraIds` | String | kommaseparierte View-IDs |
+| `LastResult.ViewCount` | Int32 | 1–4 |
+| `LastResult.WorstViewCameraId` | String | schlechteste Sicht |
+| `LastResult.DecisionPolicy` | String | z. B. `worst_view` |
 | `LastResult.*` | diverse | Score, ID, DefectClass, … |
+| `Trend.Warning` / `Severity` / `Reason` | | Case-Drift |
+| `Trend.DriftingCameraId` | String | konkrete Drift-Kamera |
+| `Trend.DriftScore` / `ScoreDelta` | Double | Drift-Metriken |
 | `System.State` | String | ready / busy / error |
 
 ### Methode
-- `Inspection.StartInspection(CameraId, RecipeId)` → Boolean Erfolg
+- `Inspection.StartInspection(CameraId, RecipeId)` → Boolean Erfolg  
+  (`CameraId=""` → Multi-View Stationsauswahl)
+
+Siehe auch `docs/MULTI_CAMERA.md`.
 
 ## HTTP-API (Gateway)
 - `GET /health` — Status

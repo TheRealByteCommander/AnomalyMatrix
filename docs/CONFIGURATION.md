@@ -1,6 +1,6 @@
 # AnomalyMatrix — Konfiguration
 
-Stand: **v1.1.0** (nach Full-Release-Hardening)
+Stand: **v1.1.x** (Multi-Kamera Case-Prüfung + Per-Camera-Drift)
 
 Diese Anleitung folgt **nach** der Installation (`docs/INSTALLATION.md`).  
 Ziel: aus einem laufenden Stack ein **linienfähiges** System machen.
@@ -103,6 +103,21 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compos
 ```
 
 Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mounten).
+
+### Multi-Kamera (gleicher Case, 1–4)
+
+- Hardware-Erkennung: `GET /api/v1/cameras` (Edge: `GET /cameras`)
+- Auswahl speichern: `PUT /api/v1/cameras/selection` — Body `{"camera_ids":["video0","video1"]}`  
+  Rollen: Admin / Prozessingenieur (HMI → Konfiguration)
+- Grenzen: **min. 1**, **max. 4** Kameras
+- Inspektion nutzt die gespeicherte Auswahl; Entscheidung: **worst view wins**
+- Override pro Request: `POST /api/v1/inspections/run` mit `camera_ids`
+- OPC-UA: leeres `Request.CameraId` → Stationsauswahl; `LastResult` liefert `CameraIds`, `ViewCount`, `WorstViewCameraId`
+- Drift: `GET /results/trend-summary` enthält `by_camera[]`, `drifting_camera_id`, `drift_score`, `score_delta`
+- Mehrere Host-Geräte in `docker-compose.camera.yml` freischalten; optional  
+  `CAMERA_SOURCES_JSON='{"video0":"0","video1":"1"}'`
+
+> Hinweis: Capture ist derzeit **sequentiell** (kein Hardware-Trigger-Sync). Für bewegte Teile Sync separat planen.
 
 GigE/GenICam: noch nicht enthalten (Folgerelease).
 
@@ -211,6 +226,8 @@ Nutzt `docker compose exec` gegen den Postgres-Container (kein Host-Port nötig)
 - [ ] TLS aktiv, `COOKIE_SECURE=true`, CORS = HTTPS-URL  
 - [ ] OPC-UA: Kunden-Zertifikate, SPS-Trigger + Ergebnis-Nodes  
 - [ ] Kamera: `opencv` + Gerät **oder** bewusst synthetic für Demo  
+- [ ] Multi-Kamera: Auswahl 1–4 gespeichert; Testlauf `view_count` ok (`docs/MULTI_CAMERA.md`)  
+- [ ] Drift: `trend-summary.by_camera` / `drifting_camera_id` nachvollziehbar  
 - [ ] `OPCUA_API_KEY` = `operator-1.api_key`  
 - [ ] PatchCore-Modell trainiert/promoted (falls Live-Linie)  
 - [ ] Backup getestet  
