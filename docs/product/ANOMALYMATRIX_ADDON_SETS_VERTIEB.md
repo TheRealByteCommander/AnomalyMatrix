@@ -1,7 +1,7 @@
 # AnomalyMatrix Add-on Sets  
 ## Inline-Anomalieerkennung für bestehende Produktionslinien
 
-**Produkt:** AnomalyMatrix v1.0  
+**Produkt:** AnomalyMatrix **v1.2.0**  
 **Zielgruppe:** Endkunden, Produktionsleiter, QS, Automatisierung, Einkauf  
 **Verwendung:** Marketing, Vertrieb, Angebotsgrundlage, Messe & Kundengespräche  
 **Ergänzung Marketing:** [Funktionen & USP](./MARKETING_FUNKTIONEN_USP.md) — vollständige Feature-Liste und Alleinstellungsmerkmale für Kommunikation  
@@ -111,7 +111,7 @@ Unsere **Add-on Sets** sind deshalb **fertige Integrationspakete**: Hardware-Gru
 | **Quality Pro** | QS-Workflow, Feedback, Training, Audit | Regulierte Branchen, hohe QS-Anforderung | + RBAC, Feedback, Modell-Lifecycle |
 | **Line Enterprise** | Mehrere Prüfstellen, Observability, Betrieb | Konzerne, mehrere Linien/Werke | + Skalierung, SLA, Rollout |
 
-> **Hinweis für Vertrieb:** Alle Sets bauen auf derselben Software-Plattform (AnomalyMatrix v1.0) auf. Upgrades sind **Upgrade-Pfade**, keine Neuprojekte.
+> **Hinweis für Vertrieb:** Alle Sets bauen auf derselben Software-Plattform (AnomalyMatrix **v1.2.0**) auf. Upgrades sind **Upgrade-Pfade**, keine Neuprojekte.
 
 ---
 
@@ -510,5 +510,5 @@ Für individuelle Angebote benötigen wir:
 
 **AnomalyMatrix** — *Qualität sehen, bevor sie teuer wird.*
 
-*Dokumentversion: 1.0 · Stand: Juli 2026 · Basis: AnomalyMatrix v1.0.0*  
+*Dokumentversion: 1.1 · Stand: Juli 2026 · Basis: AnomalyMatrix v1.2.0*  
 *Intern: Vertrieb & Marketing · Technische Details: `docs/PRODUCT_APPLICATION.md`, `docs/INSTALLATION.md`*

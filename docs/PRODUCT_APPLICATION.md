@@ -1,10 +1,10 @@
 # AnomalyMatrix — Anwendung & Einsatzgebiete
 
-Stand: v0.7 (Produktdokumentation, ergänzt HMI-Hilfe)
+Stand: **v1.2.0** (Produktdokumentation, ergänzt HMI-Hilfe)
 
 ## Kurzfassung
 
-**AnomalyMatrix** ist Software für **automatische Anomalieerkennung** in der industriellen Fertigung. Sie vergleicht aktuelle Prüfbilder mit einem Modell „guter“ Teile, liefert einen **Anomalie-Score** und eine **Ampelentscheidung** (grün / gelb / rot), bindet sich an **OPC UA** an die SPS an und bietet ein **Operator-HMI** mit QA-Feedback und Trends.
+**AnomalyMatrix** ist Software für **automatische Anomalieerkennung** in der industriellen Fertigung. Sie vergleicht aktuelle Prüfbilder mit einem Modell „guter“ Teile, liefert einen **Anomalie-Score** und eine **Ampelentscheidung** (grün / gelb / rot), bindet sich an **OPC UA** an die SPS an und bietet ein **Operator-HMI** mit QA-Feedback, Multi-Kamera-Prüfung (1–4 Views) und **Drift pro Kamera**.
 
 ## Kernproblem
 
@@ -26,7 +26,7 @@ Klassische Bildverarbeitung verlangt die explizite Definition jedes Fehlers. In 
 
 ### 3. Prozessüberwachung & Drift
 
-- Gleitende Verschlechterung des Scores über Schichten
+- Gleitende Verschlechterung des Scores über Schichten — bei Multi-View **pro Kamera**
 - KPIs: Anomaliequote, Zyklus-p95, Trendwarnung
 - Frühwarnung für Wartung / Parameterkorrektur
 
@@ -42,15 +42,15 @@ Klassische Bildverarbeitung verlangt die explizite Definition jedes Fehlers. In 
 |-------|--------|
 | Operator | Prüfung starten oder per SPS auslösen, Ampel interpretieren |
 | QA Lead | Feedback, Freigabe/Sperre unterstützen |
-| Prozessingenieur | Trends, Rezept- und Modellversion |
+| Prozessingenieur | Trends, Drift je Kamera, Rezept- und Modellversion |
 | Automatisierung | OPC-UA-NodeSet in SPS-Programm einbinden |
 
 ## Softwarebestandteile (Überblick)
 
-- **Backend:** Inspektionspipeline, Persistenz, RBAC, Lizenz, Observability
-- **Frontend (HMI):** Dashboard, Detail, Trends, Konfiguration, Hilfe (DE/EN)
-- **OPC-UA-Gateway:** Server Port 4840, PLC-Signale
-- **Edge-Acquisition:** Bildaufnahme (MVP: synthetisch / erweiterbar)
+- **Backend:** Inspektionspipeline, Multi-Kamera, Persistenz, RBAC, Lizenz, Observability
+- **Frontend (HMI):** Dashboard, Detail (Multi-View), Trends (Drift je Kamera), Konfiguration, Hilfe (DE/EN)
+- **OPC-UA-Gateway:** Server Port 4840, PLC-Signale, Contract v1.2 (Multi-View + Drift)
+- **Edge-Acquisition:** Kamera-Discovery, Capture (OpenCV/V4L2 oder synthetic)
 
 ## Abgrenzung
 
@@ -61,7 +61,7 @@ Klassische Bildverarbeitung verlangt die explizite Definition jedes Fehlers. In 
 ## Weitere Informationen
 
 - HMI: Tab **Hilfe & FAQ** → Kategorie **Anwendung & Einsatz**
-- Technik: `docs/BUILD_READY_SPEC_V1.md`, `opcua-gateway/README.md`
+- Technik: `docs/MULTI_CAMERA.md`, `docs/BUILD_READY_SPEC_V1.md`, `opcua-gateway/README.md`
 - API-Contract: `GET /api/v1/contracts/opcua`
 
 ---

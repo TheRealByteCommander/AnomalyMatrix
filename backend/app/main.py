@@ -169,7 +169,7 @@ if is_production():
 app = FastAPI(
     title="AnomalyMatrix API",
     version=app_version(),
-    description="v1.0: Production-ready inspection platform",
+    description="v1.2.0: Production-ready inspection platform (multi-camera, drift, license server)",
     lifespan=lifespan,
     **_docs_kwargs,
 )
