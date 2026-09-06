@@ -164,7 +164,9 @@ rand_secret() {
 
 rand_alnum() {
   local len="${1:-32}"
-  tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$len"
+  local hex
+  hex="$(openssl rand -hex "$len")"
+  printf '%s' "${hex:0:$len}"
 }
 
 install_base_packages() {
