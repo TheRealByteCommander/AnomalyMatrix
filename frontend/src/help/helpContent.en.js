@@ -542,7 +542,7 @@ export const HELP_ARTICLES = [
     id: 'license-status-user',
     category: 'screens',
     title: 'Understanding license status',
-    keywords: ['license', 'licensed', 'grace', 'active'],
+    keywords: ['license', 'licensed', 'grace', 'active', 'billing', 'stripe', 'checkout'],
     summary: 'What the license display on Configuration means for you.',
     sections: [
       {

@@ -98,6 +98,19 @@ def test_complete_checkout_activates_server_license(tmp_path, monkeypatch):
     assert "licenseKey" not in result
 
 
+def test_billing_status_without_key_is_available_false(tmp_path, monkeypatch):
+    monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
+    monkeypatch.setenv("LICENSE_SERVER_URL", "https://licadmin.schmitz.ms")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "2")
+    license_manager.storage_path = tmp_path / "lic.json"
+    license_manager._save(license_manager._default())
+
+    client = TestClient(app)
+    r = client.get("/api/v1/license/billing", headers={"X-AMX-Role": "admin", "X-AMX-User": "admin-1"})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["available"] is False
+
+
 def test_billing_api_requires_server_and_hides_key(tmp_path, monkeypatch):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
     monkeypatch.delenv("LICENSE_SERVER_URL", raising=False)

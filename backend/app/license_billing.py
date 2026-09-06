@@ -178,7 +178,12 @@ class LicenseBillingService:
         }
 
     def get_billing(self, *, customer_email: str | None = None) -> dict:
-        key, email = self._credentials(customer_email)
+        try:
+            key, email = self._credentials(customer_email)
+        except LicenseBillingError as exc:
+            if exc.code in {"LICENSE_NOT_ACTIVATED", "BAD_REQUEST"}:
+                return {"available": False, "reason": exc.code.lower()}
+            raise
         billing = self._call(self._client().get_license_billing, license_key=key, customer_email=email)
         self.manager.remember_customer_email(email)
         return {
