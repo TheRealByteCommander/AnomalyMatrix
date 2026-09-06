@@ -1,6 +1,6 @@
 # Ops Runbook: Licensing
 
-Stand: **v1.2.0** · Server: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)
+Stand: **v1.2.0** (+ Endkunden-Billing) · Server: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)
 
 ## Status
 
@@ -21,8 +21,8 @@ Erwartete Felder: `active`, `tier`, `features`, `grace_active`, `mode` (`server`
 Voraussetzung in `.env.production`:
 
 ```bash
-LICENSE_SERVER_URL=https://license.example.com
-LICENSE_PRODUCT_ID=1
+LICENSE_SERVER_URL=https://licadmin.schmitz.ms
+LICENSE_PRODUCT_ID=2
 LICENSE_ENFORCE=true
 LICENSE_ADMIN_TOKEN=<secret>
 ```
@@ -36,6 +36,28 @@ curl -fsS -X POST http://127.0.0.1:8080/api/v1/license/activate \
 ```
 
 Installer mit Server: `LICENSE_BOOTSTRAP_KEY=XXXX-… sudo ./scripts/install.sh …`
+
+## Endkunden-Kauf in der HMI (ohne licadmin)
+
+Administrator (`license.admin`) auf **Configuration → License & billing**:
+
+1. Pläne laden: `GET /api/v1/license/plans` (proxied `stripe.plans.listPublic`, gefiltert auf `LICENSE_PRODUCT_ID`)
+2. Rechnungs-E-Mail + Tarif → `POST /api/v1/license/checkout` → Redirect auf Stripe-URL
+3. Success-URL der HMI: `?checkout=success&session_id={CHECKOUT_SESSION_ID}`
+4. Backend holt `stripe.getCheckoutResult` und **aktiviert** den `licenseKey` lokal (Server-Modus)
+5. Status / Portal / Kündigung: `GET /api/v1/license/billing`, `POST /api/v1/license/billing/portal`, `POST /api/v1/license/billing/cancel`
+
+```bash
+curl -fsS http://127.0.0.1:8080/api/v1/license/plans \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -fsS -X POST http://127.0.0.1:8080/api/v1/license/checkout \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"billing_plan_id":1,"customer_email":"ops@example.com","success_url":"http://127.0.0.1:5173/?checkout=success&session_id={CHECKOUT_SESSION_ID}","cancel_url":"http://127.0.0.1:5173/?checkout=cancel"}'
+```
+
+`LICENSE_ADMIN_TOKEN` wird für diesen Flow **nicht** ans Frontend gegeben. Return-URLs müssen zu `AMX_CORS_ORIGINS` (oder dem Request-Origin) passen.
 
 ## Activate (Local Bootstrap — nur ohne Server-URL)
 

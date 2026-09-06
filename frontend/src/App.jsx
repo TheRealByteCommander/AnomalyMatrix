@@ -29,6 +29,14 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('session_id') || params.get('checkout')) {
+      setActive(SCREEN_IDS.configuration);
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {

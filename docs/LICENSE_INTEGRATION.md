@@ -1,6 +1,6 @@
 # License Integration — Byte Commander License Server
 
-Stand: **v1.2.0** · Upstream: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)  
+Stand: **v1.2.0** (+ Endkunden-Billing) · Upstream: [software-licensing-concept](https://github.com/TheRealByteCommander/software-licensing-concept)  
 API-Contract: [`contracts/licensing_openapi.v1.yaml`](../contracts/licensing_openapi.v1.yaml) · Guide: Upstream `INTEGRATION_GUIDE.md`
 
 ## Modi
@@ -17,10 +17,18 @@ API-Contract: [`contracts/licensing_openapi.v1.yaml`](../contracts/licensing_ope
 | `GET` | `/api/v1/license/status` | Login + `license.read` |
 | `POST` | `/api/v1/license/activate` | Login + `license.admin` + `X-License-Admin-Token` |
 | `POST` | `/api/v1/license/deactivate` | Login + `license.admin` + `X-License-Admin-Token` |
+| `GET` | `/api/v1/license/plans` | Login + `license.read` |
+| `POST` | `/api/v1/license/checkout` | Login + `license.admin` |
+| `GET` | `/api/v1/license/checkout/result` | Login + `license.admin` |
+| `GET` | `/api/v1/license/billing` | Login + `license.read` |
+| `POST` | `/api/v1/license/billing/portal` | Login + `license.admin` |
+| `POST` | `/api/v1/license/billing/cancel` | Login + `license.admin` |
 
 Body activate: `{"license_key":"XXXX-…"}`
 
-Status enthält u. a. `active`, `tier`, `features`, `grace_active`, `mode` (`server`|`local`).
+Status enthält u. a. `active`, `tier`, `features`, `grace_active`, `mode` (`server`|`local`), `billing_enabled`.
+
+**Endkunden-Kauf** läuft in der HMI (Configuration → License & billing). Kunden **nicht** nach `licadmin.schmitz.ms` schicken. `LICENSE_ADMIN_TOKEN` bleibt serverseitig und wird für Checkout/Portal/Kündigung **nicht** ans Frontend gegeben — Session + `license.admin` reicht. Nach erfolgreichem Checkout mit `licenseKey` aktiviert das Backend automatisch über `LicenseManager` (Server-Modus).
 
 ## License-Server-Calls (SDK)
 
@@ -31,15 +39,21 @@ Vendored Client: `backend/app/licensing_sdk/` (httpx, tRPC/superjson-Wire-Format
 | Activate | `POST /api/trpc/api.activate` |
 | Validate | `POST /api/trpc/api.validate` |
 | Deactivate | `POST /api/trpc/api.deactivate` |
+| Pläne | `GET /api/trpc/stripe.plans.listPublic` |
+| Checkout | `POST /api/trpc/stripe.createCheckoutSession` |
+| Checkout-Ergebnis | `GET /api/trpc/stripe.getCheckoutResult` |
+| Billing-Status | `GET /api/trpc/stripe.getLicenseBilling` |
+| Kundenportal | `POST /api/trpc/stripe.createCustomerPortalSession` |
+| Kündigung | `POST /api/trpc/stripe.cancelSubscription` |
 
-Request-Envelope: `{"json": { … }}` · Response: `result.data.json`.
+Request-Envelope: `{"json": { … }}` · Response: `result.data.json`. Queries nutzen `?input={"json":{…}}`.
 
 ## ENV
 
 | Variable | Pflicht (Prod+Server) | Default | Bedeutung |
 |----------|----------------------|---------|-----------|
 | `LICENSE_SERVER_URL` | für Server-Modus | — | Basis-URL, z. B. `https://license.example.com` |
-| `LICENSE_PRODUCT_ID` | für Server-Modus | — | **Integer**-Product-ID vom License Admin |
+| `LICENSE_PRODUCT_ID` | für Server-Modus | — | **Integer**-Product-ID vom License Admin (AnomalyMatrix = **2**) |
 | `LICENSE_ENFORCE` | ja in Prod | `false` | Feature-Gates (`402` ohne aktive Lizenz) |
 | `LICENSE_ADMIN_TOKEN` | ja in Prod | — | Dual-Control für Activate/Deactivate |
 | `LICENSE_STATE_FILE` | nein | `backend/data/license_state.json` | Persistenz (Token, Features, Grace) |
@@ -58,7 +72,7 @@ Bei `LICENSE_ENFORCE=true` und inaktiver Lizenz:
 
 `license.admin` (Activate/Deactivate) ist **nicht** feature-gegated (sonst Deadlock auf frischem System).
 
-Server-Features (String-Liste) werden auf AMX-Flags gemappt (`inspection.run`, `trends_filters`, `advanced_export`, …). Unbekannte Listen bei gültiger Lizenz → Basis-Inspektionsfeatures.
+Server-Features (String-Liste) werden case-insensitive auf AMX-Flags gemappt (`inspection`/`inspection.run`, `Trends`/`trends_filters`, `Export`/`advanced_export`, `dashboard_run`, …). Unbekannte Listen bei gültiger Lizenz → Basis-Inspektionsfeatures. Product-Defaults von licadmin (`basic`, `inspection`, `Trends`, `Export`) landen damit auf den bestehenden Gates.
 
 ## Offline / Grace
 

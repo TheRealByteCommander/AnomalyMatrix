@@ -532,6 +532,7 @@ export const HELP_ARTICLES = [
           'License tier — gebuchte Stufe.',
           'License active — darf die Software prüfen (bei „false“ IT informieren).',
           'Grace active — vorübergehende Toleranz ohne Live-Lizenzserver.',
+          'Lizenz & Abrechnung — Administratoren kaufen, verlängern oder kündigen hier über Stripe. Nicht die Vendor-Admin-Oberfläche nutzen.',
         ],
       },
     ],
@@ -743,7 +744,7 @@ export const HELP_ARTICLES = [
         heading: 'Was tun?',
         paragraphs: [
           'Schichtleitung und IT informieren.',
-          'Lizenzaktivierung ist Aufgabe des Administrators, nicht des Operators.',
+          'Ein Administrator kann die Lizenz unter Konfiguration → Lizenz & Abrechnung kaufen oder verlängern (Stripe-Checkout in AnomalyMatrix).',
         ],
       },
     ],

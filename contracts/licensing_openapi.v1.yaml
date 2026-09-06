@@ -136,6 +136,134 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  /api/trpc/stripe.plans.listPublic:
+    get:
+      tags: [Licensing]
+      summary: List public billing plans (no admin session)
+      operationId: listPublicBillingPlans
+      parameters:
+        - in: query
+          name: input
+          schema:
+            $ref: '#/components/schemas/TRPCInputEnvelope'
+      responses:
+        '200':
+          description: Public plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
+  /api/trpc/stripe.createCheckoutSession:
+    post:
+      tags: [Licensing]
+      summary: Create a Stripe checkout session
+      operationId: createCheckoutSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+      responses:
+        '200':
+          description: Checkout session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
+  /api/trpc/stripe.getCheckoutResult:
+    get:
+      tags: [Licensing]
+      summary: Read checkout result and license key after Stripe redirect
+      operationId: getCheckoutResult
+      parameters:
+        - in: query
+          name: input
+          required: true
+          schema:
+            $ref: '#/components/schemas/TRPCInputEnvelope'
+      responses:
+        '200':
+          description: Checkout result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
+  /api/trpc/stripe.getLicenseBilling:
+    get:
+      tags: [Licensing]
+      summary: Billing status for a license (key + purchase email)
+      operationId: getLicenseBilling
+      parameters:
+        - in: query
+          name: input
+          required: true
+          schema:
+            $ref: '#/components/schemas/TRPCInputEnvelope'
+      responses:
+        '200':
+          description: License billing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
+  /api/trpc/stripe.createCustomerPortalSession:
+    post:
+      tags: [Licensing]
+      summary: Open Stripe customer portal
+      operationId: createCustomerPortalSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/CreateCustomerPortalSessionRequest'
+      responses:
+        '200':
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
+  /api/trpc/stripe.cancelSubscription:
+    post:
+      tags: [Licensing]
+      summary: Cancel Stripe subscription (period-end default)
+      operationId: cancelSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TRPCInputEnvelope'
+                - type: object
+                  properties:
+                    json:
+                      $ref: '#/components/schemas/CancelSubscriptionRequest'
+      responses:
+        '200':
+          description: Cancellation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TRPCSuccessEnvelope'
+
   /api/trpc/twoFA.confirmActivationWith2FA:
     post:
       tags: [2FA]
@@ -422,3 +550,45 @@ components:
                   properties:
                     json:
                       $ref: '#/components/schemas/Confirm2FAData'
+
+    CreateCheckoutSessionRequest:
+      type: object
+      required: [billingPlanId, customerEmail, successUrl, cancelUrl]
+      properties:
+        billingPlanId:
+          type: integer
+        customerEmail:
+          type: string
+          format: email
+        successUrl:
+          type: string
+          format: uri
+        cancelUrl:
+          type: string
+          format: uri
+
+    CreateCustomerPortalSessionRequest:
+      type: object
+      required: [licenseKey, customerEmail, returnUrl]
+      properties:
+        licenseKey:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        returnUrl:
+          type: string
+          format: uri
+
+    CancelSubscriptionRequest:
+      type: object
+      required: [licenseKey, customerEmail]
+      properties:
+        licenseKey:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        cancelAtPeriodEnd:
+          type: boolean
+          default: true

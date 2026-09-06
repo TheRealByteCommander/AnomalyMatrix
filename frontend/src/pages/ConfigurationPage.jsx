@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { configSummary } from '../data/sampleData';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
@@ -10,6 +10,7 @@ import {
   fetchRecipes,
   saveCameraSelection,
 } from '../services';
+import LicenseBilling from '../components/LicenseBilling';
 import { useI18n } from '../i18n/I18nProvider';
 
 const MIN_CAMERAS = 1;
@@ -24,6 +25,7 @@ export default function ConfigurationPage({ openHelp }) {
   const [selected, setSelected] = useState([]);
   const [driver, setDriver] = useState('');
   const [canConfigure, setCanConfigure] = useState(false);
+  const [canManageLicense, setCanManageLicense] = useState(false);
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +53,7 @@ export default function ConfigurationPage({ openHelp }) {
         setSelected(initial.slice(0, MAX_CAMERAS));
         const role = me?.role_id || me?.role || '';
         setCanConfigure(role === 'admin' || role === 'process_engineer');
+        setCanManageLicense(role === 'admin');
       } catch {
         if (!cancelled) setLicense(null);
       }
@@ -65,6 +68,9 @@ export default function ConfigurationPage({ openHelp }) {
   const activeModel = models.find((m) => m.status === 'active' || m.active === true) || models[0];
 
   const selectionValid = selected.length >= MIN_CAMERAS && selected.length <= MAX_CAMERAS;
+  const handleLicenseChange = useCallback((next) => {
+    if (next) setLicense((prev) => ({ ...(prev || {}), ...next }));
+  }, []);
 
   function toggleCamera(cameraId) {
     setSaveState(null);
@@ -182,6 +188,12 @@ export default function ConfigurationPage({ openHelp }) {
           </p>
         )}
       </article>
+
+      <LicenseBilling
+        license={license}
+        canManage={canManageLicense}
+        onLicenseChange={handleLicenseChange}
+      />
     </section>
   );
 }
