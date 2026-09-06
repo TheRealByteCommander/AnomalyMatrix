@@ -10,6 +10,7 @@ test('HMI shell and tab navigation', async ({ page }) => {
 
   await page.getByTestId('nav-configuration').click();
   await expect(page.getByTestId('nav-configuration')).toHaveClass(/active/);
+  await expect(page.getByTestId('license-billing')).toBeVisible();
 
   await page.getByTestId('nav-help').click();
   await expect(page.getByTestId('nav-help')).toHaveClass(/active/);
