@@ -14,9 +14,9 @@ Verwandt: [`CONFIGURATION.md`](./CONFIGURATION.md) · [`PRODUCTION_RUNBOOK.md`](
 |--|--|
 | Min. Kameras | **1** |
 | Max. Kameras | **4** |
-| Treiber heute | OpenCV / V4L2 (USB) oder Synthetic |
+| Treiber heute | OpenCV / V4L2 (USB), **GigE/GenICam (MVP)**, oder Synthetic |
 | Capture | **sequentiell** (kein Hardware-Trigger-Sync) |
-| GigE / GenICam | Folgerelease |
+| GigE / GenICam | ✅ MVP: Discovery + Free-Run/Software-Trigger, 1–4 Kameras |
 
 ---
 
@@ -109,14 +109,40 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 
 Weitere Host-Geräte in `docker-compose.camera.yml` freischalten (`/dev/video1` …).
 
+## Deploy (GigE / GenICam)
+
+```bash
+# .env.production
+CAMERA_DRIVER=gige
+CAMERA_SOURCE=22345678
+# optional:
+# CAMERA_SOURCES_JSON={"cam-01":"22345678","cam-02":"CAM-SIDE"}
+# CAMERA_TRIGGER=software
+# GENICAM_GENTL64_PATH=/opt/gentl
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  -f docker-compose.gige.yml --env-file .env.production up -d --build
+```
+
+Voraussetzungen Host (Ubuntu VPS/IPC):
+
+- Kamera-NIC und Kamera **gleiches L2-Subnetz**
+- Jumbo Frames (MTU 9000) auf NIC **und** Kamera, wenn der Switch das unterstützt
+- UDP 3956 (GVCP) plus GVSP-Streaming-Ports nicht von UFW/iptables geblockt
+- Overlay **nicht** mit `docker-compose.dev.yml` kombinieren (`network_mode: host` vs. `ports`)
+
+Ohne gemounteten GenTL-Producer nutzt das Image **Aravis**. Mit `.cti` (Basler pylon, MATRIX VISION, IDS, …) wird Harvesters bevorzugt (`GIGE_BACKEND=auto`).
+
+**Nicht im MVP:** harter Multi-Cam-Hardware-Trigger / Encoder-Sync. `CAMERA_TRIGGER=hardware` setzt GenICam-Nodes best-effort; Linien-Sync bleibt Integrator-Thema.
+
 Persistenz Auswahl: Volume `api_data` → `/app/data/station_cameras.json`.
 
 ---
 
 ## Go-Live-Checkliste
 
-- [ ] Kameras unter Ubuntu als `/dev/video*` sichtbar
-- [ ] Overlay `docker-compose.camera.yml` aktiv
+- [ ] Kameras unter Ubuntu sichtbar (`/dev/video*` **oder** GigE-Discovery `GET /cameras`)
+- [ ] Overlay `docker-compose.camera.yml` (USB) **oder** `docker-compose.gige.yml` (GigE) aktiv
 - [ ] HMI-Auswahl 1–4 gespeichert
 - [ ] Testlauf ohne `camera_id` → `view_count` stimmt
 - [ ] OPC-UA Trigger mit leerem CameraId → Multi-View

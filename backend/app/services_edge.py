@@ -65,7 +65,7 @@ def list_edge_cameras() -> dict:
     if edge_url:
         try:
             headers = {**service_auth_headers()}
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=8.0) as client:
                 response = client.get(f"{edge_url}/cameras", headers=headers)
                 response.raise_for_status()
                 data = response.json()
@@ -115,7 +115,7 @@ def capture_frame(
             body: dict = {"camera_id": camera_id, "recipe_id": recipe_id}
             if source:
                 body["source"] = source
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=20.0) as client:
                 response = client.post(
                     f"{edge_url}/capture",
                     json=body,

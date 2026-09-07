@@ -122,5 +122,5 @@ A release/project increment is only complete when all are true:
 4) ~~OPC-UA Sign/Encrypt~~ — **v0.8** (Basic256Sha256, self-signed)
 5) ~~JWT/Session-Auth~~ — **v0.8**; WebSocket Live-View offen
 6) ~~Performance-Tests~~ — **v0.8** (< 500 ms Gate)
-7) ~~Echte Kamera~~ — **v0.8** OpenCV; GigE/GenICam Folgerelease
+7) ~~Echte Kamera~~ — **v0.8** OpenCV; **GigE/GenICam MVP** (Harvesters+GenTL / Aravis)
 8) ~~Installer-Sync~~ — **v0.8** (`VERSION` + v0.8.0 Artefakt)

@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from camera_discover import resolve_source
+from gige_backend import GigEUnavailableError, grab_gige_frame, is_gige_driver
 
 
 class CameraDriver(ABC):
@@ -26,6 +27,7 @@ class SyntheticCameraDriver(CameraDriver):
             "source": source or f"synthetic:{camera_id}",
             "exposure_ms": 10.0,
             "gain_db": 0.0,
+            "trigger_mode": "freerun",
         }
 
 
@@ -38,7 +40,13 @@ class OpenCvCameraDriver(CameraDriver):
         resolved = resolve_source(camera_id=camera_id, source=source)
         if not resolved:
             resolved = os.getenv("CAMERA_SOURCE", "0").strip()
-        meta = {"driver": "opencv", "source": resolved, "exposure_ms": 10.0, "gain_db": 0.0}
+        meta = {
+            "driver": "opencv",
+            "source": resolved,
+            "exposure_ms": 10.0,
+            "gain_db": 0.0,
+            "trigger_mode": "freerun",
+        }
 
         if resolved.isdigit():
             cap = cv2.VideoCapture(int(resolved))
@@ -69,8 +77,27 @@ class OpenCvCameraDriver(CameraDriver):
         raise RuntimeError(f"Camera source not found: {resolved}")
 
 
+class GigECameraDriver(CameraDriver):
+    """GigE Vision / GenICam capture (Harvesters+GenTL or Aravis)."""
+
+    def capture(self, *, camera_id: str, recipe_id: str, source: str | None = None) -> tuple[np.ndarray, dict]:
+        resolved = resolve_source(camera_id=camera_id, source=source)
+        if not resolved:
+            raise GigEUnavailableError(
+                f"No GigE source for camera_id={camera_id!r}. "
+                "Set CAMERA_SOURCE, CAMERA_SOURCES_JSON, or pass source= serial / user name / GenTL id."
+            )
+        image, meta = grab_gige_frame(resolved)
+        meta.setdefault("driver", "gige")
+        meta.setdefault("source", resolved)
+        meta.setdefault("trigger_mode", "freerun")
+        return image, meta
+
+
 def get_camera_driver() -> CameraDriver:
     mode = os.getenv("CAMERA_DRIVER", "synthetic").strip().lower()
+    if is_gige_driver(mode):
+        return GigECameraDriver()
     if mode in {"opencv", "webcam", "file", "real"}:
         return OpenCvCameraDriver()
     return SyntheticCameraDriver()

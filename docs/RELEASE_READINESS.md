@@ -56,9 +56,10 @@ Stand: **v1.2.0** (Production-hardened)
 | Heatmap PNG to MinIO | ✅ |
 | Raw frame storage | ✅ |
 | OpenCV camera driver | ✅ |
+| GigE Vision / GenICam (MVP, Aravis or Harvesters+GenTL) | ✅ |
 | Multi-Kamera gleicher Case (1–4, worst-view) | ✅ |
 | Drift pro Kamera (`by_camera`, OPC-UA Trend-Nodes) | ✅ |
-| GigE/GenICam industrial cameras | 🔜 optional upgrade |
+| GigE/GenICam industrial cameras | ✅ MVP (see `docker-compose.gige.yml`) |
 
 ## Freigabe
 
@@ -75,7 +76,7 @@ Stand: **v1.2.0** (Production-hardened)
 | TLS / `COOKIE_SECURE=true` vor dem HMI | ⚠️ Pflicht am Zielsystem (`docker-compose.tls.yml`) |
 | OPC-UA Kunden-PKI (statt Self-Signed) | ⚠️ Zertifikate nach `/app/certs` mounten |
 | Seed-API-Keys rotiert (`users.api_key`) | ✅ Installer synced `OPCUA_API_KEY` (hard-fail) |
-| Reale Kamera (`CAMERA_DRIVER=opencv`) | ⚠️ Overlay `docker-compose.camera.yml` |
+| Reale Kamera (`CAMERA_DRIVER=opencv` oder `gige`) | ⚠️ Overlay `docker-compose.camera.yml` bzw. `docker-compose.gige.yml` |
 | Multi-Kamera-Auswahl gespeichert (1–4) | ⚠️ HMI Konfiguration / `PUT /cameras/selection` |
 | OPC-UA CameraId leer = Stationsauswahl | ⚠️ für Multi-View an SPS abstimmen |
 | CI baut Gateway/Edge/Frontend-Images | ✅ Job `docker-images` |

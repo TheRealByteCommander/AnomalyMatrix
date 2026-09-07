@@ -45,8 +45,9 @@ Datei: `.env.production` (Vorlage: `.env.production.example`)
 | `OPCUA_SECURITY_ENABLED` | ja in Prod | `true` |
 | `EDGE_ACQUISITION_URL` | ja | z. B. `http://edge-acquisition:8091` |
 | `ANOMALYMATRIX_INFERENCE_PROVIDER` | ja | `patchcore` (nicht `stub`) |
-| `CAMERA_DRIVER` | empfohlen | `synthetic` oder `opencv` |
-| `CAMERA_SOURCE` | bei opencv | `0`, `/dev/video0` oder Bilddatei |
+| `CAMERA_DRIVER` | empfohlen | `synthetic`, `opencv` oder `gige` (`genicam`) |
+| `CAMERA_SOURCE` | bei opencv/gige | Index, `/dev/video*`, Datei **oder** GigE-Serial / User-Name / GenTL-ID |
+| `CAMERA_SOURCES_JSON` | optional | Mapping `camera_id → source` (1–4) |
 | `MINIO_PUBLIC_BASE` | empfohlen | `/artifacts` (HMI-Heatmaps) |
 | `INFLUX_*` / `MINIO_*` | empfohlen | Metriken / Artefakte |
 
@@ -121,7 +122,32 @@ Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mo
 
 > Hinweis: Capture ist derzeit **sequentiell** (kein Hardware-Trigger-Sync). Für bewegte Teile Sync separat planen.
 
-GigE/GenICam: noch nicht enthalten (Folgerelease).
+### GigE Vision / GenICam (MVP)
+
+Bevorzugter Pfad für industrielle Bildqualität (vor RTSP). Stack:
+
+- **Aravis 0.8** (open GigE Vision, im Edge-Image) — ohne Vendor-SDK
+- **Harvesters 1.4 + GenTL `.cti`**, wenn ein Hersteller-Producer gemountet ist (`GENICAM_GENTL64_PATH` / `GIGE_GENTL_CTI`)
+
+```bash
+# in .env.production
+CAMERA_DRIVER=gige
+CAMERA_SOURCE=22345678
+# optional Multi-Cam:
+# CAMERA_SOURCES_JSON={"cam-01":"22345678","cam-02":"CAM-SIDE"}
+# CAMERA_EXPOSURE_MS=8
+# CAMERA_GAIN_DB=0
+# CAMERA_TRIGGER=software
+# GIGE_BACKEND=auto
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.gige.yml \
+  --env-file .env.production up -d --build edge-acquisition api
+```
+
+**Host-Netz** ist Pflicht (GVCP UDP 3956 + Streaming). Jumbo Frames: `sudo ip link set <cam-nic> mtu 9000`.  
+Details: `edge-acquisition/README.md`, Overlay `docker-compose.gige.yml`.
+
+Einschränkungen MVP: ein Frame pro Capture-Aufruf; Hardware-Line/Encoder-Sync nur best-effort (`CAMERA_TRIGGER=hardware`); kein getesteter Multi-Cam-Sync über I/O. Getesteter Open-Stack: Aravis 0.8 auf Debian Bookworm. Vendor-CTI (pylon, mvGenTL, IDS peak, …) hängt vom gemounteten Producer ab.
 
 ---
 
@@ -230,7 +256,7 @@ Nutzt `docker compose exec` gegen den Postgres-Container (kein Host-Port nötig)
 - [ ] Smoke-Inspektion im Dashboard  
 - [ ] TLS aktiv, `COOKIE_SECURE=true`, CORS = HTTPS-URL  
 - [ ] OPC-UA: Kunden-Zertifikate, SPS-Trigger + Ergebnis-Nodes  
-- [ ] Kamera: `opencv` + Gerät **oder** bewusst synthetic für Demo  
+- [ ] Kamera: `opencv` / `gige` **oder** bewusst synthetic für Demo  
 - [ ] Multi-Kamera: Auswahl 1–4 gespeichert; Testlauf `view_count` ok (`docs/MULTI_CAMERA.md`)  
 - [ ] Drift: `trend-summary.by_camera` / `drifting_camera_id` nachvollziehbar  
 - [ ] `OPCUA_API_KEY` = `operator-1.api_key`  

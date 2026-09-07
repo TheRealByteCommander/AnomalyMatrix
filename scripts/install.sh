@@ -690,9 +690,13 @@ print_summary() {
    $compose_hint logs -f api
    systemctl status anomalymatrix
 
- Kamera (OpenCV) aktivieren:
+ Kamera (OpenCV USB) aktivieren:
    $compose_hint -f docker-compose.camera.yml up -d --build edge-acquisition
    (CAMERA_DRIVER=opencv, Device /dev/video0 — siehe docker-compose.camera.yml)
+
+ Kamera (GigE / GenICam) aktivieren:
+   CAMERA_DRIVER=gige $compose_hint -f docker-compose.gige.yml up -d --build
+   (Host-Netz, Jumbo Frames — siehe docs/CONFIGURATION.md / edge-acquisition/README.md)
 
  TLS-Termination (Caddy):
    Certs nach ./certs/tls.crt + tls.key, dann:

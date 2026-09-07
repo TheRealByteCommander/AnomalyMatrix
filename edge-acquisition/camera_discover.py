@@ -7,6 +7,8 @@ import os
 import platform
 from pathlib import Path
 
+from gige_backend import discover_gige_devices, is_gige_driver
+
 
 def _opencv_probe_index(index: int) -> bool:
     try:
@@ -92,7 +94,16 @@ def _synthetic_cameras(count: int = 4) -> list[dict]:
     return cameras
 
 
-def _mapped_cameras_from_env() -> list[dict]:
+def _driver_label() -> str:
+    mode = os.getenv("CAMERA_DRIVER", "synthetic").strip().lower()
+    if is_gige_driver(mode):
+        return "gige"
+    if mode in {"opencv", "webcam", "file", "real"}:
+        return "opencv"
+    return "synthetic"
+
+
+def _mapped_cameras_from_env(*, gige_devices=None) -> list[dict]:
     """Optional explicit map: CAMERA_SOURCES_JSON='{"cam-a":"0","cam-b":"1"}'."""
     raw = os.getenv("CAMERA_SOURCES_JSON", "").strip()
     if not raw:
@@ -103,11 +114,32 @@ def _mapped_cameras_from_env() -> list[dict]:
         return []
     if not isinstance(mapping, dict):
         return []
+    driver = _driver_label()
+    devices = gige_devices
+    if driver == "gige" and devices is None:
+        devices, _info = discover_gige_devices()
     cameras = []
     for camera_id, source in mapping.items():
         source_s = str(source).strip()
         available = True
-        if source_s.isdigit():
+        extra: dict = {}
+        if driver == "gige":
+            from gige_backend import match_gige_device
+
+            match = match_gige_device(devices or [], source_s)
+            available = match is not None and match.available
+            if match:
+                extra = {
+                    "model": match.model,
+                    "serial": match.serial,
+                    "ip": match.ip,
+                    "interface": match.interface,
+                    "user_id": match.user_id,
+                    "gentl_id": match.gentl_id,
+                    "backend": match.backend,
+                    "label": match.label,
+                }
+        elif source_s.isdigit():
             available = _opencv_probe_index(int(source_s))
         elif source_s.startswith("/dev/"):
             available = Path(source_s).exists()
@@ -116,10 +148,11 @@ def _mapped_cameras_from_env() -> list[dict]:
                 "camera_id": str(camera_id),
                 "source": source_s,
                 "path": source_s if source_s.startswith("/") else None,
-                "label": str(camera_id),
-                "driver": "opencv",
+                "label": extra.get("label") or str(camera_id),
+                "driver": driver,
                 "available": available,
                 "index": int(source_s) if source_s.isdigit() else None,
+                **extra,
             }
         )
     return cameras
@@ -128,15 +161,44 @@ def _mapped_cameras_from_env() -> list[dict]:
 def discover_cameras() -> dict:
     """Return discovered cameras for the active driver."""
     mode = os.getenv("CAMERA_DRIVER", "synthetic").strip().lower()
-    mapped = _mapped_cameras_from_env()
+    driver = _driver_label()
+    gige_devices = None
+    gige_info: dict = {}
+    if driver == "gige":
+        gige_devices, gige_info = discover_gige_devices()
+    mapped = _mapped_cameras_from_env(gige_devices=gige_devices)
+    payload = {
+        "driver": driver,
+        "host": platform.node(),
+        "max_selectable": 4,
+        "min_selectable": 1,
+    }
     if mapped:
-        return {
-            "driver": mode,
-            "host": platform.node(),
-            "cameras": mapped,
-            "max_selectable": 4,
-            "min_selectable": 1,
-        }
+        payload["cameras"] = mapped
+        if driver == "gige":
+            payload["backend"] = gige_info.get("backend")
+            payload["gentl_producers"] = gige_info.get("cti_files") or []
+            if gige_info.get("error"):
+                payload["error"] = gige_info["error"]
+        return payload
+
+    if driver == "gige":
+        cameras = [d.to_dict() for d in (gige_devices or [])]
+        payload.update(
+            {
+                "cameras": cameras,
+                "backend": gige_info.get("backend"),
+                "gentl_producers": gige_info.get("cti_files") or [],
+            }
+        )
+        if gige_info.get("error"):
+            payload["error"] = gige_info["error"]
+        elif not cameras:
+            payload["warning"] = (
+                "No GigE Vision devices found. Check host networking, NIC subnet, "
+                "Jumbo frames, and that the camera answers GVCP (UDP 3956)."
+            )
+        return payload
 
     if mode in {"opencv", "webcam", "file", "real"}:
         cameras = _v4l2_devices()
@@ -155,21 +217,11 @@ def discover_cameras() -> dict:
                             "index": idx,
                         }
                     )
-        return {
-            "driver": "opencv",
-            "host": platform.node(),
-            "cameras": cameras,
-            "max_selectable": 4,
-            "min_selectable": 1,
-        }
+        payload.update({"driver": "opencv", "cameras": cameras})
+        return payload
 
-    return {
-        "driver": "synthetic",
-        "host": platform.node(),
-        "cameras": _synthetic_cameras(4),
-        "max_selectable": 4,
-        "min_selectable": 1,
-    }
+    payload.update({"driver": "synthetic", "cameras": _synthetic_cameras(4)})
+    return payload
 
 
 def resolve_source(*, camera_id: str, source: str | None = None) -> str | None:
@@ -186,4 +238,7 @@ def resolve_source(*, camera_id: str, source: str | None = None) -> str | None:
     # videoN → index N
     if camera_id.startswith("video") and camera_id[5:].isdigit():
         return camera_id[5:]
+    if is_gige_driver():
+        # serial, user-defined name, or GenTL id used as camera_id
+        return camera_id.strip() or os.getenv("CAMERA_SOURCE", "").strip() or None
     return os.getenv("CAMERA_SOURCE", "").strip() or None

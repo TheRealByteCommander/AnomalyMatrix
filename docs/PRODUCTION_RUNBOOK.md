@@ -72,6 +72,17 @@ Auswahl im HMI (Konfiguration) oder `PUT /api/v1/cameras/selection`.
 Drift je Kamera: `GET /api/v1/results/trend-summary` → `by_camera`, `drifting_camera_id`.  
 Siehe [`MULTI_CAMERA.md`](./MULTI_CAMERA.md).
 
+### Kamera (GigE Vision / GenICam)
+
+```bash
+CAMERA_DRIVER=gige CAMERA_SOURCE=<serial-or-user-id> \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.gige.yml \
+  --env-file .env.production up -d --build
+```
+
+Host-NIC: gleiches Subnetz wie die Kamera, Jumbo Frames (MTU 9000) empfohlen.  
+Details: [`CONFIGURATION.md`](./CONFIGURATION.md), `edge-acquisition/README.md`.
+
 ### OPC-UA Kunden-PKI
 
 Mount vorhandene PEM-Dateien nach `OPCUA_CERT_DIR` (Default Volume `opcua_certs`):

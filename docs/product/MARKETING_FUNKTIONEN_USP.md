@@ -115,7 +115,7 @@ Alle unten genannten Funktionen sind **heute in v1.2.0** verfügbar, sofern nich
 | **OPC-UA Multi-View** | LastResult mit CameraIds, ViewCount, WorstViewCameraId | SPS kennt das Gesamtergebnis und die schlechteste Kamera |
 | **Filter pro Kamera** | Ergebnisabfrage nach `camera_id` | Feinanalyse je Perspektive |
 
-> **Ehrliche Abgrenzung (Vertrieb/Marketing):** Capture erfolgt sequentiell — kein Hardware-Trigger-Sync. GigE/GenICam: Folgerelease.
+> **Ehrliche Abgrenzung (Vertrieb/Marketing):** Capture erfolgt sequentiell — kein Hardware-Trigger-Sync. GigE/GenICam: MVP (Discovery + Software-Trigger/Free-Run).
 
 ### C) Prozessdrift & Trends *(Erweitert v1.2)*
 
@@ -383,7 +383,7 @@ Zum Abhaken in Produktmarketing und Presse-Fact-Sheets:
 - [x] Docker Compose Production Stack  
 - [x] Autonomer Installer  
 - [x] Backup/Restore & Runbook  
-- [ ] GigE/GenICam (Roadmap)  
+- [x] GigE/GenICam MVP (Discovery + Software-Trigger/Free-Run)  
 - [ ] Hardware-Trigger-Sync Multi-Cam (Roadmap)  
 
 ---

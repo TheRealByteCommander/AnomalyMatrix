@@ -35,7 +35,10 @@ app.add_middleware(ServiceAuthMiddleware)
 class CaptureRequest(BaseModel):
     camera_id: str = "cam-01"
     recipe_id: str = "recipe-default"
-    source: str | None = Field(default=None, description="Optional device index/path override")
+    source: str | None = Field(
+        default=None,
+        description="Optional device override (index/path, GigE serial, user name, or GenTL id)",
+    )
 
 
 @app.get("/health")
@@ -73,6 +76,7 @@ def capture(payload: CaptureRequest):
             "gain_db": float(meta.get("gain_db", 0.0)),
             "capture_driver": meta.get("driver", "unknown"),
             "source": meta.get("source"),
+            "trigger_mode": meta.get("trigger_mode"),
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail="Capture failed") from exc
+        raise HTTPException(status_code=503, detail=str(exc) or "Capture failed") from exc
