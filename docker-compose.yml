@@ -67,6 +67,13 @@ services:
       SERVICE_AUTH_TOKEN: ${SERVICE_AUTH_TOKEN:-}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+      CAMERA_SOURCES_JSON: ${CAMERA_SOURCES_JSON:-}
+      CAMERA_EXPOSURE_MS: ${CAMERA_EXPOSURE_MS:-}
+      CAMERA_GAIN_DB: ${CAMERA_GAIN_DB:-}
+      CAMERA_TRIGGER: ${CAMERA_TRIGGER:-}
+      GIGE_BACKEND: ${GIGE_BACKEND:-auto}
+      GIGE_GENTL_CTI: ${GIGE_GENTL_CTI:-}
+      GENICAM_GENTL64_PATH: ${GENICAM_GENTL64_PATH:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health', timeout=2)"]
       interval: 10s

@@ -3,7 +3,7 @@
 Stand: **v1.2.0** · Ziel: **eine Prüfstelle** mit Kamera, Edge-IPC, Operator-HMI und **OPC-UA-SPS-Anbindung**
 
 > Keine Markenbindung. Angaben sind **Produktklassen** für Einkauf / Ausschreibung.  
-> Software-Kamerapfad heute: **OpenCV / V4L2 (USB)**. GigE/GenICam: Folgerelease — siehe Hinweise.
+> Software-Kamerapfad: **OpenCV / V4L2 (USB)** und **GigE Vision / GenICam (MVP)**. RTSP ist nachrangig.
 
 Verwandte Docs: [`ANOMALYMATRIX_ADDON_SETS_VERTIEB.md`](./ANOMALYMATRIX_ADDON_SETS_VERTIEB.md) · [`../INSTALLATION.md`](../INSTALLATION.md) · [`../CONFIGURATION.md`](../CONFIGURATION.md)
 
@@ -46,7 +46,7 @@ Software-Lizenz, Inbetriebnahme und SPS-Workshop separat.
 
 | Pos. | Menge | Artikel | Spezifikation | Hinweis |
 |------|------:|---------|---------------|---------|
-| 2.1 | **1–4** | **USB3 / UVC-Industriekamera** | Global Shutter bevorzugt, ≥ **2 MP**, V4L2-fähig | Software: Multi-View gleicher Case (max. 4); Host `/dev/video0`… |
+| 2.1 | **1–4** | **USB3 / UVC-Industriekamera** **oder GigE Vision** | Global Shutter bevorzugt, ≥ **2 MP** | USB: V4L2 `/dev/video0`… · GigE: Overlay `docker-compose.gige.yml`, PoE-Switch, Jumbo Frames |
 | 2.2 | 1 je Kamera | Objektiv | C-/CS-Mount, Brennweite nach Sichtfeld & Arbeitsabstand | erst FOV/Abstand messen, dann kaufen |
 | 2.3 | 0–1 je Kamera | Filter (optional) | IR-Cut / Bandpass je nach Licht | reduziert Blendung / Drift |
 | 2.4 | 1 je Kamera | USB3-Kabel industriell | geschirmt, verriegelt, Länge ≤ 3–5 m | aktive Repeater nur wenn nötig |
@@ -58,10 +58,10 @@ Software-Lizenz, Inbetriebnahme und SPS-Workshop separat.
 
 | Artikel | Status |
 |---------|--------|
-| GigE Vision / GenICam (Basler, IDS, …) + PoE-Switch | **Noch kein Treiberpfad** in AnomalyMatrix — Folgerelease |
+| GigE Vision / GenICam (Basler, IDS, …) + PoE-Switch | **MVP-Treiberpfad** `CAMERA_DRIVER=gige` — Host-Netz, Jumbo Frames, siehe `docs/CONFIGURATION.md` |
 | Framegrabber / Camera Link | nicht vorgesehen |
 
-> Für Linien: **industrielle USB3-Kamera mit V4L2** wählen (viele Hersteller liefern Linux-UVC oder V4L2-Treiber). Vor Kauf: Gerät unter Ubuntu als `/dev/video0` verifizieren.
+> USB3-UVC bleibt der einfachste Weg. GigE: Kamera + NIC gleiches Subnetz, MTU 9000, Overlay `docker-compose.gige.yml`. Vor Kauf: Discovery unter Ubuntu (`GET /cameras` mit `CAMERA_DRIVER=gige`) verifizieren.
 
 ---
 
@@ -175,11 +175,11 @@ Edge, Postgres, MinIO, Influx: **nur Docker-Netz** (keine Host-Ports nötig).
 ## 11. Checkliste vor Bestellung
 
 - [ ] Arbeitsabstand und Sichtfeld gemessen → Objektiv gewählt  
-- [ ] USB3-Kamera unter Ubuntu als `/dev/video0` bestätigt (Datenblatt / Testgerät)  
+- [ ] USB3-Kamera unter Ubuntu als `/dev/video0` **oder** GigE-Discovery (`CAMERA_DRIVER=gige`) bestätigt  
 - [ ] Hallenlicht / Reflexe geprüft → Beleuchtungskonzept  
 - [ ] SPS-OPC-UA-Fähigkeit und Netzwerkfreigabe 4840 geklärt  
 - [ ] Speicherplatz für Rohbilder/Heatmaps dimensioniert (SSD ≥ 256 GB)  
-- [ ] Keine GigE-only-Kamera bestellt, solange GenICam-Pfad fehlt  
+- [ ] GigE: NIC-MTU, PoE-Switch und Subnetz geklärt (oder bewusst USB gewählt)  
 
 ---
 

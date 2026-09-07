@@ -149,11 +149,8 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 | `INFLUX_URL`, `MINIO_ENDPOINT` | Optionale Metriken/Heatmap-Persistenz |
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
-<<<<<<< HEAD
 | `LICENSE_SERVER_URL`, `LICENSE_PRODUCT_ID` | Byte-Commander License Server (Integer-ID) |
-=======
-| `CAMERA_DRIVER`, `CAMERA_SOURCE`, `CAMERA_SOURCES_JSON` | Edge-Capture / Multi-Kamera-Mapping |
->>>>>>> origin/master
+| `CAMERA_DRIVER`, `CAMERA_SOURCE`, `CAMERA_SOURCES_JSON` | Edge-Capture / Multi-Kamera-Mapping (`synthetic`, `opencv`, `gige`) |
 
 Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod`): Header `X-AMX-Role` / `X-AMX-User` (Frontend: `VITE_DEV_AUTH_HEADERS=true`) oder `X-AMX-Api-Key`. Unbekannte Rollen werden **abgelehnt** (kein Admin-Fallback).
 
@@ -189,9 +186,10 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | OPC-UA Sign/Encrypt | ✅ v0.8 (self-signed) |
 | Performance Gate < 500 ms | ✅ v0.8 |
 | OpenCV Kamera (Webcam/Datei) | ✅ v0.8 |
+| GigE Vision / GenICam (MVP) | ✅ Harvesters+GenTL oder Aravis |
 | Playwright HMI E2E | ✅ v0.8 |
 | Installer v1.2.0 + autonomer Linux-Setup | ✅ |
-| WebSocket Live-View, GigE/GenICam | 🔜 Folgerelease |
+| WebSocket Live-View | 🔜 Folgerelease |
 
 ## Dokumente
 - `docs/INSTALLATION.md` — **Installation** (Installer + Compose + lokal)

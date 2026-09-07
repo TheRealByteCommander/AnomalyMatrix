@@ -1,0 +1,50 @@
+# GigE Vision / GenICam overlay for edge-acquisition.
+#
+# Host networking is required so GVCP (UDP 3956) discovery and GVSP streaming
+# reach cameras on the LAN. The API then calls the edge service via the host
+# gateway instead of the Compose DNS name.
+#
+# Usage (Ubuntu + Docker, typically with prod):
+#   CAMERA_DRIVER=gige \
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     -f docker-compose.gige.yml --env-file .env.production up -d --build
+#
+# Do not combine with docker-compose.dev.yml (ports + network_mode: host conflict).
+#
+# NIC / Jumbo frames (on the HOST, not inside Compose):
+#   ip link show
+#   sudo ip link set <cam-nic> mtu 9000
+#   # camera + NIC must share a subnet; disable multicast snooping issues on cheap switches
+#
+# Optional vendor GenTL producer (Harvesters path):
+#   GIGE_GENTL_CTI=/opt/pylon/lib/pylonCXP/pylon/tl/ProducerGEV.cti
+#   # or a directory of .cti files:
+#   GENICAM_GENTL64_PATH=/opt/gentl
+# Uncomment the volume below to mount a host producer into the container.
+# Without a .cti the image uses Aravis (open GigE Vision).
+
+services:
+  api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      EDGE_ACQUISITION_URL: http://host.docker.internal:8091
+
+  edge-acquisition:
+    network_mode: host
+    mem_limit: 1g
+    environment:
+      CAMERA_DRIVER: ${CAMERA_DRIVER:-gige}
+      CAMERA_SOURCE: ${CAMERA_SOURCE:-}
+      CAMERA_SOURCES_JSON: ${CAMERA_SOURCES_JSON:-}
+      CAMERA_EXPOSURE_MS: ${CAMERA_EXPOSURE_MS:-}
+      CAMERA_GAIN_DB: ${CAMERA_GAIN_DB:-}
+      CAMERA_TRIGGER: ${CAMERA_TRIGGER:-freerun}
+      CAMERA_TRIGGER_SOURCE: ${CAMERA_TRIGGER_SOURCE:-Line1}
+      CAMERA_GRAB_TIMEOUT_S: ${CAMERA_GRAB_TIMEOUT_S:-5}
+      GIGE_BACKEND: ${GIGE_BACKEND:-auto}
+      GIGE_PACKET_SIZE: ${GIGE_PACKET_SIZE:-}
+      GIGE_GENTL_CTI: ${GIGE_GENTL_CTI:-}
+      GENICAM_GENTL64_PATH: ${GENICAM_GENTL64_PATH:-/opt/gentl}
+    # volumes:
+    #   - ${GIGE_GENTL_DIR:-/opt/gentl}:/opt/gentl:ro

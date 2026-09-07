@@ -131,13 +131,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 |---------|--------|
 | `docker-compose.tls.yml` | Caddy TLS → HMI (`infra/caddy/Caddyfile`) |
 | `docker-compose.camera.yml` | OpenCV / V4L2 (bis 4 Geräte, siehe `docs/MULTI_CAMERA.md`) |
+| `docker-compose.gige.yml` | GigE Vision / GenICam (Host-Netz, Jumbo-Frames, siehe `docs/CONFIGURATION.md`) |
 
 ```bash
 # TLS
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tls.yml \
   --env-file .env.production up -d
 
-# Kamera (1–4; weitere /dev/videoN in Overlay freischalten)
+# Kamera (1–4; USB: docker-compose.camera.yml / GigE: docker-compose.gige.yml)
 CAMERA_DRIVER=opencv CAMERA_SOURCE=0 \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml \
   --env-file .env.production up -d --build
@@ -147,7 +148,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compos
 |---------|----------|------|
 | HMI (nginx) | — | **80** (+ **443** mit TLS-Overlay) |
 | API | 8080 | localhost:8080 |
-| edge-acquisition | 8091 | nur Docker-Netz |
+| edge-acquisition | 8091 | Docker-Netz; GigE-Overlay: Host-Port 8091 |
 | opcua-gateway HTTP | 8092 | nur Docker-Netz |
 | OPC-UA | 4840 | **4840** |
 | Postgres / Influx / MinIO | 5432 / 8086 / 9000 | nur Docker-Netz |
