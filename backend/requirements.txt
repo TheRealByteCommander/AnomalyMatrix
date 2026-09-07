@@ -7,7 +7,7 @@ httpx==0.28.1
 psycopg2-binary==2.9.12
 influxdb-client==1.50.0
 minio==7.2.20
-numpy==2.5.1
+numpy==2.5.2
 opencv-python-headless==5.0.0.93
 PyJWT==2.13.0
 cryptography==50.0.0
