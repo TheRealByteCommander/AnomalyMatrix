@@ -10,4 +10,4 @@ minio==7.2.20
 numpy==2.5.1
 opencv-python-headless==5.0.0.93
 PyJWT==2.13.0
-cryptography==49.0.0
+cryptography==50.0.0
