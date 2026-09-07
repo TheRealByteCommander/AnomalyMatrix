@@ -149,10 +149,11 @@ def _features_from_server_list(
         "enterprise": "advanced_export",
         "export": "advanced_export",
     }
+    aliases_lc = {key.lower(): value for key, value in aliases.items()}
     out = {k: False for k in base}
     matched = False
     for name in names:
-        key = aliases.get(name, name if name in out else None)
+        key = aliases_lc.get(name.lower(), name if name in out else None)
         if key:
             out[key] = True
             matched = True
@@ -207,6 +208,7 @@ class LicenseManager:
             "features": self._base_features(enabled=enabled),
             "token": None,
             "licenseKey": None,
+            "customerEmail": None,
             "mode": "server" if self.server_configured else "local",
         }
 
@@ -437,6 +439,7 @@ class LicenseManager:
             "token": token,
             "licenseKey": key,
             "licenseKeyMasked": f"***{key[-4:]}",
+            "customerEmail": self._load().get("customerEmail"),
             "mode": "server",
         }
         self._save(data)
@@ -525,3 +528,50 @@ class LicenseManager:
 
         if not enabled:
             raise PermissionError(f"Feature {feature_name} not enabled by license")
+
+    def remember_customer_email(self, email: str | None) -> None:
+        cleaned = (email or "").strip().lower()
+        if not cleaned or "@" not in cleaned:
+            return
+        data = self._normalize(self._load())
+        data["customerEmail"] = cleaned
+        self._save(data)
+
+    def stored_customer_email(self) -> str | None:
+        email = self._load().get("customerEmail")
+        if isinstance(email, str) and "@" in email:
+            return email.strip().lower()
+        return None
+
+    def stored_license_key(self) -> str | None:
+        key = self._load().get("licenseKey")
+        if isinstance(key, str) and key.strip():
+            return key.strip()
+        return None
+
+    def billing_hints(self) -> dict:
+        data = self._load()
+        email = data.get("customerEmail") if isinstance(data.get("customerEmail"), str) else ""
+        return {
+            "billing_enabled": self.server_configured,
+            "customer_email_masked": _mask_email(email),
+            "license_key_masked": data.get("licenseKeyMasked") or _mask_key(data.get("licenseKey")),
+        }
+
+
+def _mask_email(email: str | None) -> str | None:
+    raw = (email or "").strip()
+    if "@" not in raw:
+        return None
+    local, _, domain = raw.partition("@")
+    if not local or not domain:
+        return None
+    visible = local[:1]
+    return f"{visible}***@{domain.lower()}"
+
+
+def _mask_key(key: str | None) -> str | None:
+    raw = (key or "").strip()
+    if len(raw) < 4:
+        return None
+    return f"***{raw[-4:]}"

@@ -16,6 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .api.auth import router as auth_router
 from .api.catalog import router as catalog_router
 from .api.health import app_version, router as health_router
+from .api.license_billing import router as license_billing_router
 from .api.training import router as training_router
 from .camera_station import MAX_CAMERAS, MIN_CAMERAS, CameraSelectionError, CameraStationStore
 from .contracts.envelope import error_envelope, success_envelope
@@ -180,6 +181,7 @@ app.include_router(health_router, prefix="/api/v1", tags=["health"])
 app.include_router(catalog_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(training_router, prefix="/api/v1")
+app.include_router(license_billing_router, prefix="/api/v1")
 
 
 def _auth(request: Request):
@@ -303,6 +305,7 @@ async def license_status(request: Request):
         "mode": "server" if license_manager.server_configured else "local",
         "last_error": getattr(snap, "last_error", None) if not is_production() else None,
     }
+    payload.update(license_manager.billing_hints())
     return success_envelope(payload, request_id)
 
 

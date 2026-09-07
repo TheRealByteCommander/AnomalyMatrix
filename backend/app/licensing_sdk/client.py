@@ -93,14 +93,7 @@ class LicenseClient:
             self._token = self._load_token()
         return self._token
 
-    def _post(self, procedure: str, payload: dict[str, Any]) -> dict[str, Any]:
-        url = f"{self.server_url}/api/trpc/{procedure}"
-        try:
-            with httpx.Client(timeout=self._timeout) as client:
-                response = client.post(url, json=wrap_input(payload))
-        except httpx.HTTPError as exc:
-            raise LicensingApiError("NETWORK_ERROR", str(exc)) from exc
-
+    def _parse_response(self, response: httpx.Response) -> Any:
         try:
             body = response.json()
         except ValueError as exc:
@@ -108,6 +101,8 @@ class LicenseClient:
 
         try:
             raise_for_trpc_error(body, response.is_success)
+        except LicensingApiError:
+            raise
         except Exception as exc:
             # Upstream helper raises generic Exception("[CODE] message")
             text = str(exc)
@@ -117,6 +112,98 @@ class LicenseClient:
             raise LicensingApiError("UNKNOWN", text) from exc
 
         return unwrap_result(body)
+
+    def _post(self, procedure: str, payload: dict[str, Any]) -> Any:
+        url = f"{self.server_url}/api/trpc/{procedure}"
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.post(url, json=wrap_input(payload))
+        except httpx.HTTPError as exc:
+            raise LicensingApiError("NETWORK_ERROR", str(exc)) from exc
+        return self._parse_response(response)
+
+    def _get(self, procedure: str, payload: dict[str, Any] | None = None) -> Any:
+        url = f"{self.server_url}/api/trpc/{procedure}"
+        params = {"input": json.dumps(wrap_input(payload or {}))}
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.get(url, params=params)
+        except httpx.HTTPError as exc:
+            raise LicensingApiError("NETWORK_ERROR", str(exc)) from exc
+        return self._parse_response(response)
+
+    def list_public_plans(self) -> list[dict[str, Any]]:
+        data = self._get("stripe.plans.listPublic", {})
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        return []
+
+    def create_checkout_session(
+        self,
+        *,
+        billing_plan_id: int,
+        customer_email: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> dict[str, Any]:
+        data = self._post(
+            "stripe.createCheckoutSession",
+            {
+                "billingPlanId": int(billing_plan_id),
+                "customerEmail": customer_email,
+                "successUrl": success_url,
+                "cancelUrl": cancel_url,
+            },
+        )
+        return data if isinstance(data, dict) else {}
+
+    def get_checkout_result(self, session_id: str, *, email: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"sessionId": session_id}
+        if email:
+            payload["email"] = email
+        data = self._get("stripe.getCheckoutResult", payload)
+        return data if isinstance(data, dict) else {}
+
+    def get_license_billing(self, *, license_key: str, customer_email: str) -> dict[str, Any]:
+        data = self._get(
+            "stripe.getLicenseBilling",
+            {"licenseKey": license_key, "customerEmail": customer_email},
+        )
+        return data if isinstance(data, dict) else {}
+
+    def create_customer_portal_session(
+        self,
+        *,
+        license_key: str,
+        customer_email: str,
+        return_url: str,
+    ) -> dict[str, Any]:
+        data = self._post(
+            "stripe.createCustomerPortalSession",
+            {
+                "licenseKey": license_key,
+                "customerEmail": customer_email,
+                "returnUrl": return_url,
+            },
+        )
+        return data if isinstance(data, dict) else {}
+
+    def cancel_subscription(
+        self,
+        *,
+        license_key: str,
+        customer_email: str,
+        cancel_at_period_end: bool = True,
+    ) -> dict[str, Any]:
+        data = self._post(
+            "stripe.cancelSubscription",
+            {
+                "licenseKey": license_key,
+                "customerEmail": customer_email,
+                "cancelAtPeriodEnd": cancel_at_period_end,
+            },
+        )
+        return data if isinstance(data, dict) else {}
 
     def activate(self, license_key: Optional[str] = None) -> dict[str, Any]:
         key = license_key or self.license_key

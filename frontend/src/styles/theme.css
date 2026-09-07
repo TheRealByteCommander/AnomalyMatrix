@@ -102,6 +102,17 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
 .ok { color: var(--green); }
 .error { color: var(--red); }
 .error-text { color: var(--red); margin-top: .5rem; }
+.billing-form { display: grid; gap: .65rem; max-width: 480px; margin-top: .75rem; }
+.billing-form label { display: grid; gap: .35rem; font-size: .85rem; color: var(--muted); }
+.billing-form input {
+  min-height: 42px; border: 1px solid var(--line); border-radius: 12px;
+  background: #111a2b; color: var(--text); padding: .5rem .7rem; font: inherit;
+}
+.billing-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.plan-list { list-style: none; padding: 0; margin: .75rem 0; display: grid; gap: .55rem; }
+.plan-card { display: flex; gap: .65rem; align-items: flex-start; cursor: pointer; }
+.plan-card input { margin-top: .25rem; }
+.billing-status { margin: .75rem 0; }
 
 /* Context help */
 .context-help-link {

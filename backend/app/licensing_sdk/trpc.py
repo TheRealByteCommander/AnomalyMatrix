@@ -1,17 +1,18 @@
 """Helpers for tRPC + superjson wire format used by the license server."""
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 
-def wrap_input(payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"json": payload}
+def wrap_input(payload: Dict[str, Any] | None) -> Dict[str, Any]:
+    return {"json": payload if payload is not None else {}}
 
 
-def unwrap_result(response_json: Dict[str, Any]) -> Dict[str, Any]:
+def unwrap_result(response_json: Dict[str, Any]) -> Any:
     data = response_json.get("result", {}).get("data", {})
     if isinstance(data, dict) and "json" in data:
-        return data["json"] or {}
-    return data if isinstance(data, dict) else {}
+        payload = data["json"]
+        return {} if payload is None else payload
+    return data if data is not None else {}
 
 
 def unwrap_error(response_json: Dict[str, Any]) -> Tuple[str, str]:

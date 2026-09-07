@@ -532,6 +532,7 @@ export const HELP_ARTICLES = [
           'License tier — licensed level.',
           'License active — whether the software may run inspections (if "false", notify your supervisor).',
           'Grace active — temporary tolerance without live license server.',
+          'License & billing — administrators buy, renew, or cancel here via Stripe. Do not use the vendor license admin UI.',
         ],
       },
     ],
@@ -541,7 +542,7 @@ export const HELP_ARTICLES = [
     id: 'license-status-user',
     category: 'screens',
     title: 'Understanding license status',
-    keywords: ['license', 'licensed', 'grace', 'active'],
+    keywords: ['license', 'licensed', 'grace', 'active', 'billing', 'stripe', 'checkout'],
     summary: 'What the license display on Configuration means for you.',
     sections: [
       {
@@ -743,7 +744,7 @@ export const HELP_ARTICLES = [
         heading: 'What to do',
         paragraphs: [
           'Notify shift lead and supervisor.',
-          'License activation is an administrator task, not the operator\'s.',
+          'An administrator can buy or renew the license on Configuration → License & billing (Stripe checkout inside AnomalyMatrix).',
         ],
       },
     ],
