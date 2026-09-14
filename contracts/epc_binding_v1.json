@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EpcBinding",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["schema", "schema_version", "unique_key", "source"],
+  "properties": {
+    "schema": {"const": "EpcBinding"},
+    "schema_version": {"type": "string"},
+    "epc": {"type": ["string", "null"]},
+    "process_id": {"type": ["string", "null"]},
+    "serial": {"type": ["string", "null"]},
+    "lot_id": {"type": ["string", "null"]},
+    "work_order": {"type": ["string", "null"]},
+    "unique_key": {"type": "string"},
+    "source": {"type": "string"},
+    "bound_at": {"type": "string"},
+    "inspection_id": {"type": ["string", "null"]}
+  }
+}

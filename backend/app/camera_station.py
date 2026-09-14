@@ -1,12 +1,18 @@
-"""Station camera selection for multi-view case inspection (1–4 cameras)."""
+"""Station camera selection for multi-view case inspection.
+
+Certified sequential path: 1–4 cameras. Raise AMX_MAX_CAMERAS (≤16) for extra
+slots (bottom / STF) — see docs/MULTI_CAMERA.md and AI_VISION_EOL_STANDARD.md.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-MIN_CAMERAS = 1
-MAX_CAMERAS = 4
+from .camera_limits import CERTIFIED_MAX_CAMERAS, HARD_CAP, MIN_CAMERAS, max_cameras
+
+# Back-compat alias used by tests and API payloads (evaluated at import).
+MAX_CAMERAS = max_cameras()
 
 
 class CameraSelectionError(ValueError):
@@ -38,10 +44,14 @@ class CameraStationStore:
         if not ids:
             ids = ["cam-01"]
         sources = data.get("sources") if isinstance(data.get("sources"), dict) else {}
+        cap = max_cameras()
         return {
-            "camera_ids": ids[:MAX_CAMERAS],
+            "camera_ids": ids[:cap],
             "sources": {str(k): str(v) for k, v in sources.items()},
             "updated_at": data.get("updated_at"),
+            "max_cameras": cap,
+            "certified_max_cameras": CERTIFIED_MAX_CAMERAS,
+            "hard_cap": HARD_CAP,
         }
 
     def save(self, *, camera_ids: list[str], sources: dict[str, str] | None = None, available_ids: set[str] | None = None) -> dict:
@@ -54,10 +64,14 @@ class CameraStationStore:
             seen.add(cid)
             cleaned.append(cid)
 
+        cap = max_cameras()
         if len(cleaned) < MIN_CAMERAS:
             raise CameraSelectionError(f"At least {MIN_CAMERAS} camera required")
-        if len(cleaned) > MAX_CAMERAS:
-            raise CameraSelectionError(f"At most {MAX_CAMERAS} cameras allowed")
+        if len(cleaned) > cap:
+            raise CameraSelectionError(
+                f"At most {cap} cameras allowed (certified sequential path is 1–{CERTIFIED_MAX_CAMERAS}; "
+                f"raise AMX_MAX_CAMERAS up to {HARD_CAP})"
+            )
 
         if available_ids is not None:
             unknown = [c for c in cleaned if c not in available_ids]
@@ -71,6 +85,9 @@ class CameraStationStore:
             "camera_ids": cleaned,
             "sources": src,
             "updated_at": datetime.now(timezone.utc).isoformat(),
+            "max_cameras": cap,
+            "certified_max_cameras": CERTIFIED_MAX_CAMERAS,
+            "hard_cap": HARD_CAP,
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")

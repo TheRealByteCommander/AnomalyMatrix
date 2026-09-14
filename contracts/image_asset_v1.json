@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImageAsset",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["schema", "schema_version", "asset_id", "inspection_id", "camera_id", "object_key"],
+  "properties": {
+    "schema": {"const": "ImageAsset"},
+    "schema_version": {"type": "string"},
+    "asset_id": {"type": "string"},
+    "inspection_id": {"type": "string"},
+    "station_id": {"type": "string"},
+    "recipe_id": {"type": "string"},
+    "epc": {"type": ["string", "null"]},
+    "camera_id": {"type": "string"},
+    "captured_at": {"type": "string"},
+    "object_key": {"type": "string", "description": "station/recipe/epc/yyyy/mm/dd/<ts>_<camera>_<decision>_image.ext"},
+    "bytes": {"type": "integer"},
+    "content_type": {"type": "string"},
+    "width": {"type": ["integer", "null"]},
+    "height": {"type": ["integer", "null"]},
+    "colorspace": {"type": ["string", "null"]},
+    "format": {"type": "string", "enum": ["png", "jpeg", "raw"]},
+    "decision": {"type": ["string", "null"]},
+    "legal_hold": {"type": "boolean"}
+  }
+}

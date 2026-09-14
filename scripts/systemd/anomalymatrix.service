@@ -1,0 +1,20 @@
+[Unit]
+Description=AnomalyMatrix stack (Docker Compose)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/anomalymatrix
+Environment=MODE=prod
+ExecStart=/usr/bin/docker compose -p anomalymatrix -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+ExecStop=/usr/bin/docker compose -p anomalymatrix -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production stop
+ExecReload=/usr/bin/docker compose -p anomalymatrix -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

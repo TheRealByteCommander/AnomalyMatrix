@@ -1,0 +1,37 @@
+# Optional MQTT broker + API subscriber.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     -f docker-compose.mqtt.yml --env-file .env.production up -d
+#
+# OPC-UA trigger remains enabled. MQTT is additive.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x mosquitto >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 128m
+    restart: unless-stopped
+
+  api:
+    environment:
+      MQTT_ENABLED: ${MQTT_ENABLED:-true}
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      MQTT_TOPIC: ${MQTT_TOPIC:-anomalymatrix/eol/trigger}
+      MQTT_QOS: ${MQTT_QOS:-1}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-anomalymatrix-eol}
+    depends_on:
+      mosquitto:
+        condition: service_started

@@ -39,7 +39,7 @@ async def _sync_store_from_plc_inputs() -> None:
     """Read PLC-written input nodes back into NODE_VALUES."""
     contract = load_contract()
     insp = contract["inspection"]
-    input_keys = ("external_trigger", "start_request", "acknowledge_stop", "camera_id", "recipe_id")
+    input_keys = ("external_trigger", "start_request", "acknowledge_stop", "camera_id", "recipe_id", "epc", "process_id")
     for key in input_keys:
         nid = insp[key]
         var = _ua_vars.get(nid)
@@ -120,6 +120,10 @@ async def _run_opcua_server(endpoint: str) -> None:
 
     await add_var(request, "CameraId", insp["camera_id"], ua.VariantType.String, writable=True)
     await add_var(request, "RecipeId", insp["recipe_id"], ua.VariantType.String, writable=True)
+    if "epc" in insp:
+        await add_var(request, "Epc", insp["epc"], ua.VariantType.String, writable=True)
+    if "process_id" in insp:
+        await add_var(request, "ProcessId", insp["process_id"], ua.VariantType.String, writable=True)
 
     await add_var(last_result, "PassFail", lr["pass_fail"], ua.VariantType.String)
     await add_var(last_result, "PassFailBool", lr["pass_fail_bool"], ua.VariantType.Boolean)
@@ -138,6 +142,10 @@ async def _run_opcua_server(endpoint: str) -> None:
         await add_var(last_result, "ViewCount", lr["view_count"], ua.VariantType.Int32)
     if "decision_policy" in lr:
         await add_var(last_result, "DecisionPolicy", lr["decision_policy"], ua.VariantType.String)
+    if "epc" in lr:
+        await add_var(last_result, "Epc", lr["epc"], ua.VariantType.String)
+    if "process_id" in lr:
+        await add_var(last_result, "ProcessId", lr["process_id"], ua.VariantType.String)
 
     trend = contract.get("trend") or {}
     if trend:

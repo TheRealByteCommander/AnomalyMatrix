@@ -13,10 +13,11 @@ import {
 import LicenseBilling from '../components/LicenseBilling';
 import ModelTraining from '../components/ModelTraining';
 import DecisionThresholds from '../components/DecisionThresholds';
+import StationVisionSetup from '../components/StationVisionSetup';
+import StorageEndurancePanel from '../components/StorageEndurancePanel';
 import { useI18n } from '../i18n/I18nProvider';
 
 const MIN_CAMERAS = 1;
-const MAX_CAMERAS = 4;
 
 export default function ConfigurationPage({ openHelp }) {
   const { t } = useI18n();
@@ -25,6 +26,7 @@ export default function ConfigurationPage({ openHelp }) {
   const [models, setModels] = useState([]);
   const [cameras, setCameras] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [maxCameras, setMaxCameras] = useState(4);
   const [driver, setDriver] = useState('');
   const [canConfigure, setCanConfigure] = useState(false);
   const [canManageLicense, setCanManageLicense] = useState(false);
@@ -51,11 +53,12 @@ export default function ConfigurationPage({ openHelp }) {
         setModels(modelData.items || []);
         setCameras(cameraData.cameras || []);
         setDriver(cameraData.driver || '');
+        setMaxCameras(cameraData.max_selectable || 4);
         const initial =
           cameraData.selection?.camera_ids?.length
             ? cameraData.selection.camera_ids
             : (cameraData.cameras || []).filter((c) => c.selected).map((c) => c.camera_id);
-        setSelected(initial.slice(0, MAX_CAMERAS));
+        setSelected(initial.slice(0, cameraData.max_selectable || 4));
         const role = me?.role_id || me?.role || '';
         const permissions = Array.isArray(me?.permissions) ? me.permissions : null;
         setCanConfigure(role === 'admin' || role === 'process_engineer');
@@ -76,7 +79,7 @@ export default function ConfigurationPage({ openHelp }) {
   const activeRecipe = recipes.find((r) => r.active === true || r.status === 'active') || recipes[0];
   const activeModel = models.find((m) => m.status === 'active' || m.active === true) || models[0];
 
-  const selectionValid = selected.length >= MIN_CAMERAS && selected.length <= MAX_CAMERAS;
+  const selectionValid = selected.length >= MIN_CAMERAS && selected.length <= maxCameras;
   const handleLicenseChange = useCallback((next) => {
     if (next) setLicense((prev) => ({ ...(prev || {}), ...next }));
   }, []);
@@ -88,7 +91,7 @@ export default function ConfigurationPage({ openHelp }) {
         if (prev.length <= MIN_CAMERAS) return prev;
         return prev.filter((id) => id !== cameraId);
       }
-      if (prev.length >= MAX_CAMERAS) return prev;
+      if (prev.length >= maxCameras) return prev;
       return [...prev, cameraId];
     });
   }
@@ -143,7 +146,7 @@ export default function ConfigurationPage({ openHelp }) {
       <article className="card">
         <h3>{t('configuration.camerasTitle')}</h3>
         <p className="muted">
-          {t('configuration.camerasHint', { min: MIN_CAMERAS, max: MAX_CAMERAS })}
+          {t('configuration.camerasHint', { min: MIN_CAMERAS, max: maxCameras })}
           {driver ? ` · ${t('configuration.camerasDriver')}: ${driver}` : ''}
         </p>
         {!cameras.length ? (
@@ -154,7 +157,7 @@ export default function ConfigurationPage({ openHelp }) {
               const checked = selected.includes(cam.camera_id);
               const disabled =
                 !canConfigure ||
-                (!checked && selected.length >= MAX_CAMERAS) ||
+                (!checked && selected.length >= maxCameras) ||
                 (checked && selected.length <= MIN_CAMERAS);
               return (
                 <li key={cam.camera_id}>
@@ -181,7 +184,7 @@ export default function ConfigurationPage({ openHelp }) {
           </ul>
         )}
         <p className="muted">
-          {t('configuration.camerasSelected')}: {selected.length}/{MAX_CAMERAS}
+          {t('configuration.camerasSelected')}: {selected.length}/{maxCameras}
           {selectedLabels ? ` — ${selectedLabels}` : ''}
         </p>
         {canConfigure ? (
@@ -197,6 +200,9 @@ export default function ConfigurationPage({ openHelp }) {
           </p>
         )}
       </article>
+
+      <StationVisionSetup canConfigure={canConfigure} openHelp={openHelp} />
+      <StorageEndurancePanel canConfigure={canConfigure} />
 
       <DecisionThresholds
         recipe={activeRecipe}

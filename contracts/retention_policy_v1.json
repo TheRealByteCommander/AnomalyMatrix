@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RetentionPolicy",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["schema", "schema_version", "ttl_days"],
+  "properties": {
+    "schema": {"const": "RetentionPolicy"},
+    "schema_version": {"type": "string"},
+    "ttl_days": {"type": "integer", "minimum": 1, "maximum": 3650},
+    "archive_bucket": {"type": "string"},
+    "archive_prefix": {"type": "string"},
+    "legal_hold_default": {"type": "boolean"},
+    "delete_after_archive": {"type": "boolean"},
+    "enabled": {"type": "boolean"}
+  }
+}

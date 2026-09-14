@@ -11,10 +11,10 @@
     "camera_ids": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 4,
+      "maxItems": 16,
       "items": {"type": "string"}
     },
-    "view_count": {"type": "integer", "minimum": 1, "maximum": 4},
+    "view_count": {"type": "integer", "minimum": 1, "maximum": 16},
     "worst_view_camera_id": {"type": "string"},
     "frame": {
       "type": "object",
@@ -63,7 +63,7 @@
     "memory_bank": {"type": "object"},
     "views": {
       "type": "array",
-      "maxItems": 4,
+      "maxItems": 16,
       "items": {
         "type": "object",
         "required": ["camera_id", "frame", "inference", "decision"],
@@ -85,6 +85,13 @@
     "drifting_cameras": {"type": "array", "items": {"type": "string"}},
     "drift_score": {"type": ["number", "null"]},
     "score_delta": {"type": ["number", "null"]},
-    "baseline_avg_score": {"type": ["number", "null"]}
+    "baseline_avg_score": {"type": ["number", "null"]},
+    "epc": {"type": ["string", "null"]},
+    "process_id": {"type": ["string", "null"]},
+    "epc_binding": {"type": "object"},
+    "station_id": {"type": "string"},
+    "trigger_source": {"type": "string"},
+    "capture_set": {"type": "object"},
+    "legal_hold": {"type": "boolean"}
   }
 }

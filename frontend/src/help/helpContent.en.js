@@ -567,6 +567,8 @@ export const HELP_ARTICLES = [
           'Model profile — which anomaly model is used for evaluation.',
           'Training / Models — capture good-part images, train PatchCore, promote candidates, and reactivate older trainings.',
           'Decision thresholds — OK / review / NOK sensitivity per recipe (Process Engineer/Admin).',
+          'EOL station standard / Vision Setup — camera roles (top/side/bottom/STF), lens/FOV notes, lighting, and checklist. Export JSON/YAML or clone for another line.',
+          'Storage & retention — object count, TTL, archive, watchdog for 24h operation. The last inspection EPC is shown on the Dashboard.',
           'NOK samples — count of QA-confirmed defect images (not mixed into good-part training).',
           'Only Process Engineer or Admin may train; operators can read the history.',
         ],
@@ -574,7 +576,7 @@ export const HELP_ARTICLES = [
       {
         heading: 'Integration',
         paragraphs: [
-          'OPC UA profile — how results are reported to the line.',
+          'OPC UA profile — how results are reported to the line. MQTT triggers (PLC/MES) run in addition; both may be active.',
           'Audit mode — whether inspection and feedback actions are logged.',
         ],
       },
@@ -588,7 +590,33 @@ export const HELP_ARTICLES = [
         ],
       },
     ],
-    related: ['license-status-user', 'roles-overview', 'good-part-training'],
+    related: ['license-status-user', 'roles-overview', 'good-part-training', 'eol-vision-setup'],
+  },
+  {
+    id: 'eol-vision-setup',
+    category: 'screens',
+    title: 'EOL station standard (Vision Setup)',
+    keywords: ['vision', 'eol', 'camera', 'bottom', 'epc', 'mqtt', 'retention', 'checklist', 'basler'],
+    summary: 'Camera roles, optics notes, checklist, and a template for other lines.',
+    screen: 'Configuration',
+    sections: [
+      {
+        heading: 'What to fill in',
+        paragraphs: [
+          'Per slot: role (top, side, bottom, STF, completeness), lens/FOV notes, exposure, gain, trigger, and an optional light-controller hook.',
+          'The perspective checklist (corners, edges, features, bottom view) is confirmed by the operator before go-live.',
+          'Export JSON/YAML or clone the profile onto a new station ID — that is the copyable Phase-3 standard.',
+        ],
+      },
+      {
+        heading: 'EPC and triggers',
+        paragraphs: [
+          'Every capture is bound to an EPC (or process id) — shown on the Dashboard and Inspection Detail.',
+          'The PLC may trigger via OPC UA or MQTT; both may run in parallel.',
+        ],
+      },
+    ],
+    related: ['configuration-overview', 'operator-daily-flow'],
   },
   {
     id: 'license-status-user',

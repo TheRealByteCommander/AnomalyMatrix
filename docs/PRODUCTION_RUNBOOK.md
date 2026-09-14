@@ -110,6 +110,22 @@ curl -X POST http://127.0.0.1:8080/api/v1/models/rollback \
 - `GET /api/v1/observability/summary` (authenticated)
 - `GET /api/v1/events/recent` (authenticated)
 - Influx measurements: `inspection_metrics`, `process_trends` (async writer)
+- Capture watchdog + MQTT status: `GET /api/v1/system/watchdog`
+- Storage sizing: `GET /api/v1/storage/stats`
+- Post-reboot self-test: `POST /api/v1/system/self-test` (auth) or `scripts/health/selftest.sh`
+
+## Auto-restart (IPC)
+
+Compose services already use `restart: unless-stopped`. After host reboot:
+
+```bash
+sudo cp scripts/systemd/anomalymatrix.service /etc/systemd/system/
+sudo systemctl enable --now anomalymatrix.service
+```
+
+LXC / custom onboot: `scripts/lxc/onboot.sh`. MQTT overlay (optional): `-f docker-compose.mqtt.yml`.
+
+AI Vision EOL: [`AI_VISION_EOL_STANDARD.md`](./AI_VISION_EOL_STANDARD.md)
 
 ## Security Notes
 

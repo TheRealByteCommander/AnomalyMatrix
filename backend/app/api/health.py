@@ -61,6 +61,29 @@ def _check_http(name: str, url: str, *, required: bool) -> dict:
         return {"ok": False, "detail": str(exc.__class__.__name__)}
 
 
+def _check_minio() -> dict:
+    endpoint = os.getenv("MINIO_ENDPOINT", "").strip()
+    if not endpoint:
+        return {"ok": True, "skipped": True, "detail": "MINIO_ENDPOINT unset"}
+    try:
+        from ..storage_minio import ensure_buckets
+
+        ok = ensure_buckets()
+        return {"ok": True, "skipped": not ok, "detail": "configured" if ok else "client unavailable"}
+    except Exception as exc:
+        required = os.getenv("MINIO_REQUIRED", "").strip().lower() in {"1", "true", "yes"}
+        return {"ok": not required, "detail": str(exc.__class__.__name__), "required": required}
+
+
+def _check_mqtt() -> dict:
+    from ..mqtt_trigger import mqtt_enabled, status_snapshot
+
+    if not mqtt_enabled():
+        return {"ok": True, "skipped": True, "detail": "MQTT_ENABLED unset (OPC-UA trigger remains)"}
+    snap = status_snapshot()
+    return {"ok": True, "connected": bool(snap.get("connected")), "detail": snap.get("last_error")}
+
+
 def readiness_payload() -> tuple[dict, bool]:
     edge = os.getenv("EDGE_ACQUISITION_URL", "").strip().rstrip("/")
     gateway = os.getenv("OPCUA_GATEWAY_URL", "").strip().rstrip("/")
@@ -72,6 +95,8 @@ def readiness_payload() -> tuple[dict, bool]:
             f"{gateway}/health" if gateway else "",
             required=False,
         ),
+        "minio": _check_minio(),
+        "mqtt": _check_mqtt(),
     }
     ready = all(bool(item.get("ok")) for item in checks.values())
     payload = {

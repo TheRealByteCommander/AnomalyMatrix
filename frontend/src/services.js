@@ -122,6 +122,10 @@ export function mapApiInspection(item) {
     memoryBankLoaded: Boolean(item.memory_bank?.loaded),
     memoryBankKnown: item.memory_bank != null,
     thresholds,
+    epc: item.epc || item.epc_binding?.epc || null,
+    processId: item.process_id || item.epc_binding?.process_id || null,
+    stationId: item.station_id || null,
+    triggerSource: item.trigger_source || null,
     raw: item,
   };
 }
@@ -381,6 +385,100 @@ export async function saveCameraSelection(cameraIds) {
       body: JSON.stringify({ camera_ids: cameraIds }),
     })
   );
+  return parseEnvelope(r);
+}
+
+export async function fetchVisionProfile() {
+  const r = await fetch(`${API_BASE}/station/vision-profile`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function saveVisionProfile(profile) {
+  const r = await fetch(
+    `${API_BASE}/station/vision-profile`,
+    withCredentials({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function exportVisionProfile(format = 'json') {
+  const r = await fetch(`${API_BASE}/station/vision-profile/export?format=${encodeURIComponent(format)}`, withCredentials());
+  if (!r.ok) throw new Error(`API error (${r.status})`);
+  const text = await r.text();
+  const filename = format === 'yaml' ? 'eol-station-standard.yaml' : 'eol-station-standard.json';
+  return { text, filename };
+}
+
+export async function importVisionProfile(content) {
+  const r = await fetch(
+    `${API_BASE}/station/vision-profile/import`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function cloneVisionProfile(stationId, name) {
+  const r = await fetch(
+    `${API_BASE}/station/vision-profile/clone`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ station_id: stationId, name }),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function fetchRecommendations() {
+  const r = await fetch(`${API_BASE}/station/recommendations`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function fetchStorageStats() {
+  const r = await fetch(`${API_BASE}/storage/stats`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function fetchRetention() {
+  const r = await fetch(`${API_BASE}/storage/retention`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function saveRetention(policy) {
+  const r = await fetch(
+    `${API_BASE}/storage/retention`,
+    withCredentials({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function runRetention() {
+  const r = await fetch(
+    `${API_BASE}/storage/retention/run`,
+    withCredentials({ method: 'POST' })
+  );
+  return parseEnvelope(r);
+}
+
+export async function fetchMqttStatus() {
+  const r = await fetch(`${API_BASE}/mqtt/status`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function fetchWatchdog() {
+  const r = await fetch(`${API_BASE}/system/watchdog`, withCredentials());
   return parseEnvelope(r);
 }
 

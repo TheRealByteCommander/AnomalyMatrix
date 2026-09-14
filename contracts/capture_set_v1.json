@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaptureSet",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["schema", "schema_version", "capture_set_id", "station_id", "recipe_id", "assets"],
+  "properties": {
+    "schema": {"const": "CaptureSet"},
+    "schema_version": {"type": "string"},
+    "capture_set_id": {"type": "string"},
+    "station_id": {"type": "string"},
+    "recipe_id": {"type": "string"},
+    "epc_binding": {"type": "object"},
+    "asset_count": {"type": "integer"},
+    "assets": {"type": "array", "items": {"type": "object"}},
+    "decision": {"type": "string"},
+    "trigger_source": {"type": "string", "enum": ["api", "mqtt", "opcua", "hmi", "self-test"]},
+    "created_at": {"type": "string"}
+  }
+}

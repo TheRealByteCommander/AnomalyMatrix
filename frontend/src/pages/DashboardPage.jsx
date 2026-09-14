@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
-import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary, fetchCameras } from '../services';
+import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary, fetchCameras, fetchWatchdog } from '../services';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { useI18n } from '../i18n/I18nProvider';
@@ -23,6 +23,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     severity: hmiState.status,
   });
   const [cameras, setCameras] = useState([]);
+  const [watchdog, setWatchdog] = useState(null);
 
   useEffect(() => {
     if (runState === 'idle') setNotice(t('dashboard.ready'));
@@ -32,12 +33,13 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     let cancelled = false;
     (async () => {
       try {
-        const [summary, recipeData, modelData, trend, cameraData] = await Promise.all([
+        const [summary, recipeData, modelData, trend, cameraData, wd] = await Promise.all([
           fetchObservabilitySummary(),
           fetchRecipes().catch(() => ({ items: [] })),
           fetchModels().catch(() => ({ items: [] })),
           fetchTrendSummary().catch(() => null),
           fetchCameras().catch(() => ({ cameras: [] })),
+          fetchWatchdog().catch(() => null),
         ]);
         if (cancelled) return;
 
@@ -60,6 +62,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         });
 
         setCameras(cameraData.cameras || []);
+        setWatchdog(wd);
 
         setKpis({
           cycleMsP95: summary.inference_latency_mean_ms || summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
@@ -139,6 +142,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           <h2>{context.line}</h2>
           <p className="muted">
             {t('common.recipe')} {context.recipe} · {t('common.model')} {context.modelVersion}
+            {inspections[0]?.epc ? ` · EPC ${inspections[0].epc}` : ''}
             {context.memoryBankKnown
               ? ` · ${context.memoryBankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}`
               : ''}
@@ -147,6 +151,18 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         </div>
         <StatusBadge state={trendStatus.warning ? trendStatus.severity : 'green'}>{statusLabel}</StatusBadge>
       </article>
+
+      {watchdog ? (
+        <article className="card kpi-grid" data-testid="endurance-watchdog">
+          <div>
+            <label>{t('storage.watchdog')}</label>
+            <StatusBadge state={watchdog.gap_detected ? 'amber' : 'green'}>{watchdog.status}</StatusBadge>
+          </div>
+          <div><label>{t('dashboard.captures')}</label><strong>{watchdog.capture_count ?? 0}</strong></div>
+          <div><label>{t('dashboard.lastEpc')}</label><strong>{watchdog.last_epc || inspections[0]?.epc || '—'}</strong></div>
+          <div><label>{t('dashboard.gaps')}</label><strong>{watchdog.gap_count ?? 0}</strong></div>
+        </article>
+      ) : null}
 
       <article className="card run-panel">
         <div>
@@ -210,7 +226,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
               <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
               <span>{i.id}</span>
               <span>
-                {i.viewCount > 1
+                {i.epc ? `EPC ${i.epc}` : i.viewCount > 1
                   ? `${i.viewCount}×cam`
                   : (i.cameraIds?.[0] || i.part)}
               </span>
