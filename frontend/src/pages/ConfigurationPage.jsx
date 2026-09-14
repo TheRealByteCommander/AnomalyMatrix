@@ -12,6 +12,7 @@ import {
 } from '../services';
 import LicenseBilling from '../components/LicenseBilling';
 import ModelTraining from '../components/ModelTraining';
+import DecisionThresholds from '../components/DecisionThresholds';
 import { useI18n } from '../i18n/I18nProvider';
 
 const MIN_CAMERAS = 1;
@@ -29,6 +30,7 @@ export default function ConfigurationPage({ openHelp }) {
   const [canManageLicense, setCanManageLicense] = useState(false);
   const [canTrain, setCanTrain] = useState(false);
   const [canPromote, setCanPromote] = useState(false);
+  const [canWriteRecipes, setCanWriteRecipes] = useState(false);
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -60,6 +62,7 @@ export default function ConfigurationPage({ openHelp }) {
         setCanManageLicense(role === 'admin');
         setCanTrain(permissions ? permissions.includes('models.train') : role === 'admin' || role === 'process_engineer');
         setCanPromote(permissions ? permissions.includes('models.promote') : role === 'admin' || role === 'process_engineer');
+        setCanWriteRecipes(permissions ? permissions.includes('recipes.write') : role === 'admin' || role === 'process_engineer');
       } catch {
         if (!cancelled) setLicense(null);
       }
@@ -168,7 +171,7 @@ export default function ConfigurationPage({ openHelp }) {
                         {' '}
                         ({cam.camera_id}
                         {cam.source ? ` → ${cam.source}` : ''}
-                        {cam.available === false ? ` · ${t('configuration.camerasUnavailable')}` : ''})
+                        {cam.available === false ? ` · ${t('configuration.camerasUnavailable')}` : ` · ${t('configuration.camerasOnline')}`})
                       </span>
                     </span>
                   </label>
@@ -194,6 +197,18 @@ export default function ConfigurationPage({ openHelp }) {
           </p>
         )}
       </article>
+
+      <DecisionThresholds
+        recipe={activeRecipe}
+        canWrite={canWriteRecipes}
+        openHelp={openHelp}
+        onRecipeChange={(saved) => {
+          setRecipes((prev) => {
+            const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
+            return [saved, ...rest];
+          });
+        }}
+      />
 
       <ModelTraining
         recipes={recipes}

@@ -76,6 +76,51 @@ class PostgresResultRepository:
                 items.append(json.loads(raw))
         return items
 
+    def get(self, inspection_id: str) -> dict | None:
+        if not inspection_id:
+            return None
+        with pooled_connection(self.dsn) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT payload FROM inspections WHERE inspection_id = %s", (inspection_id,))
+                row = cur.fetchone()
+        items = self._rows_to_items([dict(row)] if row else [])
+        return items[0] if items else None
+
+    def update(self, payload: dict) -> dict | None:
+        inspection_id = payload.get("inspection_id")
+        if not inspection_id:
+            return None
+        frame = payload.get("frame", {})
+        inf = payload.get("inference", {})
+        with pooled_connection(self.dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE inspections
+                    SET camera_id = %s,
+                        recipe_id = %s,
+                        anomaly_score = %s,
+                        status = %s,
+                        decision = %s,
+                        provider = %s,
+                        payload = %s
+                    WHERE inspection_id = %s
+                    """,
+                    (
+                        frame.get("camera_id", "unknown"),
+                        frame.get("recipe_id", "unknown"),
+                        float(inf.get("anomaly_score", 0.0)),
+                        inf.get("status", "unknown"),
+                        payload.get("decision", "green"),
+                        inf.get("provider", "stub"),
+                        Json(payload),
+                        inspection_id,
+                    ),
+                )
+                if cur.rowcount == 0:
+                    self.append(payload)
+        return payload
+
     def latest(self, limit: int = 20) -> list[dict]:
         with pooled_connection(self.dsn) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:

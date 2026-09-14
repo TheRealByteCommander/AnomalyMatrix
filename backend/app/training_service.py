@@ -9,6 +9,7 @@ import numpy as np
 
 from .patchcore_memory import active_memory_bank_path, build_memory_bank, save_memory_bank
 from .production import is_production
+from .nio_store import count_nio_images, load_local_nio_images
 from .storage_minio import decode_png_bytes, list_training_image_bytes, load_local_training_images, store_raw_frame
 
 
@@ -165,6 +166,7 @@ def train_patchcore(
     artifact_path = artifact_dir / f"{model_id}.npz"
     save_memory_bank(artifact_path, bank=bank, model_version=model_version, recipe_id=recipe_id)
     created_at = datetime.now(timezone.utc).isoformat()
+    nio_report = _nio_holdout_report(data_root=data_root, recipe_id=recipe_id, bank=bank, io_count=len(images))
     return {
         "model_id": model_id,
         "name": f"PatchCore {recipe_id}",
@@ -180,12 +182,36 @@ def train_patchcore(
             "embedding_count": int(bank.shape[0]),
             "embedding_dim": int(bank.shape[1]),
             "data_source": data_source,
+            "nio_sample_count": nio_report.get("nio_count", 0),
             "validation_report": {
                 "signed": False,
                 "holdout_passed": data_source != "synthetic_fallback",
                 "sample_count": len(images),
+                "nio_holdout": nio_report,
             },
         },
+    }
+
+
+def _nio_holdout_report(*, data_root: Path, recipe_id: str, bank, io_count: int) -> dict:
+    from .patchcore_memory import distance_to_anomaly_score, extract_embedding, min_distance_score
+
+    nio_images = load_local_nio_images(data_root, recipe_id, limit=32)
+    if not nio_images:
+        return {"nio_count": count_nio_images(data_root, recipe_id), "evaluated": 0}
+    scores = []
+    for image in nio_images:
+        distance = min_distance_score(extract_embedding(image), bank)
+        scores.append(distance_to_anomaly_score(distance))
+    mean_score = round(sum(scores) / len(scores), 4)
+    return {
+        "nio_count": count_nio_images(data_root, recipe_id),
+        "evaluated": len(scores),
+        "nio_mean_score": mean_score,
+        "nio_min_score": round(min(scores), 4),
+        "nio_max_score": round(max(scores), 4),
+        "io_sample_count": io_count,
+        "nio_scores_higher_than_mid": mean_score >= 0.5,
     }
 
 

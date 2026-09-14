@@ -65,3 +65,8 @@ class CameraSelectionRequest(BaseModel):
         if len(cleaned) > 4:
             raise ValueError("At most 4 cameras allowed")
         return cleaned
+
+
+class RecipeThresholdsRequest(BaseModel):
+    amber: float = Field(..., ge=0.0, le=1.0)
+    red: float = Field(..., ge=0.0, le=1.0)

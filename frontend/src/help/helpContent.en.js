@@ -170,8 +170,8 @@ export const HELP_ARTICLES = [
         heading: 'Benefits',
         paragraphs: [
           'Feedback (confirm / false positive / review) documents the QS decision.',
+          'Confirming an anomaly marks the inspection NOK (red) and stores the frame as a NOK sample.',
           'Audit log and events for traceability.',
-          'Foundation for future model retraining (continual learning, roadmap).',
         ],
       },
     ],
@@ -275,8 +275,8 @@ export const HELP_ARTICLES = [
         heading: 'When to give feedback?',
         paragraphs: [
           'After visual or measured re-check of the part.',
-          'Especially important for red (Fail) and amber (Review).',
-          'Also for green if you suspect a hidden defect.',
+          'Especially important for NOK (red) and review (amber).',
+          'Also for OK if you suspect a hidden defect.',
         ],
       },
       {
@@ -291,8 +291,10 @@ export const HELP_ARTICLES = [
       {
         heading: 'Effect',
         paragraphs: [
-          'Your feedback feeds quality documentation and future model learning.',
-          'Without permission you will see an error message — contact your shift lead or administrator.',
+          'Confirming an anomaly shows the inspection as NOK (red), with an audit of the automatic decision.',
+          'The inspection image is stored as a NOK sample for the recipe/camera (count on Configuration → Training).',
+          'False positive keeps the automatic decision — it does not create a NOK sample.',
+          'Needs review stays pending without overriding the traffic light.',
         ],
       },
     ],
@@ -331,6 +333,7 @@ export const HELP_ARTICLES = [
           '3. Start training to create a candidate memory-bank .npz. Previous trainings are never deleted.',
           '4. After review, Promote (validation gate) or Activate (reuse a stored bank without retraining).',
           '5. Use Rollback or activate an older row in the history when you need to switch back.',
+          '6. Run inspection → QA “Anomaly confirmed” marks NOK and stores a NOK sample (count in this panel).',
         ],
       },
       {
@@ -496,13 +499,14 @@ export const HELP_ARTICLES = [
           'Inspection ID, part/recipe, and time of inspection.',
           'Anomaly score — numeric suspicion index (0 to 1, see Glossary).',
           'Defect label — system-suggested defect class or "none".',
-          'Pass / Review / Fail — short decision from the traffic-light color.',
+          'Pass / Review / Fail — short decision as OK / Review / NOK.',
+          'Model version and whether a trained memory bank is loaded.',
         ],
       },
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Shows where the software suspects anomalies (preview/placeholder depending on rollout).',
+          'Shows where the software suspects anomalies. When an overlay file is present, this is the real heatmap, not a placeholder.',
           'For final judgment always compare the part and the image.',
         ],
       },
@@ -562,6 +566,8 @@ export const HELP_ARTICLES = [
           'Recipe version — active inspection recipe (lighting, camera, limits).',
           'Model profile — which anomaly model is used for evaluation.',
           'Training / Models — capture good-part images, train PatchCore, promote candidates, and reactivate older trainings.',
+          'Decision thresholds — OK / review / NOK sensitivity per recipe (Process Engineer/Admin).',
+          'NOK samples — count of QA-confirmed defect images (not mixed into good-part training).',
           'Only Process Engineer or Admin may train; operators can read the history.',
         ],
       },
@@ -654,29 +660,36 @@ export const HELP_ARTICLES = [
   {
     id: 'decision-colors',
     category: 'decisions',
-    title: 'Traffic-light colors & decisions',
-    keywords: ['green', 'amber', 'red', 'pass', 'fail'],
-    summary: 'Meaning of green, amber, and red.',
+    title: 'Traffic lights: OK, review, NOK',
+    keywords: ['green', 'amber', 'red', 'pass', 'fail', 'ok', 'nok', 'i.o.'],
+    summary: 'Meaning of OK (green), review (amber), and NOK (red).',
     sections: [
       {
-        heading: 'Green (Pass)',
+        heading: 'Green — OK',
         paragraphs: [
-          'No relevant anomaly suspicion.',
+          'No relevant anomaly suspicion. Part is OK.',
           'Continue production per plant standard.',
         ],
       },
       {
-        heading: 'Amber (Review)',
+        heading: 'Amber — Review',
         paragraphs: [
           'Borderline — human re-check recommended.',
           'Do not automatically reject; follow QA rules.',
         ],
       },
       {
-        heading: 'Red (Fail)',
+        heading: 'Red — NOK',
         paragraphs: [
-          'Strong anomaly suspicion or defect class.',
+          'Strong anomaly suspicion, defect class, or QA confirmation.',
           'Hold/rework the part per process; involve QA.',
+        ],
+      },
+      {
+        heading: 'Thresholds in the HMI',
+        paragraphs: [
+          'Defaults: review from 0.55, NOK from 0.85. Process Engineer/Admin set values per recipe under Configuration.',
+          'QA “Anomaly confirmed” overrides the display to NOK regardless of score.',
         ],
       },
     ],
@@ -808,8 +821,8 @@ export const HELP_ARTICLES = [
         heading: 'Interpretation',
         paragraphs: [
           'The higher the value, the more the part deviates from the "good part" model.',
-          'From approx. 0.55: Review (amber). From approx. 0.85: Fail (red). Below: Pass (green).',
-          'Thresholds may vary slightly per recipe — the decision color is authoritative.',
+          'From the recipe threshold (default 0.55): Review (amber). From the NOK threshold (default 0.85): NOK (red). Below: OK (green).',
+          'Process engineers set thresholds in Configuration — the traffic-light decision is authoritative.',
         ],
       },
     ],
@@ -841,7 +854,9 @@ export const HELP_ARTICLES = [
     sections: [
       {
         heading: 'Confirm anomaly',
-        paragraphs: ['The system was correct — there is a real defect or relevant finding.'],
+        paragraphs: [
+          'The system was correct — real defect. The inspection is shown as NOK and the image is stored as a NOK sample.',
+        ],
       },
       {
         heading: 'False positive',

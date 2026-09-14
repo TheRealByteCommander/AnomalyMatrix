@@ -9,6 +9,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 from .auth_tokens import create_session_id, hash_password, verify_password
+from .decision import DEFAULT_THRESHOLDS, normalize_thresholds, validate_thresholds
 from .production import is_production
 
 try:
@@ -36,6 +37,8 @@ class CoreStore:
         self._sessions_file = self.data_root / "sessions.json"
         if not self.use_postgres:
             self._seed_json_fallback()
+        else:
+            self._ensure_schema_extensions()
 
     @property
     def use_postgres(self) -> bool:
@@ -64,7 +67,15 @@ class CoreStore:
         if not self._recipes_file.exists():
             self._recipes_file.write_text(
                 json.dumps(
-                    [{"recipe_id": "recipe-default", "name": "Default Seam Inspection", "recipe_version": "v1", "active": True}],
+                    [
+                        {
+                            "recipe_id": "recipe-default",
+                            "name": "Default Seam Inspection",
+                            "recipe_version": "v1",
+                            "active": True,
+                            "decision_thresholds": dict(DEFAULT_THRESHOLDS),
+                        }
+                    ],
                     indent=2,
                 ),
                 encoding="utf-8",
@@ -215,13 +226,77 @@ class CoreStore:
         sessions = [s for s in json.loads(self._sessions_file.read_text(encoding="utf-8")) if s.get("session_id") != session_id]
         self._sessions_file.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
 
+    def _ensure_schema_extensions(self) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    ALTER TABLE recipes
+                    ADD COLUMN IF NOT EXISTS decision_thresholds JSONB
+                    NOT NULL DEFAULT '{"amber": 0.55, "red": 0.85}'::jsonb
+                    """
+                )
+            conn.commit()
+
+    @staticmethod
+    def _with_thresholds(recipe: dict) -> dict:
+        item = dict(recipe)
+        item["decision_thresholds"] = normalize_thresholds(item.get("decision_thresholds"))
+        return item
+
     def list_recipes(self) -> list[dict]:
         if self.use_postgres:
             with self._connect() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("SELECT recipe_id, name, recipe_version, active FROM recipes ORDER BY recipe_id")
-                    return [dict(r) for r in cur.fetchall()]
-        return json.loads(self._recipes_file.read_text(encoding="utf-8"))
+                    cur.execute(
+                        "SELECT recipe_id, name, recipe_version, active, decision_thresholds FROM recipes ORDER BY recipe_id"
+                    )
+                    return [self._with_thresholds(dict(r)) for r in cur.fetchall()]
+        recipes = json.loads(self._recipes_file.read_text(encoding="utf-8"))
+        return [self._with_thresholds(item) for item in recipes]
+
+    def get_recipe(self, recipe_id: str) -> dict | None:
+        for recipe in self.list_recipes():
+            if recipe.get("recipe_id") == recipe_id:
+                return recipe
+        return None
+
+    def get_decision_thresholds(self, recipe_id: str) -> dict:
+        recipe = self.get_recipe(recipe_id)
+        if not recipe:
+            return dict(DEFAULT_THRESHOLDS)
+        return normalize_thresholds(recipe.get("decision_thresholds"))
+
+    def update_recipe_thresholds(self, recipe_id: str, *, amber: float, red: float) -> dict:
+        thresholds = validate_thresholds(amber, red)
+        if self.use_postgres:
+            with self._connect() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        """
+                        UPDATE recipes
+                        SET decision_thresholds = %s, updated_at = NOW()
+                        WHERE recipe_id = %s
+                        RETURNING recipe_id, name, recipe_version, active, decision_thresholds
+                        """,
+                        (Json(thresholds), recipe_id),
+                    )
+                    row = cur.fetchone()
+                conn.commit()
+                if not row:
+                    raise ValueError(f"Recipe not found: {recipe_id}")
+                return self._with_thresholds(dict(row))
+        recipes = json.loads(self._recipes_file.read_text(encoding="utf-8"))
+        found = None
+        for item in recipes:
+            if item.get("recipe_id") == recipe_id:
+                item["decision_thresholds"] = thresholds
+                found = item
+                break
+        if not found:
+            raise ValueError(f"Recipe not found: {recipe_id}")
+        self._recipes_file.write_text(json.dumps(recipes, indent=2), encoding="utf-8")
+        return self._with_thresholds(found)
 
     @staticmethod
     def _serialize_model(row: dict | None) -> dict | None:

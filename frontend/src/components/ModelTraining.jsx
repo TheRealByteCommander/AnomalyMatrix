@@ -50,6 +50,7 @@ export default function ModelTraining({
   const [active, setActive] = useState(null);
   const [memoryBank, setMemoryBank] = useState(null);
   const [samples, setSamples] = useState({ count: 0, recipe_id: 'recipe-default' });
+  const [nioSamples, setNioSamples] = useState({ count: 0, recipe_id: 'recipe-default' });
   const [recipeId, setRecipeId] = useState('recipe-default');
   const [captureCount, setCaptureCount] = useState(8);
   const [sampleCount, setSampleCount] = useState(12);
@@ -63,6 +64,7 @@ export default function ModelTraining({
     setActive(data.active || items.find((m) => m.status === 'active') || items[0] || null);
     setMemoryBank(data.memory_bank || null);
     setSamples(data.training_samples || { count: 0, recipe_id: recipeId });
+    setNioSamples(data.nio_samples || { count: 0, recipe_id: recipeId });
     onModelsChange?.(items);
     return data;
   }, [onModelsChange, recipeId]);
@@ -147,6 +149,11 @@ export default function ModelTraining({
           <label>{t('training.samplesOnDisk')}</label>
           <strong>{samples.count ?? 0}</strong>
           <p className="muted">{samples.recipe_id || recipeId}</p>
+        </div>
+        <div>
+          <label>{t('training.nioOnDisk')}</label>
+          <strong data-testid="nio-sample-count">{nioSamples.count ?? 0}</strong>
+          <p className="muted">{nioSamples.recipe_id || recipeId}</p>
         </div>
         <div>
           <label>{t('training.camera')}</label>

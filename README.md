@@ -99,7 +99,7 @@ Runbook: `docs/PRODUCTION_RUNBOOK.md` · Installation: `docs/INSTALLATION.md` ·
 | InfluxDB | 8086 | internal |
 | MinIO | 9000 / 9001 | internal |
 
-DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
+DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 
 ## API v1.2.0 (Auszug)
 
@@ -112,6 +112,8 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 ### Inspection & Ergebnisse
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`) — optional `camera_ids` (1–4)
 - `GET /api/v1/inspections/recent` (Alias: `/results/latest`)
+- `GET /api/v1/inspections/{id}` — Einzelprüfung inkl. QA-Override
+- `GET /api/v1/inspections/{id}/heatmap` — lokale Heatmap-PNG
 - `GET /api/v1/results/query` — Filter `camera_id` (jede View)
 - `GET /api/v1/results/trend-summary` — inkl. `by_camera` Drift
 - `POST /api/v1/edge/capture`, `POST /api/v1/ai/infer`
@@ -122,8 +124,9 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 - Details: `docs/MULTI_CAMERA.md`
 
 ### Catalog, Feedback, Audit
-- `GET /api/v1/recipes`, `GET /api/v1/models`
-- `POST /api/v1/feedback`, `GET /api/v1/feedback`
+- `GET /api/v1/recipes`, `PUT /api/v1/recipes/{id}/thresholds` — Ampelschwellen je Rezept
+- `GET /api/v1/models`
+- `POST /api/v1/feedback`, `GET /api/v1/feedback` — `confirm_anomaly` setzt n.i.O. und speichert n.i.O.-Muster
 - `GET /api/v1/audit/recent`
 
 ### Observability & Events

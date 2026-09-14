@@ -8,6 +8,7 @@ from ..contracts.envelope import success_envelope
 from ..core_store import CoreStore
 from ..patchcore_memory import inspect_memory_bank
 from ..rbac import require_permission, resolve_auth
+from ..nio_store import count_nio_images
 from ..training_service import (
     artifact_path_for_model,
     capture_good_part_samples,
@@ -237,5 +238,9 @@ def models_catalog_payload(store: CoreStore, *, recipe_id: str = "recipe-default
         "training_samples": {
             "recipe_id": recipe_id,
             "count": count_training_images(store.data_root, recipe_id),
+        },
+        "nio_samples": {
+            "recipe_id": recipe_id,
+            "count": count_nio_images(store.data_root, recipe_id),
         },
     }
