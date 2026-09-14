@@ -44,15 +44,16 @@ export default function ModelTraining({
   canTrain = false,
   canPromote = false,
   openHelp,
+  onSelectRecipe,
   onModelsChange,
 }) {
   const { t, locale } = useI18n();
   const [models, setModels] = useState([]);
   const [active, setActive] = useState(null);
   const [memoryBank, setMemoryBank] = useState(null);
-  const [samples, setSamples] = useState({ count: 0, recipe_id: 'recipe-default' });
-  const [nioSamples, setNioSamples] = useState({ count: 0, recipe_id: 'recipe-default' });
-  const [recipeId, setRecipeId] = useState('recipe-default');
+  const [samples, setSamples] = useState({ count: 0, recipe_id: selectedRecipeId || 'recipe-default' });
+  const [nioSamples, setNioSamples] = useState({ count: 0, recipe_id: selectedRecipeId || 'recipe-default' });
+  const recipeId = selectedRecipeId || 'recipe-default';
   const [captureCount, setCaptureCount] = useState(8);
   const [sampleCount, setSampleCount] = useState(12);
   const [busy, setBusy] = useState('');
@@ -85,15 +86,6 @@ export default function ModelTraining({
       cancelled = true;
     };
   }, [load, t]);
-
-  useEffect(() => {
-    if (selectedRecipeId) {
-      setRecipeId(selectedRecipeId);
-      return;
-    }
-    const first = recipes.find((r) => r.active === true || r.status === 'active') || recipes[0];
-    if (first?.recipe_id) setRecipeId(first.recipe_id);
-  }, [recipes, selectedRecipeId]);
 
   async function runAction(key, fn, successKey, vars) {
     setBusy(key);
@@ -174,8 +166,9 @@ export default function ModelTraining({
           {t('training.recipe')}
           <select
             value={recipeId}
-            onChange={(e) => setRecipeId(e.target.value)}
+            onChange={(e) => onSelectRecipe?.(e.target.value)}
             disabled={Boolean(busy)}
+            data-testid="training-recipe"
           >
             {recipeOptions.map((recipe) => (
               <option key={recipe.recipe_id} value={recipe.recipe_id}>

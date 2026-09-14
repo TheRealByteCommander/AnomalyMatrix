@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DashboardPage from './pages/DashboardPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
 import TrendsPage from './pages/TrendsPage';
@@ -10,6 +10,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import { useI18n } from './i18n/I18nProvider';
 import { SCREEN_HELP_ARTICLE, SCREEN_IDS, SCREEN_ORDER } from './i18n/screens';
 import { inspections as seed } from './data/sampleData';
+import { readStoredRecipeId, writeStoredRecipeId } from './recipeSelection';
 import { fetchAuthMe, fetchRecentInspections, logout } from './services';
 
 const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true';
@@ -27,6 +28,16 @@ export default function App() {
     categoryId: null,
     query: '',
   });
+  const [selectedRecipeId, setSelectedRecipeIdState] = useState(() => readStoredRecipeId());
+
+  const setSelectedRecipeId = useCallback((next) => {
+    setSelectedRecipeIdState((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next;
+      const resolved = String(value || '').trim();
+      writeStoredRecipeId(resolved);
+      return resolved;
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -112,6 +123,8 @@ export default function App() {
     goTo: setActive,
     apiOnline,
     openHelp,
+    selectedRecipeId,
+    setSelectedRecipeId,
   };
 
   const pages = {

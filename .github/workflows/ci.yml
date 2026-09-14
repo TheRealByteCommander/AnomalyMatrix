@@ -72,6 +72,7 @@ jobs:
         run: |
           npm ci --legacy-peer-deps
           npm audit --audit-level=high
+          npm run test:unit
           npm run smoke
 
   frontend-e2e:

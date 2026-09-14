@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { isRenderableHeatmap, mapApiInspection, submitFeedback } from '../services';
@@ -38,6 +38,12 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
   const [feedbackStatus, setFeedbackStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    setVerdict('needs_review');
+    setComment('');
+    setFeedbackStatus(null);
+  }, [selectedInspection?.id]);
+
   if (!selectedInspection) {
     return (
       <section className="page-grid">
@@ -62,7 +68,10 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
         inspectionId: selectedInspection.id,
         verdict,
         comment,
-        recipeVersion: selectedInspection.raw?.frame?.recipe_id ? 'v1' : 'v1',
+        recipeVersion:
+          selectedInspection.recipeVersion ||
+          selectedInspection.raw?.frame?.recipe_version ||
+          'v1',
         modelVersion: selectedInspection.modelVersion || 'v0',
       });
       if (result?.inspection && setInspections) {
@@ -92,9 +101,10 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
       <article className="card hero">
         <div>
           <p className="eyebrow">{t('inspectionDetail.eyebrow')}</p>
-          <h2>{selectedInspection.id}</h2>
+          <h2 data-testid="inspection-id">{selectedInspection.id}</h2>
           <p className="muted">
             {t('inspectionDetail.part')}: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}
+            {selectedInspection.recipeId ? ` · ${t('common.recipe')} ${selectedInspection.recipeId}` : ''}
             {selectedInspection.epc ? ` · EPC ${selectedInspection.epc}` : ''}
             {selectedInspection.processId ? ` · ${t('inspectionDetail.processId')} ${selectedInspection.processId}` : ''}
           </p>
@@ -118,12 +128,19 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
       <article className="card detail-grid">
         <div>
           <h3>{t('inspectionDetail.scoreTitle')}</h3>
-          <p className="score-big">{selectedInspection.score}</p>
+          <p className="score-big" data-testid="inspection-score">{selectedInspection.score}</p>
           <p className="muted">{t('inspectionDetail.defectLabel')}: {selectedInspection.defect}</p>
           <p className="muted">
             {t('inspectionDetail.decisionLabel')}:{' '}
-            <StatusBadge state={displayDecision}>{t(`decision.${displayDecision}`)}</StatusBadge>
+            <span data-testid="inspection-decision">
+              <StatusBadge state={displayDecision}>{t(`decision.${displayDecision}`)}</StatusBadge>
+            </span>
           </p>
+          {selectedInspection.recipeId ? (
+            <p className="muted" data-testid="inspection-recipe">
+              {t('common.recipe')}: {selectedInspection.recipeId}
+            </p>
+          ) : null}
           <p className="muted">
             {t('inspectionDetail.modelVersion')}: {selectedInspection.modelVersion || '—'}
           </p>
@@ -183,9 +200,9 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
       <article className="card">
         <h3>{t('inspectionDetail.feedbackTitle')}</h3>
         <p className="muted">{t('inspectionDetail.feedbackHint')}</p>
-        <form className="feedback-form" onSubmit={handleFeedbackSubmit}>
+          <form className="feedback-form" onSubmit={handleFeedbackSubmit} data-testid="qa-feedback-form">
           <label htmlFor="feedback-verdict">{t('inspectionDetail.verdictLabel')}</label>
-          <select id="feedback-verdict" value={verdict} onChange={(e) => setVerdict(e.target.value)}>
+          <select id="feedback-verdict" data-testid="qa-verdict" value={verdict} onChange={(e) => setVerdict(e.target.value)}>
             {VERDICT_KEYS.map((key) => (
               <option key={key} value={key}>{t(`inspectionDetail.verdicts.${key}`)}</option>
             ))}
@@ -198,7 +215,7 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
             onChange={(e) => setComment(e.target.value)}
             placeholder={t('common.optional')}
           />
-          <button type="submit" disabled={submitting}>
+          <button type="submit" data-testid="qa-submit" disabled={submitting}>
             {submitting ? t('inspectionDetail.submitting') : t('inspectionDetail.submit')}
           </button>
         </form>

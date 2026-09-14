@@ -53,6 +53,7 @@ export default function StationVisionSetup({ canConfigure, openHelp }) {
   const [busy, setBusy] = useState(false);
   const [cloneId, setCloneId] = useState('eol-line-2');
   const [importText, setImportText] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function reload() {
     const [p, r] = await Promise.all([
@@ -61,10 +62,14 @@ export default function StationVisionSetup({ canConfigure, openHelp }) {
     ]);
     setProfile(p);
     setRecs(r);
+    setLoadFailed(false);
   }
 
   useEffect(() => {
-    reload().catch(() => setNotice({ ok: false, message: t('vision.loadFailed') }));
+    reload().catch(() => {
+      setLoadFailed(true);
+      setNotice({ ok: false, message: t('vision.loadFailed') });
+    });
   }, []);
 
   function updateCam(index, patch) {
@@ -139,7 +144,9 @@ export default function StationVisionSetup({ canConfigure, openHelp }) {
     return (
       <article className="card" data-testid="vision-setup">
         <h3>{t('vision.title')}</h3>
-        <p className="muted">{t('vision.loading')}</p>
+        <p className={loadFailed ? 'error' : 'muted'}>
+          {loadFailed ? t('vision.loadFailed') : t('vision.loading')}
+        </p>
       </article>
     );
   }
