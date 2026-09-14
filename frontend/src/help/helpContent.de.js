@@ -507,7 +507,7 @@ export const HELP_ARTICLES = [
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Zeigt die Anomalie-Intensität des aktiven Modells auf dem Prüfbild. Hotspots sind Patch-Abstände zur trainierten Memory Bank. Ohne Bank ist die Überlagerung ein Kanten-Residual und als Nicht-Modell gekennzeichnet.',
+          'Zeigt die Anomalie-Intensität des aktiven Modells relativ zu den Nachprüfungs-/n.i.O.-Schwellen dieses Rezepts — nicht bildweise gestreckt. Bereiche deutlich unter der Nachprüfungsschwelle bleiben nah am Prüfbild; um die Schwelle herum gelb; ab n.i.O. heißrot. Ohne Bank ist die Überlagerung ein Kanten-Residual, ebenfalls an diese Schwellen gebunden, und als Nicht-Modell gekennzeichnet.',
           'Bildweite (ältere) Banken erzeugen weiterhin ein Modell-Residual zum nächsten Gutteil-Embedding; für Patch-Lokalisierung neu trainieren.',
           'Zur endgültigen Beurteilung immer Teil und Bild vergleichen.',
         ],
