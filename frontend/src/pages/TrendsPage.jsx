@@ -3,6 +3,7 @@ import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { fetchTrendSummary } from '../services';
 import { useI18n } from '../i18n/I18nProvider';
+import { SCREEN_IDS } from '../i18n/screens';
 
 function trendState(value) {
   if (value >= 0.85) return 'red';
@@ -10,7 +11,7 @@ function trendState(value) {
   return 'green';
 }
 
-export default function TrendsPage({ inspections, openHelp }) {
+export default function TrendsPage({ inspections, openHelp, goTo }) {
   const { t } = useI18n();
   const [summary, setSummary] = useState(null);
   const latest = inspections.slice(0, 10);
@@ -49,11 +50,15 @@ export default function TrendsPage({ inspections, openHelp }) {
     : t('trends.avgBadge', { value: avg.toFixed(2) });
 
   return (
-    <section className="page-grid">
-      <article className="card hero">
-        <div>
-          <p className="eyebrow">{t('trends.eyebrow')}</p>
-          <h2>{t('trends.title')}</h2>
+    <section className="page-grid" data-testid="trends-page">
+      <article className="page-intro">
+        {goTo ? (
+          <button type="button" className="text-btn" data-testid="settings-back" onClick={() => goTo(SCREEN_IDS.configuration)}>
+            {t('settings.back')}
+          </button>
+        ) : null}
+        <p className="eyebrow">{t('trends.eyebrow')}</p>
+        <h2>{t('trends.title')}</h2>
           <p className="muted">{t('trends.source')}: {sourceLabel}</p>
           {summary?.drifting_camera_id ? (
             <p className="muted">
@@ -63,7 +68,6 @@ export default function TrendsPage({ inspections, openHelp }) {
             </p>
           ) : null}
           <ContextHelp articleId="trends-overview" onOpen={openHelp} />
-        </div>
         <StatusBadge state={trendBadgeState}>{trendBadgeLabel}</StatusBadge>
       </article>
 

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
 import { resolveRecipeSelection } from '../recipeSelection';
+import { canShowHeatmapImage, formatAnomalyScore } from '../heatmapDisplay';
 import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary, fetchCameras, fetchWatchdog } from '../services';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
@@ -19,6 +20,7 @@ export default function DashboardPage({
   const { t, locale } = useI18n();
   const [runState, setRunState] = useState('idle');
   const [notice, setNotice] = useState(() => t('dashboard.ready'));
+  const [showMore, setShowMore] = useState(false);
   const [kpis, setKpis] = useState(hmiState.kpis);
   const [context, setContext] = useState({
     line: hmiState.line,
@@ -151,46 +153,51 @@ export default function DashboardPage({
     }
   }
 
+  const latest = inspections[0] || null;
+  const decision = latest?.decision || 'idle';
+  const needsQa = decision === 'red' || decision === 'amber';
   const statusLabel = trendStatus.warning
     ? t(`dashboard.statusTrend.${trendStatus.severity}`)
     : t('dashboard.statusOk');
-
-  const stateClass = runState === 'error' ? 'state-red' : runState === 'running' ? 'state-amber' : runState === 'success' ? 'state-green' : 'state-amber';
+  const camerasOnline = cameras.filter((cam) => cam.available !== false).length;
+  const recipeLabel = recipes.find((r) => r.recipe_id === recipeId)?.name || recipeId;
 
   return (
-    <section className="page-grid">
-      <article className="card hero">
-        <div>
-          <p className="eyebrow">{t('dashboard.eyebrow')}</p>
-          <h2>{context.line}</h2>
-          <p className="muted">
-            {t('common.recipe')} {recipeId || context.recipe} · {t('common.model')} {context.modelVersion}
-            {inspections[0]?.epc ? ` · EPC ${inspections[0].epc}` : ''}
-            {context.memoryBankKnown
-              ? ` · ${context.memoryBankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}`
-              : ''}
-          </p>
-          <ContextHelp articleId="dashboard-overview" onOpen={openHelp} />
-        </div>
+    <section className="home-page">
+      <article className={`home-hero decision-${decision}`}>
+        <p className="eyebrow">{t('dashboard.lastInspection')}</p>
+        <p className="home-decision" data-testid="home-decision">
+          {latest ? t(`decision.${decision}`) : t('dashboard.idleDecision')}
+        </p>
+        <p className="home-score" data-testid="home-score">
+          {latest ? formatAnomalyScore(latest.score) : '—'}
+        </p>
+        <p className="muted home-meta">
+          {latest ? latest.id : t('dashboard.noResult')}
+          {latest?.epc ? ` · EPC ${latest.epc}` : ''}
+          {` · ${t('common.model')} ${context.modelVersion}`}
+        </p>
         <StatusBadge state={trendStatus.warning ? trendStatus.severity : 'green'}>{statusLabel}</StatusBadge>
+        <ContextHelp articleId="dashboard-overview" onOpen={openHelp} />
       </article>
 
-      {watchdog ? (
-        <article className="card kpi-grid" data-testid="endurance-watchdog">
-          <div>
-            <label>{t('storage.watchdog')}</label>
-            <StatusBadge state={watchdog.gap_detected ? 'amber' : 'green'}>{watchdog.status}</StatusBadge>
+      <div className="home-main">
+        {canShowHeatmapImage(latest) ? (
+          <button
+            type="button"
+            className="home-heatmap"
+            onClick={() => goTo(SCREEN_IDS.inspectionDetail)}
+            aria-label={t('inspectionDetail.heatmapAria')}
+          >
+            <img src={latest.heatmapUri} alt={t('inspectionDetail.heatmapAria')} />
+          </button>
+        ) : (
+          <div className="home-heatmap home-heatmap-empty">
+            <span className="muted">{t('inspectionDetail.heatmapPlaceholder')}</span>
           </div>
-          <div><label>{t('dashboard.captures')}</label><strong>{watchdog.capture_count ?? 0}</strong></div>
-          <div><label>{t('dashboard.lastEpc')}</label><strong>{watchdog.last_epc || inspections[0]?.epc || '—'}</strong></div>
-          <div><label>{t('dashboard.gaps')}</label><strong>{watchdog.gap_count ?? 0}</strong></div>
-        </article>
-      ) : null}
+        )}
 
-      <article className="card run-panel">
-        <div>
-          <h3>{t('dashboard.actionTitle')}</h3>
-          <p className="muted">{t('dashboard.actionHint')}</p>
+        <div className="home-controls">
           {recipes.length ? (
             <label className="recipe-select-label">
               {t('common.recipe')}
@@ -206,86 +213,100 @@ export default function DashboardPage({
                 ))}
               </select>
             </label>
-          ) : null}
-        </div>
-        <div className="run-actions">
-          <button type="button" className="tab active" data-testid="dashboard-run" onClick={handleRunInspection} disabled={runState === 'running'}>
+          ) : (
+            <p className="muted">{recipeLabel}</p>
+          )}
+
+          <button
+            type="button"
+            className="primary home-run"
+            data-testid="dashboard-run"
+            onClick={handleRunInspection}
+            disabled={runState === 'running'}
+          >
             {runState === 'running' ? t('dashboard.running') : t('dashboard.run')}
           </button>
-          <button type="button" className="tab" data-testid="dashboard-open-detail" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
-            {t('dashboard.openDetail')}
-          </button>
-          <button type="button" className="tab" data-testid="dashboard-training" onClick={() => goTo(SCREEN_IDS.configuration)}>
-            {t('training.title')}
-          </button>
-          <a
-            className="tab"
-            href="/heatmap"
-            target="amx-heatmap-display"
-            rel="noopener noreferrer"
-            data-testid="dashboard-heatmap-display"
-          >
-            {t('heatmapDisplay.openMonitor')}
-          </a>
-          <StatusBadge state={stateClass.replace('state-', '')}>{notice}</StatusBadge>
-        </div>
-      </article>
 
-      <article className="card kpi-grid">
-        <div><label>{t('dashboard.kpiCycle')}</label><strong>{kpis.cycleMsP95} ms</strong></div>
-        <div><label>{t('dashboard.kpiAnomalyRate')}</label><strong>{anomalyRate}%</strong></div>
-        <div><label>{t('dashboard.kpiQueueLag')}</label><strong>{kpis.queueLagMs} ms</strong></div>
-        <div><label>{t('dashboard.kpiOpcError')}</label><strong>{kpis.opcUaPublishErrorRate}%</strong></div>
-      </article>
+          <p className="muted home-notice" role="status">{notice}</p>
 
-      <article className="card">
-        <h3>{t('dashboard.camerasTitle')}</h3>
-        {!cameras.length ? (
-          <p className="muted">{t('configuration.camerasEmpty')}</p>
-        ) : (
-          <ul className="camera-select-list">
-            {cameras.map((cam) => (
-              <li key={cam.camera_id}>
-                <strong>{cam.label || cam.camera_id}</strong>
-                {' '}
-                <StatusBadge state={cam.available === false ? 'red' : 'green'}>
-                  {cam.available === false ? t('configuration.camerasOffline') : t('configuration.camerasOnline')}
-                </StatusBadge>
-                {cam.selected ? <span className="muted"> · {t('configuration.camerasSelected')}</span> : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </article>
-
-      <article className="card">
-        <h3>{t('dashboard.latestTitle')}</h3>
-        <div className="table">
-          {inspections.map((i) => (
-            <button
-              key={i.id}
-              type="button"
-              className="row row-btn"
-              onClick={() => {
-                setSelectedInspectionId(i.id);
-                goTo(SCREEN_IDS.inspectionDetail);
-              }}
-            >
-              <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
-              <span>{i.id}</span>
-              <span>
-                {i.epc ? `EPC ${i.epc}` : i.viewCount > 1
-                  ? `${i.viewCount}×cam`
-                  : (i.cameraIds?.[0] || i.part)}
-              </span>
-              <StatusBadge state={i.decision}>
-                {t(`decision.${i.decision}`)}
-                {i.qaOverride === 'nio' ? ` · ${t('inspectionDetail.verdicts.confirm_anomaly')}` : ''}
-              </StatusBadge>
+          <div className="home-secondary">
+            <button type="button" className="tab" data-testid="dashboard-open-detail" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
+              {needsQa ? t('dashboard.qaNeeded') : t('dashboard.openDetail')}
             </button>
-          ))}
+            <button type="button" className="tab" data-testid="dashboard-training" onClick={() => goTo(SCREEN_IDS.training)}>
+              {t('nav.training')}
+            </button>
+            <a
+              className="tab"
+              href="/heatmap"
+              target="amx-heatmap-display"
+              rel="noopener noreferrer"
+              data-testid="dashboard-heatmap-display"
+            >
+              {t('heatmapDisplay.openMonitor')}
+            </a>
+          </div>
         </div>
-      </article>
+      </div>
+
+      <div className="home-status-row">
+        {watchdog ? (
+          <div data-testid="endurance-watchdog">
+            <span className="muted">{t('storage.watchdog')}</span>
+            <StatusBadge state={watchdog.gap_detected ? 'amber' : 'green'}>{watchdog.status}</StatusBadge>
+          </div>
+        ) : null}
+        <div>
+          <span className="muted">{t('dashboard.camerasTitle')}</span>
+          <strong>{cameras.length ? `${camerasOnline}/${cameras.length}` : '—'}</strong>
+        </div>
+        <button type="button" className="text-btn" onClick={() => setShowMore((v) => !v)}>
+          {showMore ? t('dashboard.less') : t('dashboard.more')}
+        </button>
+      </div>
+
+      {showMore ? (
+        <article className="home-more">
+          <div className="kpi-grid">
+            <div><label>{t('dashboard.kpiCycle')}</label><strong>{kpis.cycleMsP95} ms</strong></div>
+            <div><label>{t('dashboard.kpiAnomalyRate')}</label><strong>{anomalyRate}%</strong></div>
+            <div><label>{t('dashboard.kpiQueueLag')}</label><strong>{kpis.queueLagMs} ms</strong></div>
+            <div><label>{t('dashboard.kpiOpcError')}</label><strong>{kpis.opcUaPublishErrorRate}%</strong></div>
+          </div>
+          {cameras.length ? (
+            <ul className="camera-select-list">
+              {cameras.map((cam) => (
+                <li key={cam.camera_id}>
+                  <strong>{cam.label || cam.camera_id}</strong>
+                  {' '}
+                  <StatusBadge state={cam.available === false ? 'red' : 'green'}>
+                    {cam.available === false ? t('configuration.camerasOffline') : t('configuration.camerasOnline')}
+                  </StatusBadge>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {inspections.length ? (
+            <div className="simple-list">
+              {inspections.slice(0, 5).map((i) => (
+                <button
+                  key={i.id}
+                  type="button"
+                  className="simple-row"
+                  onClick={() => {
+                    setSelectedInspectionId(i.id);
+                    goTo(SCREEN_IDS.inspectionDetail);
+                  }}
+                >
+                  <span>{new Date(i.timestamp).toLocaleTimeString()}</span>
+                  <span className="muted">{i.id}</span>
+                  <StatusBadge state={i.decision}>{t(`decision.${i.decision}`)}</StatusBadge>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </article>
+      ) : null}
     </section>
   );
 }

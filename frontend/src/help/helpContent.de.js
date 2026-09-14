@@ -219,11 +219,11 @@ export const HELP_ARTICLES = [
       {
         heading: 'Hauptnavigation',
         paragraphs: [
-          'Dashboard — Prüfungen starten und letzte Ergebnisse sehen.',
-          'Inspection Detail — Einzelprüfung mit Score, Heatmap und QA-Feedback.',
-          'Trends — Verlauf und Kennzahlen über mehrere Prüfungen.',
-          'Configuration — Aktives Rezept, Modell und Lizenzstatus (nur Anzeige).',
-          'Hilfe & FAQ — diese Wissensdatenbank.',
+          'Betrieb — Prüfung starten und letztes Ergebnis sehen.',
+          'Qualität — Score, Heatmap und QA-Feedback.',
+          'Training — Gutteile erfassen und Modelle aktivieren.',
+          'Einstellungen — Rezepte, Schwellen, Kameras, Trends, Lizenz.',
+          'Hilfe über das Fragezeichen oder Einstellungen → Hilfe.',
         ],
       },
       {
@@ -247,10 +247,10 @@ export const HELP_ARTICLES = [
       {
         heading: 'Schritt für Schritt',
         paragraphs: [
-          '1. Dashboard öffnen und Linienstatus prüfen (grün = bereit).',
-          '2. „Run Inspection Pipeline“ starten und auf die Meldung warten.',
-          '3. Ergebnis in „Latest inspections“ prüfen — Farbe und Uhrzeit beachten.',
-          '4. Bei amber oder rot: Zeile anklicken → Inspection Detail öffnen.',
+          '1. Betrieb öffnen und Status prüfen (grün = i.O. / bereit).',
+          '2. „Prüfen“ starten und auf das Ergebnis warten.',
+          '3. Entscheidung, Score und Heatmap direkt auf Betrieb prüfen.',
+          '4. Bei Nachprüfung oder n.i.O.: Qualität öffnen und QA bestätigen.',
           '5. Rot oder unklar: QA / Schichtleitung hinzuziehen; Teil ggf. sperren laut Werksregel.',
         ],
       },

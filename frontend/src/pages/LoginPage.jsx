@@ -52,7 +52,7 @@ export default function LoginPage({ onSuccess }) {
           />
         </label>
         {error ? <StatusBadge state="red">{error}</StatusBadge> : null}
-        <button type="submit" className="tab active" data-testid="login-submit" disabled={loading}>
+        <button type="submit" className="primary" data-testid="login-submit" disabled={loading}>
           {loading ? t('login.submitting') : t('login.submit')}
         </button>
       </form>

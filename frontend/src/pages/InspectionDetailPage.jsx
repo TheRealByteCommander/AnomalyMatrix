@@ -31,7 +31,13 @@ function HeatmapBlock({ uri, placeholder, kind, t, aria, fallback }) {
   );
 }
 
-export default function InspectionDetailPage({ selectedInspection, setInspections, openHelp }) {
+export default function InspectionDetailPage({
+  selectedInspection,
+  setInspections,
+  inspections = [],
+  setSelectedInspectionId,
+  openHelp,
+}) {
   const { t } = useI18n();
   const [verdict, setVerdict] = useState('needs_review');
   const [comment, setComment] = useState('');
@@ -97,20 +103,18 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
   const thresholds = selectedInspection.thresholds || {};
 
   return (
-    <section className="page-grid">
-      <article className="card hero">
-        <div>
-          <p className="eyebrow">{t('inspectionDetail.eyebrow')}</p>
-          <h2 data-testid="inspection-id">{selectedInspection.id}</h2>
-          <p className="muted">
-            {t('inspectionDetail.part')}: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}
-            {selectedInspection.recipeId ? ` · ${t('common.recipe')} ${selectedInspection.recipeId}` : ''}
-            {selectedInspection.epc ? ` · EPC ${selectedInspection.epc}` : ''}
-            {selectedInspection.processId ? ` · ${t('inspectionDetail.processId')} ${selectedInspection.processId}` : ''}
-          </p>
-          <ContextHelp articleId="inspection-detail" onOpen={openHelp} />
-        </div>
-        <StatusBadge state={displayDecision}>{passFail}</StatusBadge>
+    <section className="page-grid quality-page">
+      <article className={`home-hero decision-${displayDecision}`}>
+        <p className="eyebrow">{t('inspectionDetail.eyebrow')}</p>
+        <p className="home-decision">{passFail}</p>
+        <h2 data-testid="inspection-id">{selectedInspection.id}</h2>
+        <p className="muted">
+          {t('inspectionDetail.part')}: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}
+          {selectedInspection.recipeId ? ` · ${t('common.recipe')} ${selectedInspection.recipeId}` : ''}
+          {selectedInspection.epc ? ` · EPC ${selectedInspection.epc}` : ''}
+          {selectedInspection.processId ? ` · ${t('inspectionDetail.processId')} ${selectedInspection.processId}` : ''}
+        </p>
+        <ContextHelp articleId="inspection-detail" onOpen={openHelp} />
       </article>
 
       {qaNio ? (
@@ -197,7 +201,30 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
         </article>
       )}
 
-      <article className="card">
+      {inspections.length ? (
+        <article>
+          <h3>{t('dashboard.latestTitle')}</h3>
+          <div className="simple-list">
+            {inspections.slice(0, 8).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={item.id === selectedInspection.id ? 'simple-row active' : 'simple-row'}
+                onClick={() => setSelectedInspectionId?.(item.id)}
+              >
+                <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
+                <span className="muted">{item.id}</span>
+                <StatusBadge state={item.decision}>
+                  {t(`decision.${item.decision}`)}
+                  {item.qaOverride === 'nio' ? ` · ${t('inspectionDetail.verdicts.confirm_anomaly')}` : ''}
+                </StatusBadge>
+              </button>
+            ))}
+          </div>
+        </article>
+      ) : null}
+
+      <article>
         <h3>{t('inspectionDetail.feedbackTitle')}</h3>
         <p className="muted">{t('inspectionDetail.feedbackHint')}</p>
           <form className="feedback-form" onSubmit={handleFeedbackSubmit} data-testid="qa-feedback-form">
