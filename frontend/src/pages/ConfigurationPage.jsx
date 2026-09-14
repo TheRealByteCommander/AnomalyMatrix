@@ -89,20 +89,34 @@ export default function ConfigurationPage({ openHelp }) {
   const licenseState = license?.active ? 'green' : 'amber';
 
   function handleRecipesChange(saved, action) {
-    setRecipes((prev) => {
-      if (action === 'delete') {
+    if (action === 'delete') {
+      const deletedId = saved?.recipe_id || saved?.recipe?.recipe_id;
+      const fallbackId = saved?.activated_fallback;
+      setRecipes((prev) =>
+        prev
+          .filter((item) => item.recipe_id !== deletedId)
+          .map((item) =>
+            item.recipe_id === fallbackId ? { ...item, active: true, status: 'active' } : item
+          )
+      );
+      setSelectedRecipeId((prev) => {
+        if (fallbackId) return fallbackId;
+        if (prev && prev !== deletedId) return prev;
+        return '';
+      });
+    } else {
+      setRecipes((prev) => {
         const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
-        const next = rest.find((r) => r.active === true || r.status === 'active') || rest[0];
-        setSelectedRecipeId(next?.recipe_id || '');
-        return rest;
-      }
-      const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
-      const merged = saved.active ? rest.map((item) => ({ ...item, active: false, status: 'inactive' })) : rest;
-      return [saved, ...merged].sort((a, b) => String(a.recipe_id).localeCompare(String(b.recipe_id)));
-    });
-    if (action !== 'delete' && saved?.recipe_id) {
-      setSelectedRecipeId(saved.recipe_id);
+        const merged = saved.active ? rest.map((item) => ({ ...item, active: false, status: 'inactive' })) : rest;
+        return [saved, ...merged].sort((a, b) => String(a.recipe_id).localeCompare(String(b.recipe_id)));
+      });
+      if (saved?.recipe_id) setSelectedRecipeId(saved.recipe_id);
     }
+    fetchRecipes()
+      .then((data) => {
+        if (Array.isArray(data?.items)) setRecipes(data.items);
+      })
+      .catch(() => {});
   }
 
   const selectionValid = selected.length >= MIN_CAMERAS && selected.length <= maxCameras;

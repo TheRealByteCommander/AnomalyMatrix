@@ -162,8 +162,8 @@ export default function RecipeManager({
     setBusy(true);
     setNotice(null);
     try {
-      await deleteRecipe(recipeId, { confirm: true, confirmRecipeId: recipeId });
-      onRecipesChange?.(selected, 'delete');
+      const result = await deleteRecipe(recipeId, { confirm: true, confirmRecipeId: recipeId });
+      onRecipesChange?.(result, 'delete');
       closeDelete();
       setNotice({ ok: true, message: t('recipes.deleted') });
     } catch (err) {
