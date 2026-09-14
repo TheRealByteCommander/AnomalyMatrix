@@ -151,6 +151,7 @@ def _run_single_view(
         gray,
         anomaly_score,
         anomaly_map=anomaly_map,
+        thresholds=thresholds,
     )
     encoded = encode_frame(frame_dict, image_format=image_format, jpeg_quality=jpeg_quality)
     png_bytes = png_bytes_from_frame(frame_dict, data_root=data_root)

@@ -78,6 +78,93 @@ def _bind(tmp_path, monkeypatch, *, provider: str = "patchcore"):
     return store, repo
 
 
+def _decode_bgr(png: bytes) -> np.ndarray:
+    overlay = cv2.imdecode(np.frombuffer(png, dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert overlay is not None
+    return overlay
+
+
+def _red_orange_fraction(bgr: np.ndarray) -> float:
+    """Share of pixels that look like hot red/orange (not yellow, not gray)."""
+    b = bgr[:, :, 0].astype(np.int16)
+    g = bgr[:, :, 1].astype(np.int16)
+    r = bgr[:, :, 2].astype(np.int16)
+    hot = (r > 150) & (b < 80) & (r > g + 25)
+    return float(np.mean(hot))
+
+
+def _mean_abs_diff(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.mean(np.abs(a.astype(np.float32) - b.astype(np.float32))))
+
+
+def test_low_score_spatial_overlay_is_not_red_washed():
+    """i.O. score << amber must not fill the colormap just because the map has contrast."""
+    gray = np.full((64, 64), 90, dtype=np.uint8)
+    amap = np.full((64, 64), 0.010, dtype=np.float32)
+    amap[12:52, 12:52] = 0.040
+    amap[24:40, 24:40] = 0.0534
+    score = 0.0534
+    amber, red = 0.14, 0.2
+    png = generate_heatmap_png(gray, score, anomaly_map=amap, amber=amber, red=red)
+    overlay = _decode_bgr(png)
+    original = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    assert _red_orange_fraction(overlay) < 0.02
+    assert _mean_abs_diff(overlay, original) < 12.0
+    assert _colorfulness(overlay) < 8.0
+
+
+def test_high_score_spatial_overlay_has_red_hotspots():
+    gray = np.full((64, 64), 90, dtype=np.uint8)
+    amap = np.full((64, 64), 0.02, dtype=np.float32)
+    amap[20:36, 20:36] = 0.90
+    score = 0.72
+    amber, red = 0.14, 0.2
+    png = generate_heatmap_png(gray, score, anomaly_map=amap, amber=amber, red=red)
+    overlay = _decode_bgr(png)
+    original = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    hotspot = overlay[20:36, 20:36]
+    quiet = overlay[2:14, 2:14]
+
+    assert _red_orange_fraction(hotspot) > 0.35
+    assert _red_orange_fraction(quiet) < 0.05
+    assert _mean_abs_diff(hotspot, original[20:36, 20:36]) > 40.0
+    assert _mean_abs_diff(quiet, original[2:14, 2:14]) < 12.0
+    assert _colorfulness(hotspot) > _colorfulness(quiet) * 3.0
+
+
+def test_low_score_residual_overlay_is_not_red_washed():
+    gray = _defective_part()
+    png = generate_heatmap_png(gray, 0.0534, anomaly_map=None, amber=0.14, red=0.2)
+    overlay = _decode_bgr(png)
+    original = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    assert _red_orange_fraction(overlay) < 0.02
+    assert _mean_abs_diff(overlay, original) < 15.0
+
+
+def test_inspection_passes_recipe_thresholds_into_heatmap(tmp_path, monkeypatch):
+    _bind(tmp_path, monkeypatch, provider="patchcore")
+    captured: dict = {}
+    real = generate_heatmap_png
+
+    def _wrap(gray, anomaly_score, **kwargs):
+        captured["anomaly_score"] = anomaly_score
+        captured["kwargs"] = dict(kwargs)
+        return real(gray, anomaly_score, **kwargs)
+
+    monkeypatch.setattr("app.main.generate_heatmap_png", _wrap)
+    updated = client.put(
+        "/api/v1/recipes/recipe-default/thresholds",
+        json={"amber": 0.14, "red": 0.2},
+        headers=ENGINEER,
+    )
+    assert updated.status_code == 200
+
+    run = client.post("/api/v1/inspections/run", json={"recipe_id": "recipe-default"})
+    assert run.status_code == 200
+    assert captured.get("kwargs", {}).get("thresholds") == {"amber": 0.14, "red": 0.2}
+
+
 def test_patch_heatmap_hotspot_on_defect_not_edges():
     goods = [_good_part(seed=i) for i in range(8)]
     bank = build_memory_bank(goods)
@@ -101,7 +188,7 @@ def test_patch_heatmap_hotspot_on_defect_not_edges():
     interior = float(amap[y0 + 4 : y1 - 4, x0 + 4 : x1 - 4].mean())
     assert interior > quiet_mean * 1.8
 
-    png = generate_heatmap_png(defect, score, anomaly_map=amap)
+    png = generate_heatmap_png(defect, score, anomaly_map=amap, amber=0.14, red=0.2)
     assert png.startswith(b"\x89PNG")
     overlay = cv2.imdecode(np.frombuffer(png, dtype=np.uint8), cv2.IMREAD_COLOR)
     assert overlay is not None
@@ -138,7 +225,7 @@ def test_new_bank_roundtrip_is_patch_grid(tmp_path):
 
 def test_residual_heatmap_is_last_resort_without_bank():
     gray = _defective_part()
-    png = generate_heatmap_png(gray, 0.8, anomaly_map=None)
+    png = generate_heatmap_png(gray, 0.8, anomaly_map=None, amber=0.14, red=0.2)
     assert png.startswith(b"\x89PNG")
 
 

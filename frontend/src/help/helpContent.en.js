@@ -507,7 +507,7 @@ export const HELP_ARTICLES = [
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Shows anomaly intensity from the active model on the inspection image. Hotspots mark patch distances to the trained memory bank. Without a bank the overlay is a high-frequency residual and is labeled as non-model.',
+          'Shows anomaly intensity from the active model, relative to this recipe’s review/NOK thresholds — not auto-stretched per image. Regions well below the review threshold stay close to the raw image; around review they turn amber; at or above NOK they are hot red. Without a bank the overlay is a high-frequency residual, still gated by those thresholds, and is labeled as non-model.',
           'Image-level (legacy) banks still produce a model residual versus the nearest good-part embedding; retrain for patch-grid localization.',
           'For final judgment always compare the part and the image.',
         ],
