@@ -144,6 +144,9 @@ export default function ModelTraining({
             {bankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}
           </StatusBadge>
           <p className="muted">{memoryBank?.path || t('training.bankMissing')}</p>
+          {bankLoaded && memoryBank?.localization_ready === false ? (
+            <p className="muted">{t('training.bankLegacyLayout')}</p>
+          ) : null}
         </div>
         <div>
           <label>{t('training.samplesOnDisk')}</label>

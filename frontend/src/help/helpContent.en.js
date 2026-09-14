@@ -47,7 +47,7 @@ export const HELP_ARTICLES = [
           'Trigger inspections (manually on the dashboard, automatically via PLC trigger, or OPC UA method).',
           'Capture images, score with the AI model, store results, and report to the machine.',
           'On red: stop and reject signals to the PLC (StopLineRequest, RejectPart).',
-          'Operator HMI: latest inspections, detail with score and heatmap preview.',
+          'Operator HMI: latest inspections, detail with score and heatmap.',
           'QA feedback: confirm anomaly, mark false positive, or request review.',
           'Trends and KPIs: anomaly rate, cycle times, OPC UA error rate.',
         ],
@@ -322,7 +322,8 @@ export const HELP_ARTICLES = [
         heading: 'Why good parts only?',
         paragraphs: [
           'AnomalyMatrix learns the nominal state from good-part (i.O.) references. Defective parts must not go into training.',
-          'Without a real memory bank, scoring falls back to OpenCV/hash — shown as the Memory bank status.',
+          'Without a real memory bank, scoring falls back to OpenCV/hash — shown as the Memory bank status. The heatmap is then a high-frequency residual, not a model overlay.',
+          'Legacy image-level banks still load; retrain and promote once for a patch heatmap on the defect region.',
         ],
       },
       {
@@ -506,7 +507,8 @@ export const HELP_ARTICLES = [
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Shows where the software suspects anomalies. When an overlay file is present, this is the real heatmap, not a placeholder.',
+          'Shows anomaly intensity from the active model on the inspection image. Hotspots mark patch distances to the trained memory bank. Without a bank the overlay is a high-frequency residual and is labeled as non-model.',
+          'Image-level (legacy) banks still produce a model residual versus the nearest good-part embedding; retrain for patch-grid localization.',
           'For final judgment always compare the part and the image.',
         ],
       },

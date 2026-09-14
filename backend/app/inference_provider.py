@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import base64
 import hashlib
@@ -18,6 +18,19 @@ class InferenceOutput:
     model_version: str
     provider: str
     defect_class: str = "none"
+    heatmap_kind: str = "residual"
+    anomaly_map: np.ndarray | None = field(default=None, repr=False, compare=False)
+
+    def to_public_dict(self) -> dict:
+        return {
+            "anomaly_score": self.anomaly_score,
+            "status": self.status,
+            "heatmap_uri": self.heatmap_uri,
+            "model_version": self.model_version,
+            "provider": self.provider,
+            "defect_class": self.defect_class,
+            "heatmap_kind": self.heatmap_kind,
+        }
 
 
 class InferenceProvider(ABC):
@@ -99,6 +112,7 @@ class StubInferenceProvider(InferenceProvider):
             model_version="patchcore-mvp-v0",
             provider="stub",
             defect_class="surface_defect" if is_anomaly else "none",
+            heatmap_kind="residual",
         )
 
 
@@ -115,14 +129,16 @@ class OpenCvReadyInferenceProvider(InferenceProvider):
             model_version="opencv-ready-v1",
             provider="opencv_ready",
             defect_class="edge_burr" if is_anomaly else "none",
+            heatmap_kind="residual",
         )
 
 
 class PatchCoreInferenceProvider(InferenceProvider):
-    """PatchCore with optional trained memory bank (embedding distance)."""
+    """PatchCore with optional trained memory bank (patch-grid distance)."""
 
     def __init__(self) -> None:
         self._bank: np.ndarray | None = None
+        self._bank_meta: dict = {}
         self._model_version = "patchcore-v1"
         self._load_memory_bank()
 
@@ -137,10 +153,12 @@ class PatchCoreInferenceProvider(InferenceProvider):
             return
         bank, meta = load_memory_bank(path)
         self._bank = bank
+        self._bank_meta = meta
         self._model_version = meta.get("model_version", "patchcore-trained")
 
     def infer(self, frame: dict) -> InferenceOutput:
-        score = self._patchcore_score(frame)
+        gray = _frame_grayscale(frame)
+        score, anomaly_map, heatmap_kind = self._score_and_map(gray, frame)
         is_anomaly = score >= 0.6
         defect = "seam_void" if score >= 0.8 else ("edge_burr" if is_anomaly else "none")
         return InferenceOutput(
@@ -150,24 +168,28 @@ class PatchCoreInferenceProvider(InferenceProvider):
             model_version=self._model_version,
             provider="patchcore",
             defect_class=defect,
+            heatmap_kind=heatmap_kind,
+            anomaly_map=anomaly_map,
         )
 
-    def _patchcore_score(self, frame: dict) -> float:
+    def _score_and_map(self, gray: np.ndarray, frame: dict) -> tuple[float, np.ndarray | None, str]:
         if self._bank is not None:
-            from .patchcore_memory import distance_to_anomaly_score, extract_embedding, min_distance_score
+            from .patchcore_memory import infer_spatial
 
-            gray = _frame_grayscale(frame)
-            features = extract_embedding(gray)
-            distance = min_distance_score(features, self._bank)
-            bank_score = distance_to_anomaly_score(distance)
-            return bank_score
+            return infer_spatial(gray, self._bank, self._bank_meta)
 
-        cv_score = _opencv_texture_score(frame)
+        cv_score = _opencv_texture_score_from_gray(gray)
         meta_score = _hash_score(frame, salt="patchcore-bank-")
         if cv_score is None:
-            return meta_score
-        combined = 0.65 * cv_score + 0.35 * meta_score
-        return round(min(1.0, combined), 4)
+            score = meta_score
+        else:
+            score = round(min(1.0, 0.65 * cv_score + 0.35 * meta_score), 4)
+        return score, None, "residual"
+
+    def _patchcore_score(self, frame: dict) -> float:
+        gray = _frame_grayscale(frame)
+        score, _, _ = self._score_and_map(gray, frame)
+        return score
 
 
 def get_inference_provider() -> InferenceProvider:
