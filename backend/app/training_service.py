@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import base64
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 
-from .patchcore_memory import build_memory_bank, save_memory_bank
+from .patchcore_memory import active_memory_bank_path, build_memory_bank, save_memory_bank
 from .production import is_production
-from .storage_minio import decode_png_bytes, list_training_image_bytes, load_local_training_images
+from .storage_minio import decode_png_bytes, list_training_image_bytes, load_local_training_images, store_raw_frame
 
 
 def _synthetic_good_images(recipe_id: str, *, count: int = 12, size: int = 128) -> list[np.ndarray]:
@@ -22,25 +24,130 @@ def _synthetic_good_images(recipe_id: str, *, count: int = 12, size: int = 128) 
     return images
 
 
-def collect_training_images(*, data_root: Path, recipe_id: str, sample_count: int) -> tuple[list[np.ndarray], str]:
-    images: list[np.ndarray] = []
-    source = "synthetic"
+def training_images_dir(data_root: Path, recipe_id: str) -> Path:
+    return Path(data_root) / "training-images" / recipe_id
 
+
+def count_training_images(data_root: Path, recipe_id: str) -> int:
+    folder = training_images_dir(data_root, recipe_id)
+    if not folder.exists():
+        return 0
+    return len(list(folder.glob("*.png")))
+
+
+def collect_training_images(*, data_root: Path, recipe_id: str, sample_count: int) -> tuple[list[np.ndarray], str]:
+    """Prefer explicit Gutteil captures, then MinIO raw frames, else synthetic."""
+    images = load_local_training_images(data_root, recipe_id, limit=sample_count)
+    if images:
+        return images[:sample_count], "local_files"
+
+    images = []
     for blob in list_training_image_bytes(recipe_id=recipe_id, limit=sample_count):
         decoded = decode_png_bytes(blob)
         if decoded is not None:
             images.append(decoded)
+    if images:
+        return images[:sample_count], "minio_raw"
 
-    if not images:
-        images = load_local_training_images(data_root, recipe_id, limit=sample_count)
-        if images:
-            source = "local_files"
+    return _synthetic_good_images(recipe_id, count=sample_count)[:sample_count], "synthetic_fallback"
 
-    if not images:
-        images = _synthetic_good_images(recipe_id, count=sample_count)
-        source = "synthetic_fallback"
 
-    return images[:sample_count], source
+def set_active_memory_bank(data_root: Path, artifact_path: str | Path | None) -> str | None:
+    """Point active_memory_bank.npz at an existing artifact. Never deletes the source .npz."""
+    active_link = active_memory_bank_path(data_root)
+    active_link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        active_link.unlink(missing_ok=True)
+    except OSError:
+        pass
+    if artifact_path is None:
+        return None
+    source = Path(artifact_path)
+    if not source.exists():
+        raise FileNotFoundError(f"Memory-bank artifact not found: {source}")
+    try:
+        target = source.name if source.parent.resolve() == active_link.parent.resolve() else source
+        active_link.symlink_to(target)
+    except OSError:
+        import shutil
+
+        shutil.copy2(source, active_link)
+    return str(active_link)
+
+
+def artifact_path_for_model(model: dict | None) -> Path | None:
+    if not model:
+        return None
+    meta = model.get("metadata") or {}
+    uri = meta.get("artifact_uri")
+    if not uri:
+        return None
+    path = Path(str(uri))
+    return path if path.exists() else None
+
+
+def _encode_png(gray: np.ndarray) -> bytes:
+    import cv2
+
+    ok, buf = cv2.imencode(".png", gray)
+    if not ok:
+        raise RuntimeError("Failed to encode training PNG")
+    return buf.tobytes()
+
+
+def _frame_png_bytes(frame) -> bytes:
+    import cv2
+
+    b64 = getattr(frame, "image_b64", None)
+    if b64:
+        raw = base64.b64decode(b64)
+        arr = np.frombuffer(raw, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
+        if img is not None:
+            return _encode_png(img)
+        if raw.startswith(b"\x89PNG"):
+            return raw
+    rng = np.random.default_rng()
+    gray = np.clip(rng.normal(120, 8, (128, 128)), 0, 255).astype(np.uint8)
+    return _encode_png(gray)
+
+
+def capture_good_part_samples(
+    *,
+    data_root: Path,
+    recipe_id: str,
+    camera_id: str,
+    count: int = 8,
+    source: str | None = None,
+) -> dict:
+    from .services_edge import capture_frame
+
+    folder = training_images_dir(data_root, recipe_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    saved_paths: list[str] = []
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    batch_id = uuid4().hex[:8]
+    for index in range(count):
+        frame = capture_frame(camera_id=camera_id, recipe_id=recipe_id, source=source)
+        png_bytes = _frame_png_bytes(frame)
+        filename = f"{stamp}_{batch_id}_{index:02d}.png"
+        path = folder / filename
+        path.write_bytes(png_bytes)
+        store_raw_frame(
+            inspection_id=f"train-{batch_id}-{index:02d}",
+            recipe_id=recipe_id,
+            image_bytes=png_bytes,
+            camera_id=camera_id,
+        )
+        saved_paths.append(str(path))
+    return {
+        "recipe_id": recipe_id,
+        "camera_id": camera_id,
+        "saved": len(saved_paths),
+        "paths": saved_paths,
+        "count": count_training_images(data_root, recipe_id),
+        "data_source": "local_files",
+    }
 
 
 def train_patchcore(
@@ -54,21 +161,10 @@ def train_patchcore(
     bank = build_memory_bank(images)
     model_id = f"patchcore-{uuid4().hex[:8]}"
     model_version = f"{dataset_version}-{model_id[-4:]}"
-    artifact_dir = data_root / "training-artifacts"
+    artifact_dir = Path(data_root) / "training-artifacts"
     artifact_path = artifact_dir / f"{model_id}.npz"
     save_memory_bank(artifact_path, bank=bank, model_version=model_version, recipe_id=recipe_id)
-    active_link = artifact_dir / "active_memory_bank.npz"
-    try:
-        active_link.unlink(missing_ok=True)
-    except OSError:
-        pass
-    try:
-        active_link.symlink_to(artifact_path.name)
-    except OSError:
-        import shutil
-
-        shutil.copy2(artifact_path, active_link)
-
+    created_at = datetime.now(timezone.utc).isoformat()
     return {
         "model_id": model_id,
         "name": f"PatchCore {recipe_id}",
@@ -76,9 +172,11 @@ def train_patchcore(
         "provider": "patchcore",
         "dataset_version": dataset_version,
         "status": "candidate",
+        "created_at": created_at,
         "metadata": {
             "artifact_uri": str(artifact_path),
             "recipe_id": recipe_id,
+            "sample_count": len(images),
             "embedding_count": int(bank.shape[0]),
             "embedding_dim": int(bank.shape[1]),
             "data_source": data_source,

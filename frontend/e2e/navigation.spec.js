@@ -11,6 +11,7 @@ test('HMI shell and tab navigation', async ({ page }) => {
   await page.getByTestId('nav-configuration').click();
   await expect(page.getByTestId('nav-configuration')).toHaveClass(/active/);
   await expect(page.getByTestId('license-billing')).toBeVisible();
+  await expect(page.getByTestId('training-panel')).toBeVisible();
 
   await page.getByTestId('nav-help').click();
   await expect(page.getByTestId('nav-help')).toHaveClass(/active/);
@@ -19,4 +20,7 @@ test('HMI shell and tab navigation', async ({ page }) => {
 test('dashboard run button visible', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('dashboard-run')).toBeVisible();
+  await expect(page.getByTestId('dashboard-training')).toBeVisible();
+  await page.getByTestId('dashboard-training').click();
+  await expect(page.getByTestId('training-panel')).toBeVisible();
 });

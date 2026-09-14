@@ -189,18 +189,32 @@ docker compose … exec -T postgres \
 
 ## 6. Rezepte, Modelle, Training
 
-HMI → **Configuration** zeigt aktives Rezept/Modell (API).
+HMI → **Configuration** → Abschnitt **Training / Modelle**.
+
+Nur **i.O.-Gutteile** erfassen. Das System lernt den Sollzustand; n.i.O.-Teile gehören nicht ins Training.
+
+Ablauf in der HMI:
+
+1. Rezept wählen, Kamera in der Kamerauswahl setzen (Live: USB OpenCV `/dev/video0`).
+2. **Gutteile erfassen** — speichert PNG unter `data/training-images/{recipe_id}/` (und optional MinIO `raw-images`).
+3. **Training starten** — erzeugt einen Kandidaten (`status=candidate`) und eine Memory-Bank `.npz` unter `training-artifacts/`. Vorherige Artefakte bleiben liegen.
+4. Nach Prüfung **Promoten** (Validierung) oder **Aktivieren** (gespeichertes Training ohne Neu-Training).
+5. **Rollback** oder ein älteres Training aus der Historie erneut aktiv setzen. `active_memory_bank.npz` zeigt dann auf das gewählte Artefakt.
 
 | Aktion | Endpoint / Ort |
 |--------|----------------|
 | Rezepte lesen | `GET /api/v1/recipes` |
-| Modelle lesen | `GET /api/v1/models` |
+| Modelle + Historie + Memory-Bank-Status | `GET /api/v1/models` |
+| Gutteile erfassen | `POST /api/v1/models/training-samples` (Engineer/Admin) |
 | Trainieren | `POST /api/v1/models/train` (Engineer/Admin) |
 | Promoten | `POST /api/v1/models/{id}/promote` |
+| Gespeichertes Training aktivieren | `POST /api/v1/models/{id}/activate` |
 | Rollback | `POST /api/v1/models/rollback` |
 
+Rechte: `models.train` / `models.promote` (Prozessingenieur, Admin). Operatoren haben `models.read` (Historie sichtbar, Aktionen deaktiviert).
+
 Provider in Prod: `ANOMALYMATRIX_INFERENCE_PROVIDER=patchcore`.  
-Training braucht Gut-Teil-Bilder (MinIO `raw-images` und/oder lokal).
+Training braucht Gut-Teil-Bilder (`training-images/{recipe_id}` hat Vorrang vor MinIO `raw-images`). Ohne Memory Bank fällt die Inferenz auf OpenCV/Hash zurück.
 
 ---
 

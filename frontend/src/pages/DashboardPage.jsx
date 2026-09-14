@@ -15,6 +15,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     line: hmiState.line,
     recipe: hmiState.recipe,
     modelVersion: hmiState.modelVersion,
+    memoryBankLoaded: false,
+    memoryBankKnown: false,
   });
   const [trendStatus, setTrendStatus] = useState({
     warning: true,
@@ -38,7 +40,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         if (cancelled) return;
 
         const activeRecipe = (recipeData.items || []).find((r) => r.status === 'active') || recipeData.items?.[0];
-        const activeModel = (modelData.items || []).find((m) => m.status === 'active') || modelData.items?.[0];
+          const items = modelData.items || [];
+          const activeModel = items.find((m) => m.status === 'active') || modelData.active || items[0];
         const latestCameras = inspections[0]?.cameraIds || [];
         const latestCamera = latestCameras[0] || inspections[0]?.raw?.frame?.camera_id;
 
@@ -50,6 +53,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
               : activeRecipe?.name || hmiState.line,
           recipe: activeRecipe?.recipe_id || activeRecipe?.name || hmiState.recipe,
           modelVersion: activeModel?.model_version || activeModel?.name || hmiState.modelVersion,
+          memoryBankLoaded: Boolean(modelData.memory_bank?.loaded),
+          memoryBankKnown: modelData.memory_bank != null,
         });
 
         setKpis({
@@ -128,7 +133,12 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         <div>
           <p className="eyebrow">{t('dashboard.eyebrow')}</p>
           <h2>{context.line}</h2>
-          <p className="muted">{t('common.recipe')} {context.recipe} · {t('common.model')} {context.modelVersion}</p>
+          <p className="muted">
+            {t('common.recipe')} {context.recipe} · {t('common.model')} {context.modelVersion}
+            {context.memoryBankKnown
+              ? ` · ${context.memoryBankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}`
+              : ''}
+          </p>
           <ContextHelp articleId="dashboard-overview" onOpen={openHelp} />
         </div>
         <StatusBadge state={trendStatus.warning ? trendStatus.severity : 'green'}>{statusLabel}</StatusBadge>
@@ -145,6 +155,9 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           </button>
           <button type="button" className="tab" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
             {t('dashboard.openDetail')}
+          </button>
+          <button type="button" className="tab" data-testid="dashboard-training" onClick={() => goTo(SCREEN_IDS.configuration)}>
+            {t('training.title')}
           </button>
           <StatusBadge state={stateClass.replace('state-', '')}>{notice}</StatusBadge>
         </div>

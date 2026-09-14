@@ -6,7 +6,7 @@ from ..auth_tokens import create_access_token, decode_access_token
 from ..contracts.envelope import success_envelope
 from ..core_store import CoreStore
 from ..production import cookie_secure
-from ..rbac import resolve_auth
+from ..rbac import ROLE_PERMISSIONS, resolve_auth
 
 router = APIRouter(tags=["auth"])
 
@@ -82,6 +82,7 @@ async def me(request: Request):
             "user_id": auth.user_id,
             "display_name": auth.display_name,
             "role_id": auth.role_id,
+            "permissions": sorted(ROLE_PERMISSIONS.get(auth.role_id, set())),
             "token": token_payload,
         },
         request.state.request_id,

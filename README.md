@@ -105,7 +105,9 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`005`).
 
 ### Auth & Training
 - `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
-- `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`, `POST /api/v1/models/rollback`
+- `POST /api/v1/models/train`, `POST /api/v1/models/{id}/promote`, `POST /api/v1/models/{id}/activate`, `POST /api/v1/models/rollback`
+- `POST /api/v1/models/training-samples` — Gutteil-Bilder von der gewählten Kamera
+- `GET /api/v1/models` — Historie inkl. Metadata, aktivem Modell und Memory-Bank-Status
 
 ### Inspection & Ergebnisse
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`) — optional `camera_ids` (1–4)

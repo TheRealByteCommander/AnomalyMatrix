@@ -299,6 +299,51 @@ export const HELP_ARTICLES = [
     related: ['inspection-detail', 'glossary-feedback-verdict', 'faq-feedback-denied'],
   },
   {
+    id: 'good-part-training',
+    category: 'workflow',
+    title: 'Gutteil-Training im Dashboard',
+    keywords: [
+      'training',
+      'gutteil',
+      'i.o.',
+      'modell',
+      'patchcore',
+      'memory bank',
+      'promoten',
+      'aktivieren',
+      'historie',
+    ],
+    summary: 'Nur i.O.-Teile erfassen, trainieren, in der Historie behalten und später wieder aktiv setzen.',
+    screen: 'Configuration',
+    sections: [
+      {
+        heading: 'Warum nur Gutteile?',
+        paragraphs: [
+          'AnomalyMatrix lernt den Sollzustand aus i.O.-Referenzen (Gutteilen). n.i.O.-Teile gehören nicht ins Training.',
+          'Ohne echte Memory Bank fällt die Bewertung auf OpenCV-/Hash-Scoring zurück — das sehen Sie unter „Memory Bank“.',
+        ],
+      },
+      {
+        heading: 'Ablauf in Configuration',
+        paragraphs: [
+          '1. Rezept wählen und die Kamera in der Kamerauswahl setzen (z. B. USB /dev/video0).',
+          '2. Gutteile vor die Kamera legen und „Gutteile erfassen“ — PNG-Dateien landen unter training-images/{Rezept}.',
+          '3. „Training starten“ erzeugt einen Kandidaten (Memory-Bank .npz). Vorherige Trainings werden nicht gelöscht.',
+          '4. Nach Prüfung „Promoten“ (Validierung) oder „Aktivieren“ (gespeichertes Training wiederverwenden).',
+          '5. Bei Bedarf Rollback oder ein älteres Training aus der Historie erneut aktivieren.',
+        ],
+      },
+      {
+        heading: 'Berechtigungen',
+        paragraphs: [
+          'Trainieren, erfassen, promoten und aktivieren: Prozessingenieur und Admin (Rechte models.train / models.promote).',
+          'Operatoren dürfen den Verlauf und den aktiven Modellstatus lesen, die Aktionen sind deaktiviert.',
+        ],
+      },
+    ],
+    related: ['configuration-overview', 'roles-overview', 'what-is-anomalymatrix'],
+  },
+  {
     id: 'engineer-trends-flow',
     category: 'workflow',
     title: 'Prozessingenieur: Trends interpretieren',
@@ -516,7 +561,8 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'Recipe version — aktives Prüfrezept (Beleuchtung, Kamera, Grenzen).',
           'Model profile — welches Anomalie-Modell ausgewertet wird.',
-          'Nur Anzeige: Änderungen nimmt Ihr Administrator oder Prozessingenieur vor.',
+          'Training / Modelle — Gutteil-Bilder erfassen, PatchCore trainieren, Kandidaten promoten und ältere Trainings wieder aktiv setzen.',
+          'Nur Prozessingenieur oder Admin dürfen trainieren; Operatoren sehen den Verlauf lesend.',
         ],
       },
       {
@@ -536,7 +582,7 @@ export const HELP_ARTICLES = [
         ],
       },
     ],
-    related: ['license-status-user', 'roles-overview'],
+    related: ['license-status-user', 'roles-overview', 'good-part-training'],
   },
   {
     id: 'license-status-user',
@@ -591,6 +637,7 @@ export const HELP_ARTICLES = [
         heading: 'Process Engineer',
         paragraphs: [
           'Auswertung von Trends, Rezepten und Modellen.',
+          'In Configuration: Gutteile erfassen, Modelle trainieren, promoten und ältere Trainings wieder aktivieren.',
           'Feedback lesen; typischerweise keine neuen Prüfungen am Band.',
         ],
       },

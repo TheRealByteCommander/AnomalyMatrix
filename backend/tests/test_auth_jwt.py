@@ -24,6 +24,8 @@ def test_login_and_jwt_me(tmp_path, monkeypatch):
     body = me.json()["data"]
     assert body["user_id"] == "admin-1"
     assert body["role_id"] == "admin"
+    assert "models.train" in body["permissions"]
+    assert "models.promote" in body["permissions"]
 
 
 def test_session_cookie_auth(tmp_path, monkeypatch):

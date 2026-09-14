@@ -102,6 +102,39 @@ h1 { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); }
 .ok { color: var(--green); }
 .error { color: var(--red); }
 .error-text { color: var(--red); margin-top: .5rem; }
+button.primary,
+.primary {
+  min-height: 42px; border: 1px solid #6ea9ff; background: #21406b; color: var(--text);
+  border-radius: 12px; padding: .6rem .9rem; cursor: pointer; font: inherit;
+}
+button.primary:disabled,
+.primary:disabled { opacity: .55; cursor: not-allowed; }
+.training-status { margin: .85rem 0; }
+.training-status p { margin: .25rem 0 0; font-size: .8rem; overflow-wrap: anywhere; }
+.training-form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: .75rem; margin: .75rem 0;
+}
+.training-form label { display: grid; gap: .35rem; font-size: .85rem; color: var(--muted); }
+.training-form select, .training-form input {
+  min-height: 42px; border: 1px solid var(--line); border-radius: 12px;
+  background: #111a2b; color: var(--text); padding: .5rem .7rem; font: inherit;
+}
+.training-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .35rem 0 .75rem; }
+.training-history-title { margin: 1.1rem 0 .35rem; }
+.training-table { display: grid; gap: .45rem; margin-top: .65rem; overflow-x: auto; }
+.training-row {
+  display: grid; grid-template-columns: 1.4fr .8fr 1fr .8fr .8fr .7fr auto;
+  gap: .55rem; align-items: center; padding: .65rem .75rem;
+  border: 1px solid rgba(144,166,211,.24); border-radius: 12px;
+  background: rgba(13, 22, 39, .45); font-size: .86rem;
+}
+.training-head { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; }
+.training-row-actions { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
+@media (max-width: 1100px) {
+  .training-row { grid-template-columns: 1fr 1fr; }
+  .training-head { display: none; }
+}
 .billing-form { display: grid; gap: .65rem; max-width: 480px; margin-top: .75rem; }
 .billing-form label { display: grid; gap: .35rem; font-size: .85rem; color: var(--muted); }
 .billing-form input {
