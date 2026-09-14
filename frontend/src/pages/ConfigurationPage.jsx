@@ -10,6 +10,7 @@ import {
   fetchRecipes,
   saveCameraSelection,
 } from '../services';
+import { resolveRecipeSelection } from '../recipeSelection';
 import LicenseBilling from '../components/LicenseBilling';
 import ModelTraining from '../components/ModelTraining';
 import DecisionThresholds from '../components/DecisionThresholds';
@@ -20,7 +21,11 @@ import { useI18n } from '../i18n/I18nProvider';
 
 const MIN_CAMERAS = 1;
 
-export default function ConfigurationPage({ openHelp }) {
+export default function ConfigurationPage({
+  openHelp,
+  selectedRecipeId = '',
+  setSelectedRecipeId = () => {},
+}) {
   const { t } = useI18n();
   const [license, setLicense] = useState(null);
   const [recipes, setRecipes] = useState([]);
@@ -34,7 +39,6 @@ export default function ConfigurationPage({ openHelp }) {
   const [canTrain, setCanTrain] = useState(false);
   const [canPromote, setCanPromote] = useState(false);
   const [canWriteRecipes, setCanWriteRecipes] = useState(false);
-  const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -52,9 +56,10 @@ export default function ConfigurationPage({ openHelp }) {
         if (cancelled) return;
         setLicense(lic);
         setRecipes(recipeData.items || []);
-        const first =
-          (recipeData.items || []).find((r) => r.active === true || r.status === 'active') || recipeData.items?.[0];
-        if (first?.recipe_id) setSelectedRecipeId(first.recipe_id);
+        const items = recipeData.items || [];
+        if (items.length) {
+          setSelectedRecipeId((prev) => resolveRecipeSelection(items, prev));
+        }
         setModels(modelData.items || []);
         setCameras(cameraData.cameras || []);
         setDriver(cameraData.driver || '');
@@ -78,7 +83,7 @@ export default function ConfigurationPage({ openHelp }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setSelectedRecipeId]);
 
   const selectedRecipe =
     recipes.find((r) => r.recipe_id === selectedRecipeId) ||
@@ -267,6 +272,7 @@ export default function ConfigurationPage({ openHelp }) {
         canTrain={canTrain}
         canPromote={canPromote}
         openHelp={openHelp}
+        onSelectRecipe={setSelectedRecipeId}
         onModelsChange={setModels}
       />
 

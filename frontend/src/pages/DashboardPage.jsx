@@ -1,12 +1,21 @@
 import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
+import { resolveRecipeSelection } from '../recipeSelection';
 import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary, fetchCameras, fetchWatchdog } from '../services';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { useI18n } from '../i18n/I18nProvider';
 import { SCREEN_IDS } from '../i18n/screens';
 
-export default function DashboardPage({ inspections, setInspections, setSelectedInspectionId, goTo, openHelp }) {
+export default function DashboardPage({
+  inspections,
+  setInspections,
+  setSelectedInspectionId,
+  goTo,
+  openHelp,
+  selectedRecipeId,
+  setSelectedRecipeId = () => {},
+}) {
   const { t, locale } = useI18n();
   const [runState, setRunState] = useState('idle');
   const [notice, setNotice] = useState(() => t('dashboard.ready'));
@@ -25,7 +34,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
   const [cameras, setCameras] = useState([]);
   const [watchdog, setWatchdog] = useState(null);
   const [recipes, setRecipes] = useState([]);
-  const [recipeId, setRecipeId] = useState('recipe-default');
+  const recipeId = resolveRecipeSelection(recipes, selectedRecipeId) || selectedRecipeId || 'recipe-default';
 
   useEffect(() => {
     if (runState === 'idle') setNotice(t('dashboard.ready'));
@@ -54,8 +63,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         const latestCamera = latestCameras[0] || inspections[0]?.raw?.frame?.camera_id;
 
         setRecipes(recipeItems);
-        if (activeRecipe?.recipe_id) {
-          setRecipeId((prev) => (recipeItems.some((r) => r.recipe_id === prev) ? prev : activeRecipe.recipe_id));
+        if (recipeItems.length) {
+          setSelectedRecipeId((prev) => resolveRecipeSelection(recipeItems, prev));
         }
 
         setContext({
@@ -94,7 +103,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     return () => {
       cancelled = true;
     };
-  }, [inspections.length, inspections[0]?.id]);
+  }, [inspections.length, inspections[0]?.id, setSelectedRecipeId]);
 
   const anomalyRate = useMemo(() => {
     if (!inspections.length) return 0;
@@ -106,7 +115,12 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     setRunState('running');
     setNotice(t('dashboard.noticeRunning'));
     try {
-      const result = await runInspection(null, recipeId);
+      const selectedCameraIds = cameras.filter((cam) => cam.selected).map((cam) => cam.camera_id);
+      const result = await runInspection(
+        null,
+        recipeId,
+        selectedCameraIds.length ? selectedCameraIds : null
+      );
       const merged = [result, ...inspections.filter((i) => i.id !== result.id)].slice(0, 20);
       setInspections(merged);
       setSelectedInspectionId(result.id);
@@ -182,7 +196,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
               {t('common.recipe')}
               <select
                 value={recipeId}
-                onChange={(e) => setRecipeId(e.target.value)}
+                onChange={(e) => setSelectedRecipeId(e.target.value)}
                 data-testid="dashboard-recipe"
               >
                 {recipes.map((recipe) => (
@@ -198,7 +212,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           <button type="button" className="tab active" data-testid="dashboard-run" onClick={handleRunInspection} disabled={runState === 'running'}>
             {runState === 'running' ? t('dashboard.running') : t('dashboard.run')}
           </button>
-          <button type="button" className="tab" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
+          <button type="button" className="tab" data-testid="dashboard-open-detail" onClick={() => goTo(SCREEN_IDS.inspectionDetail)}>
             {t('dashboard.openDetail')}
           </button>
           <button type="button" className="tab" data-testid="dashboard-training" onClick={() => goTo(SCREEN_IDS.configuration)}>

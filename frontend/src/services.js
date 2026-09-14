@@ -101,6 +101,8 @@ export function mapApiInspection(item) {
 
   return {
     id: item.inspection_id || item.id,
+    recipeId: frame.recipe_id || item.recipe_id || null,
+    recipeVersion: frame.recipe_version || item.recipe_version || null,
     part: frame.recipe_id || frame.camera_id || 'unknown',
     score,
     decision,
@@ -133,7 +135,10 @@ export function mapApiInspection(item) {
 }
 
 export async function runInspection(cameraId = null, recipeId = 'recipe-default', cameraIds = null) {
-  const body = { recipe_id: recipeId };
+  const body = {
+    recipe_id: recipeId || 'recipe-default',
+    trigger_source: 'hmi',
+  };
   if (Array.isArray(cameraIds) && cameraIds.length) {
     body.camera_ids = cameraIds;
   } else if (cameraId) {

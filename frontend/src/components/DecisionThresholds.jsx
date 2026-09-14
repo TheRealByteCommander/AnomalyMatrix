@@ -42,6 +42,11 @@ export default function DecisionThresholds({
     <article className="card" data-testid="decision-thresholds">
       <h3>{t('thresholds.title')}</h3>
       <p className="muted">{t('thresholds.hint')}</p>
+      {recipe ? (
+        <p className="muted" data-testid="thresholds-recipe">
+          {t('common.recipe')} {recipe.name || recipeId}
+        </p>
+      ) : null}
       <ContextHelp articleId="decision-colors" onOpen={openHelp} />
       <form className="training-form" onSubmit={handleSave}>
         <label>
