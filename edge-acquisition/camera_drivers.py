@@ -31,6 +31,108 @@ class SyntheticCameraDriver(CameraDriver):
         }
 
 
+_OPENCV_DEFAULT_FOURCC = "MJPG"
+_OPENCV_DEFAULT_WIDTH = 3840
+_OPENCV_DEFAULT_HEIGHT = 2160
+_OPENCV_DEFAULT_FPS = 30.0
+_FOURCC_ALIASES = {
+    "MJPEG": "MJPG",
+    "JPEG": "MJPG",
+}
+
+
+def _env_positive_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _env_positive_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        value = float(str(raw).strip())
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def opencv_capture_mode_from_env() -> dict:
+    """USB/V4L2 capture mode. Ignored by GigE and synthetic drivers."""
+    raw = os.getenv("CAMERA_FOURCC", _OPENCV_DEFAULT_FOURCC)
+    fourcc = str(raw).strip().upper() if raw is not None else _OPENCV_DEFAULT_FOURCC
+    fourcc = _FOURCC_ALIASES.get(fourcc, fourcc) or _OPENCV_DEFAULT_FOURCC
+    fourcc = (fourcc + "    ")[:4]
+    return {
+        "fourcc": fourcc,
+        "width": _env_positive_int("CAMERA_WIDTH", _OPENCV_DEFAULT_WIDTH),
+        "height": _env_positive_int("CAMERA_HEIGHT", _OPENCV_DEFAULT_HEIGHT),
+        "fps": _env_positive_float("CAMERA_FPS", _OPENCV_DEFAULT_FPS),
+    }
+
+
+def _fourcc_code(cv2, fourcc: str) -> int:
+    return int(cv2.VideoWriter_fourcc(*fourcc))
+
+
+def _fourcc_name(code: float | int) -> str:
+    value = int(code)
+    if value <= 0:
+        return ""
+    chars: list[str] = []
+    for shift in range(4):
+        ch = (value >> (8 * shift)) & 0xFF
+        chars.append(chr(ch) if 32 <= ch < 127 else "?")
+    return "".join(chars).rstrip()
+
+
+def _configure_opencv_capture(cv2, cap, requested: dict | None = None) -> dict:
+    """Set FOURCC then geometry/fps before the first read (UVC 4K needs MJPG)."""
+    requested = requested or opencv_capture_mode_from_env()
+    cap.set(cv2.CAP_PROP_FOURCC, _fourcc_code(cv2, requested["fourcc"]))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(requested["width"]))
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(requested["height"]))
+    cap.set(cv2.CAP_PROP_FPS, float(requested["fps"]))
+    return requested
+
+
+def _opencv_negotiated_mode(cv2, cap, frame, requested: dict) -> dict:
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+    fourcc = _fourcc_name(cap.get(cv2.CAP_PROP_FOURCC) or 0)
+    if width <= 0 and frame is not None and getattr(frame, "ndim", 0) >= 2:
+        width = int(frame.shape[1])
+    if height <= 0 and frame is not None and getattr(frame, "ndim", 0) >= 2:
+        height = int(frame.shape[0])
+    return {
+        "width": width,
+        "height": height,
+        "fps": fps,
+        "fourcc": fourcc or requested["fourcc"],
+    }
+
+
+def _grab_live_opencv(cv2, device: int | str, *, error_label: str) -> tuple[np.ndarray, dict]:
+    cap = cv2.VideoCapture(device)
+    try:
+        requested = _configure_opencv_capture(cv2, cap)
+        ok, frame = cap.read()
+        negotiated = _opencv_negotiated_mode(cv2, cap, frame, requested)
+    finally:
+        cap.release()
+    if not ok or frame is None:
+        raise RuntimeError(f"{error_label} capture failed")
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
+    return gray.astype(np.uint8), negotiated
+
+
 class OpenCvCameraDriver(CameraDriver):
     """OpenCV capture from webcam index, video file, or still image path."""
 
@@ -49,25 +151,21 @@ class OpenCvCameraDriver(CameraDriver):
         }
 
         if resolved.isdigit():
-            cap = cv2.VideoCapture(int(resolved))
-            ok, frame = cap.read()
-            cap.release()
-            if not ok or frame is None:
-                raise RuntimeError(f"Webcam {resolved} capture failed")
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
-            return gray.astype(np.uint8), meta
+            gray, negotiated = _grab_live_opencv(
+                cv2, int(resolved), error_label=f"Webcam {resolved}"
+            )
+            meta.update(negotiated)
+            return gray, meta
 
         path = Path(resolved)
         if path.exists():
             # Prefer live device path, else still image
             if str(path).startswith("/dev/"):
-                cap = cv2.VideoCapture(str(path))
-                ok, frame = cap.read()
-                cap.release()
-                if not ok or frame is None:
-                    raise RuntimeError(f"Device {path} capture failed")
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
-                return gray.astype(np.uint8), meta
+                gray, negotiated = _grab_live_opencv(
+                    cv2, str(path), error_label=f"Device {path}"
+                )
+                meta.update(negotiated)
+                return gray, meta
 
             frame = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
             if frame is None:
