@@ -11,6 +11,7 @@ import {
   saveCameraSelection,
 } from '../services';
 import LicenseBilling from '../components/LicenseBilling';
+import ModelTraining from '../components/ModelTraining';
 import { useI18n } from '../i18n/I18nProvider';
 
 const MIN_CAMERAS = 1;
@@ -26,6 +27,8 @@ export default function ConfigurationPage({ openHelp }) {
   const [driver, setDriver] = useState('');
   const [canConfigure, setCanConfigure] = useState(false);
   const [canManageLicense, setCanManageLicense] = useState(false);
+  const [canTrain, setCanTrain] = useState(false);
+  const [canPromote, setCanPromote] = useState(false);
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -52,8 +55,11 @@ export default function ConfigurationPage({ openHelp }) {
             : (cameraData.cameras || []).filter((c) => c.selected).map((c) => c.camera_id);
         setSelected(initial.slice(0, MAX_CAMERAS));
         const role = me?.role_id || me?.role || '';
+        const permissions = Array.isArray(me?.permissions) ? me.permissions : null;
         setCanConfigure(role === 'admin' || role === 'process_engineer');
         setCanManageLicense(role === 'admin');
+        setCanTrain(permissions ? permissions.includes('models.train') : role === 'admin' || role === 'process_engineer');
+        setCanPromote(permissions ? permissions.includes('models.promote') : role === 'admin' || role === 'process_engineer');
       } catch {
         if (!cancelled) setLicense(null);
       }
@@ -188,6 +194,15 @@ export default function ConfigurationPage({ openHelp }) {
           </p>
         )}
       </article>
+
+      <ModelTraining
+        recipes={recipes}
+        selectedCameraId={selected[0] || cameras[0]?.camera_id || ''}
+        canTrain={canTrain}
+        canPromote={canPromote}
+        openHelp={openHelp}
+        onModelsChange={setModels}
+      />
 
       <LicenseBilling
         license={license}

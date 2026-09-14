@@ -6,6 +6,7 @@ from ..contracts.envelope import success_envelope
 from ..core_store import CoreStore
 from ..event_bus import DomainEventBus
 from ..rbac import require_permission, resolve_auth
+from .training import models_catalog_payload
 
 router = APIRouter(tags=["catalog"])
 
@@ -29,11 +30,12 @@ async def list_recipes(request: Request):
 
 
 @router.get("/models")
-async def list_models(request: Request):
+async def list_models(request: Request, recipe_id: str | None = Query(default=None)):
     auth = resolve_auth(request, _store(request))
     require_permission(auth, "models.read")
-    items = _store(request).list_models()
-    return success_envelope({"items": items, "count": len(items)}, request.state.request_id)
+    recipe = str(recipe_id or "recipe-default").strip() or "recipe-default"
+    payload = models_catalog_payload(_store(request), recipe_id=recipe)
+    return success_envelope(payload, request.state.request_id)
 
 
 @router.get("/audit/recent")

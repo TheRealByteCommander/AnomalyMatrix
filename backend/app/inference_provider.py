@@ -127,20 +127,17 @@ class PatchCoreInferenceProvider(InferenceProvider):
         self._load_memory_bank()
 
     def _load_memory_bank(self) -> None:
-        from .patchcore_memory import load_memory_bank
+        from .patchcore_memory import inspect_memory_bank, load_memory_bank
 
-        custom = os.getenv("PATCHCORE_MEMORY_BANK", "").strip()
-        candidates = []
-        if custom:
-            candidates.append(Path(custom))
-        data_root = Path(__file__).resolve().parents[1] / "data" / "training-artifacts"
-        candidates.append(data_root / "active_memory_bank.npz")
-        for path in candidates:
-            if path.exists():
-                bank, meta = load_memory_bank(path)
-                self._bank = bank
-                self._model_version = meta.get("model_version", "patchcore-trained")
-                return
+        status = inspect_memory_bank()
+        if not status.get("loaded"):
+            return
+        path = status.get("path")
+        if not path:
+            return
+        bank, meta = load_memory_bank(path)
+        self._bank = bank
+        self._model_version = meta.get("model_version", "patchcore-trained")
 
     def infer(self, frame: dict) -> InferenceOutput:
         score = self._patchcore_score(frame)

@@ -6,6 +6,8 @@ from pathlib import Path
 from threading import Lock
 from uuid import uuid4
 
+from datetime import datetime, timezone
+
 from .auth_tokens import create_session_id, hash_password, verify_password
 from .production import is_production
 
@@ -70,7 +72,18 @@ class CoreStore:
         if not self._models_file.exists():
             self._models_file.write_text(
                 json.dumps(
-                    [{"model_id": "patchcore-mvp", "name": "PatchCore MVP", "model_version": "v0", "provider": "stub", "status": "active"}],
+                    [
+                        {
+                            "model_id": "patchcore-mvp",
+                            "name": "PatchCore MVP",
+                            "model_version": "v0",
+                            "provider": "stub",
+                            "status": "active",
+                            "dataset_version": "v1",
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                            "metadata": {},
+                        }
+                    ],
                     indent=2,
                 ),
                 encoding="utf-8",
@@ -210,15 +223,39 @@ class CoreStore:
                     return [dict(r) for r in cur.fetchall()]
         return json.loads(self._recipes_file.read_text(encoding="utf-8"))
 
+    @staticmethod
+    def _serialize_model(row: dict | None) -> dict | None:
+        if not row:
+            return None
+        item = dict(row)
+        created = item.get("created_at")
+        if hasattr(created, "isoformat"):
+            item["created_at"] = created.isoformat()
+        meta = item.get("metadata") or {}
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta)
+            except json.JSONDecodeError:
+                meta = {}
+        item["metadata"] = meta if isinstance(meta, dict) else {}
+        return item
+
     def list_models(self) -> list[dict]:
         if self.use_postgres:
             with self._connect() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute(
-                        "SELECT model_id, name, model_version, provider, dataset_version, status FROM model_registry ORDER BY created_at DESC"
+                        """
+                        SELECT model_id, name, model_version, provider, dataset_version, status, metadata, created_at
+                        FROM model_registry
+                        ORDER BY created_at DESC
+                        """
                     )
-                    return [dict(r) for r in cur.fetchall()]
-        return json.loads(self._models_file.read_text(encoding="utf-8"))
+                    return [self._serialize_model(dict(r)) or {} for r in cur.fetchall()]
+        if not self._models_file.exists():
+            return []
+        items = json.loads(self._models_file.read_text(encoding="utf-8"))
+        return [self._serialize_model(item) or {} for item in items]
 
     def get_model(self, model_id: str) -> dict | None:
         for item in self.list_models():
@@ -242,6 +279,7 @@ class CoreStore:
             "dataset_version": entry.get("dataset_version", "v1"),
             "status": entry.get("status", "candidate"),
             "metadata": entry.get("metadata", {}),
+            "created_at": entry.get("created_at") or datetime.now(timezone.utc).isoformat(),
         }
         if self.use_postgres:
             with self._connect() as conn:
@@ -257,7 +295,7 @@ class CoreStore:
                           dataset_version = EXCLUDED.dataset_version,
                           status = EXCLUDED.status,
                           metadata = EXCLUDED.metadata
-                        RETURNING model_id, name, model_version, provider, dataset_version, status, metadata
+                        RETURNING model_id, name, model_version, provider, dataset_version, status, metadata, created_at
                         """,
                         (
                             payload["model_id"],
@@ -271,7 +309,7 @@ class CoreStore:
                     )
                     row = cur.fetchone()
                 conn.commit()
-                return dict(row) if row else payload
+                return self._serialize_model(dict(row)) if row else payload
         models = self.list_models()
         models = [m for m in models if m.get("model_id") != payload["model_id"]]
         models.insert(0, payload)
@@ -284,14 +322,17 @@ class CoreStore:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("UPDATE model_registry SET status = 'archived' WHERE status = 'active'")
                     cur.execute(
-                        "UPDATE model_registry SET status = 'active' WHERE model_id = %s RETURNING *",
+                        """
+                        UPDATE model_registry SET status = 'active' WHERE model_id = %s
+                        RETURNING model_id, name, model_version, provider, dataset_version, status, metadata, created_at
+                        """,
                         (model_id,),
                     )
                     row = cur.fetchone()
                 conn.commit()
                 if not row:
                     raise ValueError(f"Model not found: {model_id}")
-                return dict(row)
+                return self._serialize_model(dict(row)) or {}
         models = self.list_models()
         found = None
         for item in models:
@@ -317,14 +358,17 @@ class CoreStore:
                     cur.execute("UPDATE model_registry SET status = 'rolled_back' WHERE model_id = %s", (active["model_id"],))
                     if previous:
                         cur.execute(
-                            "UPDATE model_registry SET status = 'active' WHERE model_id = %s RETURNING *",
+                            """
+                            UPDATE model_registry SET status = 'active' WHERE model_id = %s
+                            RETURNING model_id, name, model_version, provider, dataset_version, status, metadata, created_at
+                            """,
                             (previous["model_id"],),
                         )
                         row = cur.fetchone()
                     else:
                         row = None
                 conn.commit()
-                return dict(row) if row else None
+                return self._serialize_model(dict(row)) if row else None
         for item in models:
             if item.get("model_id") == active.get("model_id"):
                 item["status"] = "rolled_back"

@@ -299,6 +299,51 @@ export const HELP_ARTICLES = [
     related: ['inspection-detail', 'glossary-feedback-verdict', 'faq-feedback-denied'],
   },
   {
+    id: 'good-part-training',
+    category: 'workflow',
+    title: 'Good-part training in the dashboard',
+    keywords: [
+      'training',
+      'good part',
+      'i.o.',
+      'model',
+      'patchcore',
+      'memory bank',
+      'promote',
+      'activate',
+      'history',
+    ],
+    summary: 'Capture i.O. parts only, train, keep every run in history, and reactivate a previous training later.',
+    screen: 'Configuration',
+    sections: [
+      {
+        heading: 'Why good parts only?',
+        paragraphs: [
+          'AnomalyMatrix learns the nominal state from good-part (i.O.) references. Defective parts must not go into training.',
+          'Without a real memory bank, scoring falls back to OpenCV/hash — shown as the Memory bank status.',
+        ],
+      },
+      {
+        heading: 'Flow on Configuration',
+        paragraphs: [
+          '1. Select the recipe and the camera (for example USB /dev/video0).',
+          '2. Present good parts and use Capture good parts — PNGs are stored under training-images/{recipe}.',
+          '3. Start training to create a candidate memory-bank .npz. Previous trainings are never deleted.',
+          '4. After review, Promote (validation gate) or Activate (reuse a stored bank without retraining).',
+          '5. Use Rollback or activate an older row in the history when you need to switch back.',
+        ],
+      },
+      {
+        heading: 'Permissions',
+        paragraphs: [
+          'Capture, train, promote, and activate: Process Engineer and Admin (models.train / models.promote).',
+          'Operators can read history and the active model; action buttons stay disabled.',
+        ],
+      },
+    ],
+    related: ['configuration-overview', 'roles-overview', 'what-is-anomalymatrix'],
+  },
+  {
     id: 'engineer-trends-flow',
     category: 'workflow',
     title: 'Process engineer: interpreting trends',
@@ -516,7 +561,8 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'Recipe version — active inspection recipe (lighting, camera, limits).',
           'Model profile — which anomaly model is used for evaluation.',
-          'Read-only: changes are made by your administrator or process engineer.',
+          'Training / Models — capture good-part images, train PatchCore, promote candidates, and reactivate older trainings.',
+          'Only Process Engineer or Admin may train; operators can read the history.',
         ],
       },
       {
@@ -536,7 +582,7 @@ export const HELP_ARTICLES = [
         ],
       },
     ],
-    related: ['license-status-user', 'roles-overview'],
+    related: ['license-status-user', 'roles-overview', 'good-part-training'],
   },
   {
     id: 'license-status-user',
@@ -591,6 +637,7 @@ export const HELP_ARTICLES = [
         heading: 'Process Engineer',
         paragraphs: [
           'Analysis of trends, recipes, and models.',
+          'On Configuration: capture good parts, train models, promote them, and reactivate older trainings.',
           'Read feedback; typically does not start new inspections on the line.',
         ],
       },

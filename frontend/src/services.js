@@ -206,8 +206,70 @@ export async function fetchRecipes() {
   return parseEnvelope(r);
 }
 
-export async function fetchModels() {
-  const r = await fetch(`${API_BASE}/models`, withCredentials());
+export async function fetchModels(recipeId) {
+  const q = recipeId ? `?recipe_id=${encodeURIComponent(recipeId)}` : '';
+  const r = await fetch(`${API_BASE}/models${q}`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function captureTrainingSamples({ recipeId = 'recipe-default', cameraId = null, count = 8 } = {}) {
+  const body = { recipe_id: recipeId, count };
+  if (cameraId) body.camera_id = cameraId;
+  const r = await fetch(
+    `${API_BASE}/models/training-samples`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function trainModel({ recipeId = 'recipe-default', sampleCount = 12, datasetVersion = 'v1' } = {}) {
+  const r = await fetch(
+    `${API_BASE}/models/train`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipe_id: recipeId,
+        sample_count: sampleCount,
+        dataset_version: datasetVersion,
+      }),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function promoteModel(modelId, { baselineScore = 0.35, candidateScore = 0.3 } = {}) {
+  const r = await fetch(
+    `${API_BASE}/models/${encodeURIComponent(modelId)}/promote`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baseline_score: baselineScore,
+        candidate_score: candidateScore,
+      }),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function activateModel(modelId) {
+  const r = await fetch(
+    `${API_BASE}/models/${encodeURIComponent(modelId)}/activate`,
+    withCredentials({ method: 'POST' })
+  );
+  return parseEnvelope(r);
+}
+
+export async function rollbackModel() {
+  const r = await fetch(
+    `${API_BASE}/models/rollback`,
+    withCredentials({ method: 'POST' })
+  );
   return parseEnvelope(r);
 }
 

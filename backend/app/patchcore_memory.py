@@ -1,8 +1,44 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
+
+
+def default_data_root() -> Path:
+    env = os.getenv("ANOMALYMATRIX_DATA_ROOT", "").strip()
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parents[1] / "data"
+
+
+def active_memory_bank_path(data_root: Path | None = None) -> Path:
+    root = Path(data_root) if data_root is not None else default_data_root()
+    return root / "training-artifacts" / "active_memory_bank.npz"
+
+
+def iter_memory_bank_candidates(data_root: Path | None = None) -> list[Path]:
+    """Search order for the active PatchCore memory bank."""
+    custom = os.getenv("PATCHCORE_MEMORY_BANK", "").strip()
+    paths: list[Path] = []
+    if custom:
+        paths.append(Path(custom))
+    if data_root is not None:
+        paths.append(active_memory_bank_path(data_root))
+    default_path = active_memory_bank_path(default_data_root())
+    if default_path not in paths:
+        paths.append(default_path)
+    # unique while preserving order
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for path in paths:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
 
 
 def frame_to_grayscale(image: np.ndarray) -> np.ndarray:
@@ -55,3 +91,27 @@ def load_memory_bank(path: str | Path) -> tuple[np.ndarray, dict]:
         "recipe_id": str(data.get("recipe_id", "recipe-default")),
     }
     return data["embeddings"], meta
+
+
+def inspect_memory_bank(data_root: Path | None = None) -> dict:
+    for path in iter_memory_bank_candidates(data_root):
+        if not path.exists():
+            continue
+        try:
+            bank, meta = load_memory_bank(path)
+            return {
+                "loaded": True,
+                "path": str(path),
+                "model_version": meta.get("model_version"),
+                "recipe_id": meta.get("recipe_id"),
+                "embedding_count": int(bank.shape[0]),
+            }
+        except Exception:
+            continue
+    return {
+        "loaded": False,
+        "path": None,
+        "model_version": None,
+        "recipe_id": None,
+        "embedding_count": 0,
+    }
