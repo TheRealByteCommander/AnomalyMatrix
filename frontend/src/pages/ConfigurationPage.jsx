@@ -264,7 +264,7 @@ export default function ConfigurationPage({
         <p className="eyebrow">{t('settings.title')}</p>
         <h2>{settingsSection ? t(`settings.${settingsSection}`) : t('settings.title')}</h2>
         <p className="muted">{settingsSection ? t(`settings.${settingsSection}Hint`) : t('settings.hint')}</p>
-        <ContextHelp articleId="configuration-overview" onOpen={openHelp} />
+        {!settingsSection ? <ContextHelp articleId="configuration-overview" onOpen={openHelp} /> : null}
       </header>
 
       {!settingsSection ? (

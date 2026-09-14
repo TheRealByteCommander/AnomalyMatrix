@@ -242,7 +242,7 @@ export default function InspectionDetailPage({
             onChange={(e) => setComment(e.target.value)}
             placeholder={t('common.optional')}
           />
-          <button type="submit" data-testid="qa-submit" disabled={submitting}>
+          <button type="submit" className="primary" data-testid="qa-submit" disabled={submitting}>
             {submitting ? t('inspectionDetail.submitting') : t('inspectionDetail.submit')}
           </button>
         </form>

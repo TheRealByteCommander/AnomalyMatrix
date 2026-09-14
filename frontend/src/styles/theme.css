@@ -261,7 +261,7 @@ a.tab { text-decoration: none; display: inline-flex; align-items: center; color:
 }
 .simple-row.active { background: #262626; }
 .home-page { display: grid; gap: var(--space-3); }
-.home-hero { display: grid; gap: 8px; }
+.home-hero { display: grid; gap: 8px; justify-items: start; }
 .home-decision {
   margin: 0;
   font-size: clamp(2.6rem, 8vw, 5.2rem);
