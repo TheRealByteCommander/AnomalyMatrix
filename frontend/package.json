@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "smoke": "npm run build",
-    "test:unit": "node --test src/recipeSelection.test.js",
+    "test:unit": "node --test src/recipeSelection.test.js src/heatmapDisplay.test.js src/displayRoute.test.js",
     "test:e2e": "playwright test"
   },
   "dependencies": {

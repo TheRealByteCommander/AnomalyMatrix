@@ -9,6 +9,26 @@ function defaultStorage() {
   return null;
 }
 
+function defaultLocalStorage() {
+  try {
+    if (typeof localStorage !== 'undefined') return localStorage;
+  } catch {
+    // private mode / blocked storage
+  }
+  return null;
+}
+
+function writeRecipeValue(storage, recipeId) {
+  if (!storage) return;
+  try {
+    const value = String(recipeId || '').trim();
+    if (value) storage.setItem(RECIPE_SELECTION_KEY, value);
+    else if (typeof storage.removeItem === 'function') storage.removeItem(RECIPE_SELECTION_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export function readStoredRecipeId(storage = defaultStorage()) {
   if (!storage || typeof storage.getItem !== 'function') return '';
   try {
@@ -18,14 +38,17 @@ export function readStoredRecipeId(storage = defaultStorage()) {
   }
 }
 
+/** Cross-window mirror so a second monitor can follow the operator selection. */
+export function readSharedRecipeId(storage = defaultLocalStorage()) {
+  return readStoredRecipeId(storage);
+}
+
 export function writeStoredRecipeId(recipeId, storage = defaultStorage()) {
-  if (!storage) return;
-  try {
-    const value = String(recipeId || '').trim();
-    if (value) storage.setItem(RECIPE_SELECTION_KEY, value);
-    else if (typeof storage.removeItem === 'function') storage.removeItem(RECIPE_SELECTION_KEY);
-  } catch {
-    // ignore storage errors
+  writeRecipeValue(storage, recipeId);
+  // Same-tab HMI keeps sessionStorage; second windows listen via localStorage.
+  if (storage === defaultStorage()) {
+    const shared = defaultLocalStorage();
+    if (shared && shared !== storage) writeRecipeValue(shared, recipeId);
   }
 }
 

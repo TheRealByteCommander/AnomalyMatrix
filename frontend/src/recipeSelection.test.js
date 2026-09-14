@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RECIPE_SELECTION_KEY,
+  readSharedRecipeId,
   readStoredRecipeId,
   resolveRecipeSelection,
   writeStoredRecipeId,
@@ -66,5 +67,10 @@ describe('recipe selection session storage', () => {
     writeStoredRecipeId('', storage);
     assert.equal(readStoredRecipeId(storage), '');
     assert.equal(storage.snapshot()[RECIPE_SELECTION_KEY], undefined);
+  });
+
+  it('reads a shared localStorage mirror without requiring sessionStorage', () => {
+    const shared = memoryStorage({ [RECIPE_SELECTION_KEY]: 'recipe-custom' });
+    assert.equal(readSharedRecipeId(shared), 'recipe-custom');
   });
 });

@@ -27,10 +27,23 @@ export function recipeFixtures() {
   ];
 }
 
-export function inspectionDto({ recipeId = DEFAULT_RECIPE_ID, id = 'INSP-E2E-1' } = {}) {
+export const SAMPLE_HEATMAP_URI =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071018"/><stop offset=".4" stop-color="#1a5cff"/><stop offset=".72" stop-color="#ffbf57"/><stop offset="1" stop-color="#ff2a4d"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><circle cx="430" cy="170" r="78" fill="#ff2a4d" fill-opacity=".88"/></svg>'
+  );
+
+export function inspectionDto({
+  recipeId = DEFAULT_RECIPE_ID,
+  id = 'INSP-E2E-1',
+  score = 0.12,
+  decision = 'green',
+  heatmapUri = 'placeholder:none',
+  heatmapPlaceholder = true,
+} = {}) {
   return {
     inspection_id: id,
-    decision: 'green',
+    decision,
     frame: {
       recipe_id: recipeId,
       camera_id: 'cam-01',
@@ -38,14 +51,14 @@ export function inspectionDto({ recipeId = DEFAULT_RECIPE_ID, id = 'INSP-E2E-1' 
       recipe_version: recipeId === CUSTOM_RECIPE_ID ? 'v2' : 'v1',
     },
     inference: {
-      anomaly_score: 0.12,
-      status: 'ok',
-      heatmap_uri: 'placeholder:none',
+      anomaly_score: score,
+      status: decision === 'green' ? 'ok' : 'anomaly',
+      heatmap_uri: heatmapUri,
       model_version: 'v0',
     },
-    heatmap: { uri: 'placeholder:none', placeholder: true, kind: 'none' },
+    heatmap: { uri: heatmapUri, placeholder: heatmapPlaceholder, kind: heatmapPlaceholder ? 'none' : 'patchcore' },
     decision_thresholds: { amber: 0.55, red: 0.85 },
-    qa: { pending: false, auto_decision: 'green' },
+    qa: { pending: false, auto_decision: decision },
     camera_ids: ['cam-01'],
     view_count: 1,
   };
@@ -71,11 +84,13 @@ function json(request, data, status = 200) {
 }
 
 export async function mockHmiApi(page, options = {}) {
-  const state = {
+  const state = options.state || {
     recipes: options.recipes || recipeFixtures(),
-    inspections: [],
+    inspections: options.inspections || [],
     runRequests: [],
     feedbackRequests: [],
+    runHeatmapUri: options.runHeatmapUri,
+    runHeatmapPlaceholder: options.runHeatmapPlaceholder,
   };
 
   await page.route('**/api/v1/**', async (route) => {
@@ -115,9 +130,13 @@ export async function mockHmiApi(page, options = {}) {
     }
     if (path.endsWith('/inspections/run') && method === 'POST') {
       state.runRequests.push(body);
+      const heatmapUri = state.runHeatmapUri || 'placeholder:none';
+      const heatmapPlaceholder = state.runHeatmapPlaceholder ?? heatmapUri.startsWith('placeholder:');
       const item = inspectionDto({
         recipeId: body.recipe_id || DEFAULT_RECIPE_ID,
         id: `INSP-E2E-${state.runRequests.length}`,
+        heatmapUri,
+        heatmapPlaceholder,
       });
       state.inspections = [item, ...state.inspections].slice(0, 20);
       await route.fulfill(json(request, item));

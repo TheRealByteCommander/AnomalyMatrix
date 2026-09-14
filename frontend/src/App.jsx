@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DashboardPage from './pages/DashboardPage';
+import HeatmapDisplayPage from './pages/HeatmapDisplayPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
 import TrendsPage from './pages/TrendsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import HelpPage from './pages/HelpPage';
 import LoginPage from './pages/LoginPage';
+import { isHeatmapDisplayPath } from './displayRoute';
 import HelpLauncher from './components/HelpLauncher';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useI18n } from './i18n/I18nProvider';
@@ -113,6 +115,10 @@ export default function App() {
 
   if (requireAuth && !authUser) {
     return <LoginPage onSuccess={setAuthUser} />;
+  }
+
+  if (isHeatmapDisplayPath()) {
+    return <HeatmapDisplayPage />;
   }
 
   const pageProps = {
