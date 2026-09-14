@@ -229,7 +229,9 @@ Ablauf in der HMI:
 Rechte: `models.train` / `models.promote` (Prozessingenieur, Admin). Operatoren haben `models.read` (Historie sichtbar, Aktionen deaktiviert).
 
 Provider in Prod: `ANOMALYMATRIX_INFERENCE_PROVIDER=patchcore`.  
-Training braucht Gut-Teil-Bilder (`training-images/{recipe_id}` hat Vorrang vor MinIO `raw-images`). Ohne Memory Bank fällt die Inferenz auf OpenCV/Hash zurück.
+Training braucht Gut-Teil-Bilder (`training-images/{recipe_id}` hat Vorrang vor MinIO `raw-images`). Ohne Memory Bank fällt die Inferenz auf OpenCV/Hash zurück; die Heatmap ist dann ein **Kanten-Residual** (im HMI als Nicht-Modell gekennzeichnet).
+
+**Heatmap:** Neue Trainings speichern ein **Patch-Gitter** (16×16) in der Memory Bank. Die Overlay-Karte ist der min. Embedding-Abstand je Patch — Hotspots liegen auf der Defektregion, nicht auf allen Kanten. Ältere bildweite Banken (`layout=image`, ein 32×32-Vektor je Gutteil) bleiben ladbar und erzeugen ein Residual zum nächsten Gutteil-Embedding. Für korrekte Patch-Lokalisierung **einmal neu trainieren und promoten**.
 
 ---
 

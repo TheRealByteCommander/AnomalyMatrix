@@ -6,7 +6,7 @@ React/Vite HMI für AnomalyMatrix (**v0.8.0**).
 | Seite | Funktion |
 |-------|----------|
 | Dashboard | Inspection auslösen, KPIs, letzte Ergebnisse |
-| Inspection Detail | Score, Heatmap-Platzhalter, **QA-Feedback** |
+| Inspection Detail | Score, Modell-Heatmap, **QA-Feedback** |
 | Trends | Trend-Summary aus API |
 | Configuration | License, Recipes/Models aus API |
 | **Hilfe & FAQ** | Durchsuchbare Wissensdatenbank, FAQ, Glossar |

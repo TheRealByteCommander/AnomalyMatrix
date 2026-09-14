@@ -6,8 +6,14 @@ import { useI18n } from '../i18n/I18nProvider';
 
 const VERDICT_KEYS = ['confirm_anomaly', 'false_positive', 'needs_review'];
 
-function HeatmapBlock({ uri, placeholder, hintLive, hintPlaceholder, aria, fallback }) {
+function HeatmapBlock({ uri, placeholder, kind, t, aria, fallback }) {
   const real = isRenderableHeatmap(uri) && !placeholder;
+  const modelBased = kind === 'patchcore' || kind === 'legacy_spatial';
+  const hint = !real
+    ? t('inspectionDetail.heatmapHintPlaceholder')
+    : modelBased
+      ? t('inspectionDetail.heatmapHint')
+      : t('inspectionDetail.heatmapHintResidual');
   return (
     <>
       {real ? (
@@ -17,7 +23,10 @@ function HeatmapBlock({ uri, placeholder, hintLive, hintPlaceholder, aria, fallb
           <span>{fallback}</span>
         </div>
       )}
-      <p className="muted">{real ? hintLive : hintPlaceholder}</p>
+      <p className="muted">{hint}</p>
+      {real && kind === 'legacy_spatial' ? (
+        <p className="muted">{t('inspectionDetail.heatmapHintRetrain')}</p>
+      ) : null}
     </>
   );
 }
@@ -138,8 +147,8 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
           <HeatmapBlock
             uri={selectedInspection.heatmapUri}
             placeholder={selectedInspection.heatmapPlaceholder}
-            hintLive={t('inspectionDetail.heatmapHint')}
-            hintPlaceholder={t('inspectionDetail.heatmapHintPlaceholder')}
+            kind={selectedInspection.heatmapKind}
+            t={t}
             aria={t('inspectionDetail.heatmapAria')}
             fallback={selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}
           />

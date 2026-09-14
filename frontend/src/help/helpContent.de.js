@@ -47,7 +47,7 @@ export const HELP_ARTICLES = [
           'Inspektion auslösen (manuell im Dashboard, automatisch per SPS-Trigger oder OPC-UA-Methode).',
           'Bild erfassen, mit KI-Modell bewerten, Ergebnis speichern und an die Anlage melden.',
           'Bei rot: Stop- und Ausschleus-Signale an die SPS (StopLineRequest, RejectPart).',
-          'Operator-HMI: letzte Prüfungen, Detail mit Score und Heatmap-Vorschau.',
+          'Operator-HMI: letzte Prüfungen, Detail mit Score und Heatmap.',
           'QA-Feedback: Anomalie bestätigen, falsch positiv markieren oder Nachprüfung anfordern.',
           'Trends und KPIs: Anomaliequote, Zykluszeiten, OPC-UA-Fehlerrate.',
         ],
@@ -322,7 +322,8 @@ export const HELP_ARTICLES = [
         heading: 'Warum nur Gutteile?',
         paragraphs: [
           'AnomalyMatrix lernt den Sollzustand aus i.O.-Referenzen (Gutteilen). n.i.O.-Teile gehören nicht ins Training.',
-          'Ohne echte Memory Bank fällt die Bewertung auf OpenCV-/Hash-Scoring zurück — das sehen Sie unter „Memory Bank“.',
+          'Ohne echte Memory Bank fällt die Bewertung auf OpenCV-/Hash-Scoring zurück — das sehen Sie unter „Memory Bank“. Die Heatmap ist dann ein Kanten-Residual, kein Modell-Overlay.',
+          'Ältere bildweite Banken bleiben ladbar; für eine Patch-Heatmap auf der Defektstelle einmal neu trainieren und promoten.',
         ],
       },
       {
@@ -506,7 +507,8 @@ export const HELP_ARTICLES = [
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Zeigt, wo die Software Auffälligkeiten vermutet. Bei vorhandener Overlay-Datei ist das die echte Heatmap, kein Platzhalter.',
+          'Zeigt die Anomalie-Intensität des aktiven Modells auf dem Prüfbild. Hotspots sind Patch-Abstände zur trainierten Memory Bank. Ohne Bank ist die Überlagerung ein Kanten-Residual und als Nicht-Modell gekennzeichnet.',
+          'Bildweite (ältere) Banken erzeugen weiterhin ein Modell-Residual zum nächsten Gutteil-Embedding; für Patch-Lokalisierung neu trainieren.',
           'Zur endgültigen Beurteilung immer Teil und Bild vergleichen.',
         ],
       },

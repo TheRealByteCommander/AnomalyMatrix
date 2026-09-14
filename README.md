@@ -113,7 +113,7 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 - `POST /api/v1/inspections/run` (Alias: `/orchestrate/run-inspection`) — optional `camera_ids` (1–4)
 - `GET /api/v1/inspections/recent` (Alias: `/results/latest`)
 - `GET /api/v1/inspections/{id}` — Einzelprüfung inkl. QA-Override
-- `GET /api/v1/inspections/{id}/heatmap` — lokale Heatmap-PNG
+- `GET /api/v1/inspections/{id}/heatmap` — lokale Heatmap-PNG (Patch-Abstände zur Memory Bank, sonst Residual)
 - `GET /api/v1/results/query` — Filter `camera_id` (jede View)
 - `GET /api/v1/results/trend-summary` — inkl. `by_camera` Drift
 - `POST /api/v1/edge/capture`, `POST /api/v1/ai/infer`

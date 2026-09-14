@@ -93,6 +93,7 @@ export function mapApiInspection(item) {
         decision: v.decision,
         heatmapUri: v.heatmap?.uri || v.inference?.heatmap_uri || null,
         heatmapPlaceholder: Boolean(v.heatmap?.placeholder),
+        heatmapKind: v.heatmap?.kind || v.inference?.heatmap_kind || null,
         source: v.source || v.frame?.source || null,
       }))
     : [];
@@ -112,6 +113,7 @@ export function mapApiInspection(item) {
     timestamp: frame.captured_at || new Date().toISOString(),
     heatmapUri,
     heatmapPlaceholder: item.heatmap ? Boolean(item.heatmap.placeholder) : !isRenderableHeatmap(heatmapUri),
+    heatmapKind: item.heatmap?.kind || inf.heatmap_kind || null,
     cameraIds: item.camera_ids || (frame.camera_id ? [frame.camera_id] : []),
     viewCount: item.view_count || views.length || 1,
     worstViewCameraId: item.worst_view_camera_id || frame.camera_id || null,

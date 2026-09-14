@@ -128,7 +128,9 @@ async def promote_model(request: Request, model_id: str, payload: dict = Body(de
         raise HTTPException(status_code=404, detail="Model not found")
 
     meta = model.get("metadata") or {}
-    sample_count = int(meta.get("embedding_count") or meta.get("sample_count") or 0)
+    sample_count = int(meta.get("sample_count") or 0)
+    if sample_count <= 0:
+        sample_count = int(meta.get("embedding_count") or 0)
     validation = validate_candidate(
         baseline_score=float(payload.get("baseline_score", 0.35)),
         candidate_score=float(payload.get("candidate_score", 0.30)),

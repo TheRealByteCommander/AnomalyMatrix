@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from .patchcore_memory import active_memory_bank_path, build_memory_bank, save_memory_bank
+from .patchcore_memory import active_memory_bank_path, build_memory_bank, default_patch_bank_meta, save_memory_bank
 from .production import is_production
 from .nio_store import count_nio_images, load_local_nio_images
 from .storage_minio import decode_png_bytes, list_training_image_bytes, load_local_training_images, store_raw_frame
@@ -159,14 +159,29 @@ def train_patchcore(
     sample_count: int = 12,
 ) -> dict:
     images, data_source = collect_training_images(data_root=data_root, recipe_id=recipe_id, sample_count=sample_count)
-    bank = build_memory_bank(images)
+    bank_meta = default_patch_bank_meta()
+    bank = build_memory_bank(images, grid=int(bank_meta["grid"]), embed_size=int(bank_meta["patch_embed_size"]))
     model_id = f"patchcore-{uuid4().hex[:8]}"
     model_version = f"{dataset_version}-{model_id[-4:]}"
     artifact_dir = Path(data_root) / "training-artifacts"
     artifact_path = artifact_dir / f"{model_id}.npz"
-    save_memory_bank(artifact_path, bank=bank, model_version=model_version, recipe_id=recipe_id)
+    save_memory_bank(
+        artifact_path,
+        bank=bank,
+        model_version=model_version,
+        recipe_id=recipe_id,
+        layout=str(bank_meta["layout"]),
+        grid=int(bank_meta["grid"]),
+        patch_embed_size=int(bank_meta["patch_embed_size"]),
+    )
     created_at = datetime.now(timezone.utc).isoformat()
-    nio_report = _nio_holdout_report(data_root=data_root, recipe_id=recipe_id, bank=bank, io_count=len(images))
+    nio_report = _nio_holdout_report(
+        data_root=data_root,
+        recipe_id=recipe_id,
+        bank=bank,
+        bank_meta=bank_meta,
+        io_count=len(images),
+    )
     return {
         "model_id": model_id,
         "name": f"PatchCore {recipe_id}",
@@ -181,6 +196,9 @@ def train_patchcore(
             "sample_count": len(images),
             "embedding_count": int(bank.shape[0]),
             "embedding_dim": int(bank.shape[1]),
+            "layout": bank_meta["layout"],
+            "grid": bank_meta["grid"],
+            "patch_embed_size": bank_meta["patch_embed_size"],
             "data_source": data_source,
             "nio_sample_count": nio_report.get("nio_count", 0),
             "validation_report": {
@@ -193,16 +211,17 @@ def train_patchcore(
     }
 
 
-def _nio_holdout_report(*, data_root: Path, recipe_id: str, bank, io_count: int) -> dict:
-    from .patchcore_memory import distance_to_anomaly_score, extract_embedding, min_distance_score
+def _nio_holdout_report(*, data_root: Path, recipe_id: str, bank, io_count: int, bank_meta: dict | None = None) -> dict:
+    from .patchcore_memory import infer_spatial
 
     nio_images = load_local_nio_images(data_root, recipe_id, limit=32)
     if not nio_images:
         return {"nio_count": count_nio_images(data_root, recipe_id), "evaluated": 0}
     scores = []
+    meta = bank_meta or default_patch_bank_meta()
     for image in nio_images:
-        distance = min_distance_score(extract_embedding(image), bank)
-        scores.append(distance_to_anomaly_score(distance))
+        score, _, _ = infer_spatial(image, bank, meta)
+        scores.append(score)
     mean_score = round(sum(scores) / len(scores), 4)
     return {
         "nio_count": count_nio_images(data_root, recipe_id),

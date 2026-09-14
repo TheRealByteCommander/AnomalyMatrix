@@ -111,26 +111,29 @@ def _run_single_view(
     if color_mode:
         frame_dict.setdefault("colorspace", color_mode)
     if capture_only:
-        inference_dict = {
+        inference_public = {
             "anomaly_score": 0.0,
             "status": "captured",
             "heatmap_uri": "",
             "model_version": "capture_only",
             "provider": "capture_only",
             "defect_class": "none",
+            "heatmap_kind": "residual",
         }
-
-        class _CaptureInference:
-            anomaly_score = 0.0
-            heatmap_uri = ""
-
-        inference = _CaptureInference()
+        heatmap_kind = "residual"
+        anomaly_map = None
+        anomaly_score = 0.0
         decision = "green"
     else:
         inference = provider.infer(frame_dict)
-        inference_dict = inference.__dict__
+        inference_public = inference.to_public_dict() if hasattr(inference, "to_public_dict") else {
+            k: v for k, v in inference.__dict__.items() if k != "anomaly_map"
+        }
+        heatmap_kind = str(getattr(inference, "heatmap_kind", None) or inference_public.get("heatmap_kind") or "residual")
+        anomaly_map = getattr(inference, "anomaly_map", None)
+        anomaly_score = float(inference.anomaly_score)
         decision = score_to_decision(
-            float(inference.anomaly_score),
+            anomaly_score,
             amber=float(thresholds["amber"]),
             red=float(thresholds["red"]),
         )
@@ -138,13 +141,17 @@ def _run_single_view(
         "camera_id": camera_id,
         "source": source or frame_dict.get("source"),
         "frame": frame_dict,
-        "inference": inference_dict,
+        "inference": inference_public,
         "decision": decision,
-        "heatmap": {"uri": inference_dict.get("heatmap_uri"), "placeholder": True},
+        "heatmap": {"uri": inference_public.get("heatmap_uri"), "placeholder": True, "kind": heatmap_kind},
     }
 
     gray = _frame_grayscale(frame_dict)
-    heatmap_png = generate_heatmap_png(gray, float(inference_dict.get("anomaly_score") or 0.0))
+    heatmap_png = generate_heatmap_png(
+        gray,
+        anomaly_score,
+        anomaly_map=anomaly_map,
+    )
     encoded = encode_frame(frame_dict, image_format=image_format, jpeg_quality=jpeg_quality)
     png_bytes = png_bytes_from_frame(frame_dict, data_root=data_root)
     if not png_bytes:
@@ -234,14 +241,16 @@ def _run_single_view(
     stored_uri = store_heatmap_binary(
         inspection_id=inspection_id,
         png_bytes=heatmap_png,
-        anomaly_score=float(inference_dict.get("anomaly_score") or 0.0),
+        anomaly_score=anomaly_score,
         camera_id=camera_id,
     )
-    heatmap_uri = stored_uri or local_uri or inference_dict.get("heatmap_uri")
+    heatmap_uri = stored_uri or local_uri or inference_public.get("heatmap_uri")
     view["heatmap"] = {
         "uri": heatmap_uri,
         "placeholder": not bool(heatmap_png),
         "storage": "minio" if stored_uri else ("local" if local_heatmap else "synthetic"),
+        "kind": heatmap_kind,
+        "model_based": heatmap_kind in {"patchcore", "legacy_spatial"},
     }
     return view
 
@@ -662,7 +671,10 @@ async def ai_infer(payload: InferRequest, request: Request):
     request_id = request.state.request_id
     provider = get_inference_provider()
     inference = provider.infer(payload.model_dump())
-    return success_envelope(inference.__dict__, request_id)
+    public = inference.to_public_dict() if hasattr(inference, "to_public_dict") else {
+        k: v for k, v in inference.__dict__.items() if k != "anomaly_map"
+    }
+    return success_envelope(public, request_id)
 
 
 def execute_inspection(payload: RunInspectionRequest, *, auth, request_id: str) -> dict:
