@@ -211,12 +211,16 @@ Ablauf in der HMI:
 4. Nach Prüfung **Promoten** (Validierung) oder **Aktivieren** (gespeichertes Training ohne Neu-Training).
 5. **Rollback** oder ein älteres Training aus der Historie erneut aktiv setzen. `active_memory_bank.npz` zeigt dann auf das gewählte Artefakt.
 6. **Entscheidungsschwellen** (Configuration, Engineer/Admin): Nachprüfung / n.i.O. je Rezept, Standard 0,55 / 0,85.
-7. Dashboard **Inspektion starten** → Score, i.O./n.i.O., Modellversion, Memory-Bank-Status.
-8. Inspection Detail **QA-Feedback**: Anomalie bestätigt → n.i.O. + Muster; Falsch positiv → keine n.i.O.-Markierung; Nachprüfung bleibt offen.
+7. **Rezepte** (Configuration): Prozessingenieur/Admin legen Rezepte an, ändern Name/Version/Kamera-/Lichtprofil/Schwellen und setzen das aktive Rezept. Operatoren lesen und wählen das Rezept am Dashboard.
+8. Dashboard **Inspektion starten** → Score, i.O./n.i.O., Modellversion, Memory-Bank-Status.
+9. Inspection Detail **QA-Feedback**: Anomalie bestätigt → n.i.O. + Muster; Falsch positiv → keine n.i.O.-Markierung; Nachprüfung bleibt offen.
 
 | Aktion | Endpoint / Ort |
 |--------|----------------|
-| Rezepte lesen | `GET /api/v1/recipes` |
+| Rezepte lesen | `GET /api/v1/recipes` (Operator/Engineer/Admin) |
+| Rezept anlegen | `POST /api/v1/recipes` (Engineer/Admin) |
+| Rezept ändern | `PUT /api/v1/recipes/{id}` (Engineer/Admin) |
+| Rezept löschen | `DELETE /api/v1/recipes/{id}` mit `{confirm:true, confirm_recipe_id}` (Engineer/Admin, **doppelte Bestätigung**) |
 | Schwellen speichern | `PUT /api/v1/recipes/{id}/thresholds` (Engineer/Admin) |
 | Modelle + Historie + Memory-Bank + n.i.O.-Zähler | `GET /api/v1/models` |
 | Gutteile erfassen | `POST /api/v1/models/training-samples` (Engineer/Admin) |
@@ -226,7 +230,18 @@ Ablauf in der HMI:
 | Rollback | `POST /api/v1/models/rollback` |
 | QA-Feedback | `POST /api/v1/feedback` (`confirm_anomaly` / `false_positive` / `needs_review`) |
 
-Rechte: `models.train` / `models.promote` (Prozessingenieur, Admin). Operatoren haben `models.read` (Historie sichtbar, Aktionen deaktiviert).
+Rechte: `recipes.write` / `models.train` / `models.promote` (Prozessingenieur, Admin). Operatoren haben `recipes.read` und `models.read` (Historie sichtbar, Aktionen deaktiviert).
+
+**Rezept löschen (sicheres Default):**
+
+- HMI verlangt **zwei Schritte**: „Wirklich löschen?“ und „Endgültig löschen — nicht rückgängig“ inkl. Eingabe der Rezept-ID.
+- API verlangt denselben Schutz: `DELETE` mit `{ "confirm": true, "confirm_recipe_id": "<id>" }`.
+- `recipe-default` ist **geschützt** und kann nicht gelöscht werden (System-Fallback für Inspektion, OPC-UA, MQTT/EOL).
+- Löschen wird **blockiert**, solange ein Modell mit Status `active` oder `candidate` das Rezept in `metadata.recipe_id` referenziert. Zuerst anderes Modell promoten/aktivieren.
+- Das letzte verbleibende Rezept kann nicht gelöscht werden.
+- Gutteil-Ordner `training-images/{id}` und n.i.O.-Ordner `nio-images/{id}` werden nach `archived-recipes/{id}/{timestamp}/` **verschoben**, nicht mitgelöscht.
+- Historische Inspektionen bleiben erhalten (`recipe_id` ist ein String, kein FK).
+- War das gelöschte Rezept aktiv, wird `recipe-default` (sonst das nächste vorhandene) aktiv gesetzt.
 
 Provider in Prod: `ANOMALYMATRIX_INFERENCE_PROVIDER=patchcore`.  
 Training braucht Gut-Teil-Bilder (`training-images/{recipe_id}` hat Vorrang vor MinIO `raw-images`). Ohne Memory Bank fällt die Inferenz auf OpenCV/Hash zurück; die Heatmap ist dann ein **Kanten-Residual** (im HMI als Nicht-Modell gekennzeichnet).

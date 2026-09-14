@@ -566,6 +566,7 @@ export const HELP_ARTICLES = [
         heading: 'Recipe & model',
         paragraphs: [
           'Recipe version — active inspection recipe (lighting, camera, limits).',
+          'Recipes — create, edit, and delete with double confirmation (Process Engineer/Admin). Operators may read and select recipes on the Dashboard. recipe-default is protected.',
           'Model profile — which anomaly model is used for evaluation.',
           'Training / Models — capture good-part images, train PatchCore, promote candidates, and reactivate older trainings.',
           'Decision thresholds — OK / review / NOK sensitivity per recipe (Process Engineer/Admin).',
@@ -911,7 +912,7 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'Camera and lighting settings.',
           'Assigned anomaly model and limits.',
-          'Maintained centrally — view only under Configuration.',
+          'Maintained under Configuration (Process Engineer/Admin). Operators select the recipe on the Dashboard.',
         ],
       },
     ],

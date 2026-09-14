@@ -12,6 +12,7 @@ test('HMI shell and tab navigation', async ({ page }) => {
   await expect(page.getByTestId('nav-configuration')).toHaveClass(/active/);
   await expect(page.getByTestId('license-billing')).toBeVisible();
   await expect(page.getByTestId('training-panel')).toBeVisible();
+  await expect(page.getByTestId('recipe-manager')).toBeVisible();
   await expect(page.getByTestId('decision-thresholds')).toBeVisible();
   await expect(page.getByTestId('vision-setup')).toBeVisible();
   await expect(page.getByTestId('storage-endurance')).toBeVisible();
@@ -26,4 +27,5 @@ test('dashboard run button visible', async ({ page }) => {
   await expect(page.getByTestId('dashboard-training')).toBeVisible();
   await page.getByTestId('dashboard-training').click();
   await expect(page.getByTestId('training-panel')).toBeVisible();
+  await expect(page.getByTestId('recipe-manager')).toBeVisible();
 });

@@ -39,6 +39,7 @@ function formatWhen(value, locale) {
 
 export default function ModelTraining({
   recipes = [],
+  selectedRecipeId = '',
   selectedCameraId = '',
   canTrain = false,
   canPromote = false,
@@ -86,9 +87,13 @@ export default function ModelTraining({
   }, [load, t]);
 
   useEffect(() => {
+    if (selectedRecipeId) {
+      setRecipeId(selectedRecipeId);
+      return;
+    }
     const first = recipes.find((r) => r.active === true || r.status === 'active') || recipes[0];
     if (first?.recipe_id) setRecipeId(first.recipe_id);
-  }, [recipes]);
+  }, [recipes, selectedRecipeId]);
 
   async function runAction(key, fn, successKey, vars) {
     setBusy(key);

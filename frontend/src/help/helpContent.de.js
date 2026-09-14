@@ -566,6 +566,7 @@ export const HELP_ARTICLES = [
         heading: 'Rezept & Modell',
         paragraphs: [
           'Recipe version — aktives Prüfrezept (Beleuchtung, Kamera, Grenzen).',
+          'Rezepte — anlegen, bearbeiten und mit doppelter Bestätigung löschen (Prozessingenieur/Admin). Operatoren dürfen Rezepte lesen und am Dashboard auswählen. recipe-default ist geschützt.',
           'Model profile — welches Anomalie-Modell ausgewertet wird.',
           'Training / Modelle — Gutteil-Bilder erfassen, PatchCore trainieren, Kandidaten promoten und ältere Trainings wieder aktiv setzen.',
           'Entscheidungsschwellen — Empfindlichkeit i.O. / Nachprüfung / n.i.O. je Rezept (Prozessingenieur/Admin).',
@@ -911,7 +912,7 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'Kamera- und Beleuchtungseinstellungen.',
           'Zugeordnetes Anomalie-Modell und Grenzwerte.',
-          'Wird zentral gepflegt — unter Configuration nur einsehbar.',
+          'Unter Configuration pflegbar (Prozessingenieur/Admin). Operatoren wählen das Rezept am Dashboard.',
         ],
       },
     ],

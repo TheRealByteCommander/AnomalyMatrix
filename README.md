@@ -127,7 +127,8 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 - Details: `docs/MULTI_CAMERA.md`, `docs/AI_VISION_EOL_STANDARD.md`
 
 ### Catalog, Feedback, Audit
-- `GET /api/v1/recipes`, `PUT /api/v1/recipes/{id}/thresholds` — Ampelschwellen je Rezept
+- `GET /api/v1/recipes`, `POST /api/v1/recipes`, `PUT /api/v1/recipes/{id}`, `DELETE /api/v1/recipes/{id}` — Rezept-CRUD (Schreiben: Engineer/Admin)
+- `PUT /api/v1/recipes/{id}/thresholds` — Ampelschwellen je Rezept
 - `GET /api/v1/models`
 - `POST /api/v1/feedback`, `GET /api/v1/feedback` — `confirm_anomaly` setzt n.i.O. und speichert n.i.O.-Muster
 - `GET /api/v1/audit/recent`
@@ -168,7 +169,7 @@ Produktion: `.env.production.example` · Dev: `.env.example`
 
 ## Frontend (HMI)
 
-Seiten: **Dashboard**, **Inspection Detail** (Multi-View + QA-Feedback + EPC), **Trends** (Drift je Kamera), **Configuration** (Kameraauswahl, Vision Setup, Training, Retention).
+Seiten: **Dashboard**, **Inspection Detail** (Multi-View + QA-Feedback + EPC), **Trends** (Drift je Kamera), **Configuration** (Rezepte CRUD, Kameraauswahl, Vision Setup, Training, Retention).
 
 ```bash
 cd frontend
