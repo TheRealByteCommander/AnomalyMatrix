@@ -48,6 +48,10 @@ Datei: `.env.production` (Vorlage: `.env.production.example`)
 | `CAMERA_DRIVER` | empfohlen | `synthetic`, `opencv` oder `gige` (`genicam`) |
 | `CAMERA_SOURCE` | bei opencv/gige | Index, `/dev/video*`, Datei **oder** GigE-Serial / User-Name / GenTL-ID |
 | `CAMERA_SOURCES_JSON` | optional | Mapping `camera_id → source` (1–N, Default-Max 4, `AMX_MAX_CAMERAS`) |
+| `CAMERA_FOURCC` | opencv USB | Pixel-Format, Default `MJPG` (UVC-4K; GigE/Synthetic ignorieren das) |
+| `CAMERA_WIDTH` | opencv USB | Capture-Breite, Default `3840` |
+| `CAMERA_HEIGHT` | opencv USB | Capture-Höhe, Default `2160` |
+| `CAMERA_FPS` | opencv USB | Capture-FPS, Default `30` (Kamera kann bis 60) |
 | `MQTT_ENABLED` / `MQTT_BROKER` / `MQTT_TOPIC` | optional | MQTT-Trigger (zusätzlich zu OPC-UA) |
 | `AMX_STATION_ID` | empfohlen | Stations-ID in Object-Keys und Vision-Profil |
 | `AMX_MAX_CAMERAS` | optional | >4 bis 16; zertifizierter sequentieller Pfad bleibt 1–4 |
@@ -104,10 +108,18 @@ Default Install: `CAMERA_DRIVER=synthetic` (ohne Host-Kamera).
 CAMERA_DRIVER=opencv
 CAMERA_SOURCE=0
 # optional: CAMERA_DEVICE=/dev/video0
+# USB 4K U3 (z. B. 32e4:6678): vor dem ersten Frame MJPG 3840x2160 @ 30 setzen
+CAMERA_FOURCC=MJPG
+CAMERA_WIDTH=3840
+CAMERA_HEIGHT=2160
+CAMERA_FPS=30
+# 60 fps: CAMERA_FPS=60
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml \
   --env-file .env.production up -d --build edge-acquisition
 ```
+
+Ohne diese Variablen nutzt `OpenCvCameraDriver` dieselben Defaults (sonst fällt UVC oft auf 640×480). Die **tatsächlich ausgehandelten** Werte `width` / `height` / `fps` / `fourcc` stehen in den Capture-Metadaten. Standbilder (`CAMERA_SOURCE=/path/to/image.png`) und GigE/Synthetic bleiben unverändert.
 
 Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mounten).
 

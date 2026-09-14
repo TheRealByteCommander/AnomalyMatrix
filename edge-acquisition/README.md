@@ -15,6 +15,8 @@ HTTP Capture-Service für AnomalyMatrix.
 | `opencv` (Aliases: `webcam`, `file`, `real`) | USB/V4L2, Index, `/dev/video*`, Standbild |
 | `gige` (Aliases: `genicam`, `gigE`) | GigE Vision / GenICam |
 
+Live-USB setzt vor dem ersten Frame `CAMERA_FOURCC` / `CAMERA_WIDTH` / `CAMERA_HEIGHT` / `CAMERA_FPS` (Default **MJPG 3840×2160 @ 30**). GigE und Synthetic ignorieren diese Variablen.
+
 ## Multi-Kamera
 Bis zu 4 Geräte zertifiziert sequentiell (`AMX_MAX_CAMERAS` bis 16). Mapping optional über `CAMERA_SOURCES_JSON`.  
 Auswahl und Same-Case-Aggregation liegen in der API (`/api/v1/cameras*`, Inspektion).

@@ -32,6 +32,10 @@ def _clean_camera_env(monkeypatch):
     monkeypatch.delenv("CAMERA_DRIVER", raising=False)
     monkeypatch.delenv("CAMERA_SOURCE", raising=False)
     monkeypatch.delenv("CAMERA_SOURCES_JSON", raising=False)
+    monkeypatch.delenv("CAMERA_FOURCC", raising=False)
+    monkeypatch.delenv("CAMERA_WIDTH", raising=False)
+    monkeypatch.delenv("CAMERA_HEIGHT", raising=False)
+    monkeypatch.delenv("CAMERA_FPS", raising=False)
     monkeypatch.delenv("CAMERA_EXPOSURE_MS", raising=False)
     monkeypatch.delenv("CAMERA_GAIN_DB", raising=False)
     monkeypatch.delenv("CAMERA_TRIGGER", raising=False)
@@ -81,6 +85,8 @@ def test_opencv_still_file(tmp_path, monkeypatch):
     assert image.shape == (32, 48)
     assert meta["driver"] == "opencv"
     assert meta["source"] == str(path)
+    assert "fourcc" not in meta
+    assert "fps" not in meta
 
 
 def test_to_grayscale_mono_and_rgb_and_bayer():

@@ -100,6 +100,10 @@ Details: `opcua-gateway/README.md`, `contracts/opcua_nodeset_mapping_v1.json`.
 # .env.production
 CAMERA_DRIVER=opencv
 CAMERA_SOURCE=0
+CAMERA_FOURCC=MJPG
+CAMERA_WIDTH=3840
+CAMERA_HEIGHT=2160
+CAMERA_FPS=30
 # optional:
 # CAMERA_SOURCES_JSON={"video0":"0","video1":"1"}
 
