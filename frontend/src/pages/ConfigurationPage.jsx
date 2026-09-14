@@ -13,6 +13,7 @@ import {
 import LicenseBilling from '../components/LicenseBilling';
 import ModelTraining from '../components/ModelTraining';
 import DecisionThresholds from '../components/DecisionThresholds';
+import RecipeManager from '../components/RecipeManager';
 import StationVisionSetup from '../components/StationVisionSetup';
 import StorageEndurancePanel from '../components/StorageEndurancePanel';
 import { useI18n } from '../i18n/I18nProvider';
@@ -33,6 +34,7 @@ export default function ConfigurationPage({ openHelp }) {
   const [canTrain, setCanTrain] = useState(false);
   const [canPromote, setCanPromote] = useState(false);
   const [canWriteRecipes, setCanWriteRecipes] = useState(false);
+  const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +52,9 @@ export default function ConfigurationPage({ openHelp }) {
         if (cancelled) return;
         setLicense(lic);
         setRecipes(recipeData.items || []);
+        const first =
+          (recipeData.items || []).find((r) => r.active === true || r.status === 'active') || recipeData.items?.[0];
+        if (first?.recipe_id) setSelectedRecipeId(first.recipe_id);
         setModels(modelData.items || []);
         setCameras(cameraData.cameras || []);
         setDriver(cameraData.driver || '');
@@ -75,9 +80,30 @@ export default function ConfigurationPage({ openHelp }) {
     };
   }, []);
 
-  const licenseState = license?.active ? 'green' : 'amber';
-  const activeRecipe = recipes.find((r) => r.active === true || r.status === 'active') || recipes[0];
+  const selectedRecipe =
+    recipes.find((r) => r.recipe_id === selectedRecipeId) ||
+    recipes.find((r) => r.active === true || r.status === 'active') ||
+    recipes[0];
+  const activeRecipe = recipes.find((r) => r.active === true || r.status === 'active') || selectedRecipe;
   const activeModel = models.find((m) => m.status === 'active' || m.active === true) || models[0];
+  const licenseState = license?.active ? 'green' : 'amber';
+
+  function handleRecipesChange(saved, action) {
+    setRecipes((prev) => {
+      if (action === 'delete') {
+        const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
+        const next = rest.find((r) => r.active === true || r.status === 'active') || rest[0];
+        setSelectedRecipeId(next?.recipe_id || '');
+        return rest;
+      }
+      const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
+      const merged = saved.active ? rest.map((item) => ({ ...item, active: false, status: 'inactive' })) : rest;
+      return [saved, ...merged].sort((a, b) => String(a.recipe_id).localeCompare(String(b.recipe_id)));
+    });
+    if (action !== 'delete' && saved?.recipe_id) {
+      setSelectedRecipeId(saved.recipe_id);
+    }
+  }
 
   const selectionValid = selected.length >= MIN_CAMERAS && selected.length <= maxCameras;
   const handleLicenseChange = useCallback((next) => {
@@ -201,23 +227,28 @@ export default function ConfigurationPage({ openHelp }) {
         )}
       </article>
 
+      <RecipeManager
+        recipes={recipes}
+        selectedRecipeId={selectedRecipe?.recipe_id || selectedRecipeId}
+        onSelect={setSelectedRecipeId}
+        onRecipesChange={handleRecipesChange}
+        canWrite={canWriteRecipes}
+        openHelp={openHelp}
+      />
+
       <StationVisionSetup canConfigure={canConfigure} openHelp={openHelp} />
       <StorageEndurancePanel canConfigure={canConfigure} />
 
       <DecisionThresholds
-        recipe={activeRecipe}
+        recipe={selectedRecipe}
         canWrite={canWriteRecipes}
         openHelp={openHelp}
-        onRecipeChange={(saved) => {
-          setRecipes((prev) => {
-            const rest = prev.filter((item) => item.recipe_id !== saved.recipe_id);
-            return [saved, ...rest];
-          });
-        }}
+        onRecipeChange={(saved) => handleRecipesChange(saved, 'update')}
       />
 
       <ModelTraining
         recipes={recipes}
+        selectedRecipeId={selectedRecipe?.recipe_id || selectedRecipeId}
         selectedCameraId={selected[0] || cameras[0]?.camera_id || ''}
         canTrain={canTrain}
         canPromote={canPromote}

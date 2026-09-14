@@ -85,6 +85,55 @@ class RecipeThresholdsRequest(BaseModel):
     red: float = Field(..., ge=0.0, le=1.0)
 
 
+class RecipeCreateRequest(BaseModel):
+    recipe_id: str = Field(..., min_length=2, max_length=63)
+    name: str = Field(..., min_length=1, max_length=128)
+    recipe_version: str = Field(default="v1", max_length=32)
+    active: bool = False
+    camera_profile: dict | None = None
+    lighting_profile: dict | None = None
+    decision_thresholds: RecipeThresholdsRequest | None = None
+
+    @field_validator("recipe_id")
+    @classmethod
+    def _recipe_id(cls, value: str) -> str:
+        from .core_store import validate_recipe_id
+
+        return validate_recipe_id(value)
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, value: str) -> str:
+        cleaned = str(value).strip()
+        if not cleaned:
+            raise ValueError("name is required")
+        return cleaned
+
+
+class RecipeUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=128)
+    recipe_version: str | None = Field(default=None, max_length=32)
+    active: bool | None = None
+    camera_profile: dict | None = None
+    lighting_profile: dict | None = None
+    decision_thresholds: RecipeThresholdsRequest | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        if not cleaned:
+            raise ValueError("name cannot be empty")
+        return cleaned
+
+
+class RecipeDeleteRequest(BaseModel):
+    confirm: bool = False
+    confirm_recipe_id: str = ""
+
+
 class MqttTriggerRequest(BaseModel):
     payload: dict | str | None = None
     topic: str | None = None

@@ -241,6 +241,50 @@ export async function fetchRecipes() {
   return parseEnvelope(r);
 }
 
+export async function fetchRecipe(recipeId) {
+  const r = await fetch(`${API_BASE}/recipes/${encodeURIComponent(recipeId)}`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function createRecipe(payload) {
+  const r = await fetch(
+    `${API_BASE}/recipes`,
+    withCredentials({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function updateRecipe(recipeId, payload) {
+  const r = await fetch(
+    `${API_BASE}/recipes/${encodeURIComponent(recipeId)}`,
+    withCredentials({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  );
+  return parseEnvelope(r);
+}
+
+export async function deleteRecipe(recipeId, { confirm, confirmRecipeId }) {
+  const r = await fetch(
+    `${API_BASE}/recipes/${encodeURIComponent(recipeId)}`,
+    withCredentials({
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        confirm: Boolean(confirm),
+        confirm_recipe_id: confirmRecipeId,
+      }),
+    })
+  );
+  return parseEnvelope(r);
+}
+
 export async function updateRecipeThresholds(recipeId, { amber, red }) {
   const r = await fetch(
     `${API_BASE}/recipes/${encodeURIComponent(recipeId)}/thresholds`,

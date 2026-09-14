@@ -24,6 +24,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
   });
   const [cameras, setCameras] = useState([]);
   const [watchdog, setWatchdog] = useState(null);
+  const [recipes, setRecipes] = useState([]);
+  const [recipeId, setRecipeId] = useState('recipe-default');
 
   useEffect(() => {
     if (runState === 'idle') setNotice(t('dashboard.ready'));
@@ -43,11 +45,18 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         ]);
         if (cancelled) return;
 
-        const activeRecipe = (recipeData.items || []).find((r) => r.status === 'active') || recipeData.items?.[0];
+        const recipeItems = recipeData.items || [];
+        const activeRecipe =
+          recipeItems.find((r) => r.active === true || r.status === 'active') || recipeItems[0];
           const items = modelData.items || [];
           const activeModel = items.find((m) => m.status === 'active') || modelData.active || items[0];
         const latestCameras = inspections[0]?.cameraIds || [];
         const latestCamera = latestCameras[0] || inspections[0]?.raw?.frame?.camera_id;
+
+        setRecipes(recipeItems);
+        if (activeRecipe?.recipe_id) {
+          setRecipeId((prev) => (recipeItems.some((r) => r.recipe_id === prev) ? prev : activeRecipe.recipe_id));
+        }
 
         setContext({
           line: latestCameras.length > 1
@@ -97,7 +106,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     setRunState('running');
     setNotice(t('dashboard.noticeRunning'));
     try {
-      const result = await runInspection();
+      const result = await runInspection(null, recipeId);
       const merged = [result, ...inspections.filter((i) => i.id !== result.id)].slice(0, 20);
       setInspections(merged);
       setSelectedInspectionId(result.id);
@@ -141,7 +150,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           <p className="eyebrow">{t('dashboard.eyebrow')}</p>
           <h2>{context.line}</h2>
           <p className="muted">
-            {t('common.recipe')} {context.recipe} · {t('common.model')} {context.modelVersion}
+            {t('common.recipe')} {recipeId || context.recipe} · {t('common.model')} {context.modelVersion}
             {inspections[0]?.epc ? ` · EPC ${inspections[0].epc}` : ''}
             {context.memoryBankKnown
               ? ` · ${context.memoryBankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}`
@@ -168,6 +177,22 @@ export default function DashboardPage({ inspections, setInspections, setSelected
         <div>
           <h3>{t('dashboard.actionTitle')}</h3>
           <p className="muted">{t('dashboard.actionHint')}</p>
+          {recipes.length ? (
+            <label className="recipe-select-label">
+              {t('common.recipe')}
+              <select
+                value={recipeId}
+                onChange={(e) => setRecipeId(e.target.value)}
+                data-testid="dashboard-recipe"
+              >
+                {recipes.map((recipe) => (
+                  <option key={recipe.recipe_id} value={recipe.recipe_id}>
+                    {recipe.name || recipe.recipe_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
         <div className="run-actions">
           <button type="button" className="tab active" data-testid="dashboard-run" onClick={handleRunInspection} disabled={runState === 'running'}>
