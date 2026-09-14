@@ -219,11 +219,11 @@ export const HELP_ARTICLES = [
       {
         heading: 'Main navigation',
         paragraphs: [
-          'Dashboard — start inspections and view recent results.',
-          'Inspection Detail — single inspection with score, heatmap, and QA feedback.',
-          'Trends — history and metrics across multiple inspections.',
-          'Configuration — active recipe, model, and license status (read-only).',
-          'Help & FAQ — this knowledge base.',
+          'Home — start inspections and see the last result.',
+          'Quality — score, heatmap, and QA feedback.',
+          'Training — capture good parts and activate models.',
+          'Settings — recipes, thresholds, cameras, trends, license.',
+          'Help via the question mark or Settings → Help.',
         ],
       },
       {
@@ -247,10 +247,10 @@ export const HELP_ARTICLES = [
       {
         heading: 'Step by step',
         paragraphs: [
-          '1. Open Dashboard and check line status (green = ready).',
-          '2. Start "Run Inspection Pipeline" and wait for the status message.',
-          '3. Review the result in "Latest inspections" — note the color and time.',
-          '4. For amber or red: click the row → open Inspection Detail.',
+          '1. Open Home and check status (green = OK / ready).',
+          '2. Start "Inspect" and wait for the result.',
+          '3. Read the decision, score, and heatmap on Home.',
+          '4. For review or NOK: open Quality and confirm QA.',
           '5. For red or unclear results: involve QA / shift lead; hold the part per plant rules.',
         ],
       },

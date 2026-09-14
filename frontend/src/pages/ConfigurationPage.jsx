@@ -1,43 +1,41 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { configSummary } from '../data/sampleData';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import {
   fetchAuthMe,
   fetchCameras,
   fetchLicenseStatus,
-  fetchModels,
   fetchRecipes,
   saveCameraSelection,
 } from '../services';
 import { resolveRecipeSelection } from '../recipeSelection';
 import LicenseBilling from '../components/LicenseBilling';
-import ModelTraining from '../components/ModelTraining';
 import DecisionThresholds from '../components/DecisionThresholds';
 import RecipeManager from '../components/RecipeManager';
 import StationVisionSetup from '../components/StationVisionSetup';
 import StorageEndurancePanel from '../components/StorageEndurancePanel';
 import { useI18n } from '../i18n/I18nProvider';
+import { SETTINGS_ITEMS } from '../i18n/screens';
 
 const MIN_CAMERAS = 1;
 
 export default function ConfigurationPage({
   openHelp,
+  goTo,
   selectedRecipeId = '',
   setSelectedRecipeId = () => {},
+  settingsSection = '',
+  setSettingsSection = () => {},
 }) {
   const { t } = useI18n();
   const [license, setLicense] = useState(null);
   const [recipes, setRecipes] = useState([]);
-  const [models, setModels] = useState([]);
   const [cameras, setCameras] = useState([]);
   const [selected, setSelected] = useState([]);
   const [maxCameras, setMaxCameras] = useState(4);
   const [driver, setDriver] = useState('');
   const [canConfigure, setCanConfigure] = useState(false);
   const [canManageLicense, setCanManageLicense] = useState(false);
-  const [canTrain, setCanTrain] = useState(false);
-  const [canPromote, setCanPromote] = useState(false);
   const [canWriteRecipes, setCanWriteRecipes] = useState(false);
   const [saveState, setSaveState] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -46,10 +44,9 @@ export default function ConfigurationPage({
     let cancelled = false;
     (async () => {
       try {
-        const [lic, recipeData, modelData, cameraData, me] = await Promise.all([
+        const [lic, recipeData, cameraData, me] = await Promise.all([
           fetchLicenseStatus(),
           fetchRecipes().catch(() => ({ items: [] })),
-          fetchModels().catch(() => ({ items: [] })),
           fetchCameras().catch(() => ({ cameras: [], selection: { camera_ids: [] } })),
           fetchAuthMe().catch(() => null),
         ]);
@@ -60,7 +57,6 @@ export default function ConfigurationPage({
         if (items.length) {
           setSelectedRecipeId((prev) => resolveRecipeSelection(items, prev));
         }
-        setModels(modelData.items || []);
         setCameras(cameraData.cameras || []);
         setDriver(cameraData.driver || '');
         setMaxCameras(cameraData.max_selectable || 4);
@@ -73,8 +69,6 @@ export default function ConfigurationPage({
         const permissions = Array.isArray(me?.permissions) ? me.permissions : null;
         setCanConfigure(role === 'admin' || role === 'process_engineer');
         setCanManageLicense(role === 'admin');
-        setCanTrain(permissions ? permissions.includes('models.train') : role === 'admin' || role === 'process_engineer');
-        setCanPromote(permissions ? permissions.includes('models.promote') : role === 'admin' || role === 'process_engineer');
         setCanWriteRecipes(permissions ? permissions.includes('recipes.write') : role === 'admin' || role === 'process_engineer');
       } catch {
         if (!cancelled) setLicense(null);
@@ -90,7 +84,6 @@ export default function ConfigurationPage({
     recipes.find((r) => r.active === true || r.status === 'active') ||
     recipes[0];
   const activeRecipe = recipes.find((r) => r.active === true || r.status === 'active') || selectedRecipe;
-  const activeModel = models.find((m) => m.status === 'active' || m.active === true) || models[0];
   const licenseState = license?.active ? 'green' : 'amber';
 
   function handleRecipesChange(saved, action) {
@@ -161,34 +154,8 @@ export default function ConfigurationPage({
     return selected.map((id) => map[id] || id).join(', ');
   }, [cameras, selected]);
 
-  return (
-    <section className="page-grid">
-      <article className="card hero">
-        <div>
-          <p className="eyebrow">{t('configuration.eyebrow')}</p>
-          <h2>{t('configuration.title')}</h2>
-          <p className="muted">{t('configuration.hint')}</p>
-          <ContextHelp articleId="configuration-overview" onOpen={openHelp} />
-        </div>
-        <StatusBadge state="green">{t('common.configValid')}</StatusBadge>
-      </article>
-      <article className="card kpi-grid">
-        <div><label>{t('configuration.opcProfile')}</label><strong>{configSummary.opcUaProfile}</strong></div>
-        <div><label>{t('configuration.recipeVersion')}</label><strong>{activeRecipe?.recipe_version || configSummary.recipeVersion}</strong></div>
-        <div><label>{t('configuration.modelProfile')}</label><strong>{activeModel?.name || configSummary.modelProfile}</strong></div>
-        <div><label>{t('configuration.auditMode')}</label><strong>{configSummary.auditMode}</strong></div>
-      </article>
-      <article className="card kpi-grid">
-        <div><label>{t('configuration.licenseTier')}</label><strong>{license?.tier || t('license.na')}</strong></div>
-        <div><label>{t('configuration.licenseActive')}</label><strong>{license ? String(license.active) : t('license.unknown')}</strong></div>
-        <div><label>{t('configuration.graceActive')}</label><strong>{license ? String(license.grace_active) : t('license.unknown')}</strong></div>
-        <div>
-          <label>{t('configuration.status')}</label>
-          <StatusBadge state={licenseState}>{license?.active ? t('license.licensed') : t('license.unlicensed')}</StatusBadge>
-        </div>
-      </article>
-
-      <article className="card">
+  const camerasPanel = (
+      <article>
         <h3>{t('configuration.camerasTitle')}</h3>
         <p className="muted">
           {t('configuration.camerasHint', { min: MIN_CAMERAS, max: maxCameras })}
@@ -245,7 +212,10 @@ export default function ConfigurationPage({
           </p>
         )}
       </article>
+  );
 
+  const sectionPanels = {
+    recipes: (
       <RecipeManager
         recipes={recipes}
         selectedRecipeId={selectedRecipe?.recipe_id || selectedRecipeId}
@@ -254,33 +224,78 @@ export default function ConfigurationPage({
         canWrite={canWriteRecipes}
         openHelp={openHelp}
       />
-
-      <StationVisionSetup canConfigure={canConfigure} openHelp={openHelp} />
-      <StorageEndurancePanel canConfigure={canConfigure} />
-
+    ),
+    thresholds: (
       <DecisionThresholds
         recipe={selectedRecipe}
         canWrite={canWriteRecipes}
         openHelp={openHelp}
         onRecipeChange={(saved) => handleRecipesChange(saved, 'update')}
       />
-
-      <ModelTraining
-        recipes={recipes}
-        selectedRecipeId={selectedRecipe?.recipe_id || selectedRecipeId}
-        selectedCameraId={selected[0] || cameras[0]?.camera_id || ''}
-        canTrain={canTrain}
-        canPromote={canPromote}
-        openHelp={openHelp}
-        onSelectRecipe={setSelectedRecipeId}
-        onModelsChange={setModels}
-      />
-
+    ),
+    cameras: camerasPanel,
+    vision: <StationVisionSetup canConfigure={canConfigure} openHelp={openHelp} />,
+    storage: <StorageEndurancePanel canConfigure={canConfigure} />,
+    license: (
       <LicenseBilling
         license={license}
         canManage={canManageLicense}
         onLicenseChange={handleLicenseChange}
       />
+    ),
+  };
+
+  function openSettingsItem(item) {
+    if (item.screen && goTo) {
+      goTo(item.screen);
+      return;
+    }
+    setSettingsSection(item.id);
+  }
+
+  return (
+    <section className="page-grid settings-page">
+      <header className="page-intro">
+        {settingsSection ? (
+          <button type="button" className="text-btn" data-testid="settings-back" onClick={() => setSettingsSection('')}>
+            {t('settings.back')}
+          </button>
+        ) : null}
+        <p className="eyebrow">{t('settings.title')}</p>
+        <h2>{settingsSection ? t(`settings.${settingsSection}`) : t('settings.title')}</h2>
+        <p className="muted">{settingsSection ? t(`settings.${settingsSection}Hint`) : t('settings.hint')}</p>
+        {!settingsSection ? <ContextHelp articleId="configuration-overview" onOpen={openHelp} /> : null}
+      </header>
+
+      {!settingsSection ? (
+        <>
+          <div className="settings-status">
+            <span className="muted">{t('common.recipe')}</span>
+            <strong>{activeRecipe?.name || activeRecipe?.recipe_id || '—'}</strong>
+            <span className="muted">{t('configuration.licenseTier')}</span>
+            <StatusBadge state={licenseState}>{license?.active ? t('license.licensed') : t('license.unlicensed')}</StatusBadge>
+          </div>
+          <nav className="settings-list" aria-label={t('settings.title')}>
+            {SETTINGS_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="settings-row"
+                data-testid={item.testId}
+                onClick={() => openSettingsItem(item)}
+              >
+                <span>
+                  <strong>{t(item.labelKey)}</strong>
+                  <span className="muted">{t(item.hintKey)}</span>
+                </span>
+                <span className="settings-chevron" aria-hidden="true">›</span>
+              </button>
+            ))}
+          </nav>
+        </>
+      ) : (
+        sectionPanels[settingsSection] || null
+      )}
     </section>
   );
 }

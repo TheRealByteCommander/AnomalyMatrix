@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
+import { SCREEN_IDS } from '../i18n/screens';
 import { getArticleById, getArticlesByCategory, getApplicationOverviewArticles, getHelpArticles, getHelpCategories } from '../help/helpContent';
 import { searchHelpArticles } from '../help/searchHelp';
 
@@ -50,6 +51,7 @@ export default function HelpPage({
   initialCategoryId = null,
   initialQuery = '',
   onNavigateArticle,
+  goTo,
 }) {
   const { locale, t, messages } = useI18n();
   const [query, setQuery] = useState(initialQuery);
@@ -88,13 +90,16 @@ export default function HelpPage({
   const faqItems = messages.help.faqItems;
 
   return (
-    <section className="page-grid help-page">
-      <article className="card hero">
-        <div>
-          <p className="eyebrow">{t('help.eyebrow')}</p>
-          <h2>{t('help.title')}</h2>
-          <p className="muted">{t('help.subtitle')}</p>
-        </div>
+    <section className="page-grid help-page" data-testid="help-page">
+      <article className="page-intro">
+        {goTo ? (
+          <button type="button" className="text-btn" data-testid="settings-back" onClick={() => goTo(SCREEN_IDS.configuration)}>
+            {t('settings.back')}
+          </button>
+        ) : null}
+        <p className="eyebrow">{t('help.eyebrow')}</p>
+        <h2>{t('help.title')}</h2>
+        <p className="muted">{t('help.subtitle')}</p>
       </article>
 
       <article className="card help-application-showcase">

@@ -28,11 +28,24 @@ test('recipe selection survives inspection, detail, and configuration', async ({
   await expect(page.getByTestId('dashboard-recipe')).toHaveValue(CUSTOM_RECIPE_ID);
 
   await page.getByTestId('nav-configuration').click();
+  await page.getByTestId('settings-recipes').click();
   await expect(page.getByTestId(`recipe-row-${CUSTOM_RECIPE_ID}`)).toHaveClass(/active/);
+  await expect(page.getByTestId('license-billing')).toHaveCount(0);
+
+  await page.getByTestId('nav-training').click();
   await expect(page.getByTestId('training-recipe')).toHaveValue(CUSTOM_RECIPE_ID);
+
+  await page.getByTestId('nav-configuration').click();
+  await page.getByTestId('settings-thresholds').click();
   await expect(page.getByTestId('thresholds-recipe')).toContainText('Custom Seam');
+  await page.getByTestId('settings-back').click();
+  await page.getByTestId('settings-license').click();
   await expect(page.getByTestId('license-billing')).toBeVisible();
+  await page.getByTestId('settings-back').click();
+  await page.getByTestId('settings-vision').click();
   await expect(page.getByTestId('vision-setup')).toBeVisible();
+  await page.getByTestId('settings-back').click();
+  await page.getByTestId('settings-storage').click();
   await expect(page.getByTestId('storage-endurance')).toBeVisible();
 
   await page.getByTestId('nav-dashboard').click();
@@ -50,6 +63,7 @@ test('recipe selection is restored from sessionStorage after reload', async ({ p
   await page.reload();
   await expect(page.getByTestId('dashboard-recipe')).toHaveValue(CUSTOM_RECIPE_ID);
   await page.getByTestId('nav-configuration').click();
+  await page.getByTestId('settings-recipes').click();
   await expect(page.getByTestId(`recipe-row-${CUSTOM_RECIPE_ID}`)).toHaveClass(/active/);
 });
 

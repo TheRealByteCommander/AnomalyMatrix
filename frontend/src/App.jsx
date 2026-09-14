@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import DashboardPage from './pages/DashboardPage';
 import HeatmapDisplayPage from './pages/HeatmapDisplayPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
+import TrainingPage from './pages/TrainingPage';
 import TrendsPage from './pages/TrendsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import HelpPage from './pages/HelpPage';
@@ -9,8 +10,9 @@ import LoginPage from './pages/LoginPage';
 import { isHeatmapDisplayPath } from './displayRoute';
 import HelpLauncher from './components/HelpLauncher';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import NavRail from './components/NavRail';
 import { useI18n } from './i18n/I18nProvider';
-import { SCREEN_HELP_ARTICLE, SCREEN_IDS, SCREEN_ORDER } from './i18n/screens';
+import { SCREEN_HELP_ARTICLE, SCREEN_IDS } from './i18n/screens';
 import { inspections as seed } from './data/sampleData';
 import { readStoredRecipeId, writeStoredRecipeId } from './recipeSelection';
 import { fetchAuthMe, fetchRecentInspections, logout } from './services';
@@ -20,6 +22,7 @@ const requireAuth = import.meta.env.VITE_REQUIRE_AUTH === 'true';
 export default function App() {
   const { t } = useI18n();
   const [active, setActive] = useState(SCREEN_IDS.dashboard);
+  const [settingsSection, setSettingsSection] = useState('');
   const [inspections, setInspections] = useState(seed);
   const [selectedInspectionId, setSelectedInspectionId] = useState(seed[0]?.id ?? null);
   const [apiOnline, setApiOnline] = useState(false);
@@ -41,13 +44,20 @@ export default function App() {
     });
   }, []);
 
+  const goTo = useCallback((screenId, options = {}) => {
+    setActive(screenId);
+    if (screenId === SCREEN_IDS.configuration) {
+      setSettingsSection(options.section || '');
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('session_id') || params.get('checkout')) {
-      setActive(SCREEN_IDS.configuration);
+      goTo(SCREEN_IDS.configuration, { section: 'license' });
     }
-  }, []);
+  }, [goTo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +120,11 @@ export default function App() {
   }
 
   if (!authReady) {
-    return <div className="shell"><p className="muted">{t('login.loading')}</p></div>;
+    return (
+      <div className="login-shell">
+        <p className="muted">{t('login.loading')}</p>
+      </div>
+    );
   }
 
   if (requireAuth && !authUser) {
@@ -126,16 +140,19 @@ export default function App() {
     setInspections,
     selectedInspection,
     setSelectedInspectionId,
-    goTo: setActive,
+    goTo,
     apiOnline,
     openHelp,
     selectedRecipeId,
     setSelectedRecipeId,
+    settingsSection,
+    setSettingsSection,
   };
 
   const pages = {
     [SCREEN_IDS.dashboard]: <DashboardPage {...pageProps} />,
     [SCREEN_IDS.inspectionDetail]: <InspectionDetailPage {...pageProps} />,
+    [SCREEN_IDS.training]: <TrainingPage {...pageProps} />,
     [SCREEN_IDS.trends]: <TrendsPage {...pageProps} />,
     [SCREEN_IDS.configuration]: <ConfigurationPage {...pageProps} />,
     [SCREEN_IDS.help]: (
@@ -144,22 +161,23 @@ export default function App() {
         initialCategoryId={helpState.categoryId}
         initialQuery={helpState.query}
         onNavigateArticle={(id) => setHelpState((s) => ({ ...s, articleId: id }))}
+        goTo={goTo}
       />
     ),
   };
 
   return (
-    <div className="shell">
+    <div className="hmi-shell">
       <a href="#main-content" className="skip-link" data-testid="skip-to-content">{t('app.skipToContent')}</a>
-      <header className="topbar">
-        <div className="topbar-main">
-          <div>
-            <p className="eyebrow">{t('app.eyebrow')}</p>
-            <h1>{t('app.title')}</h1>
-            <p className="muted">
+      <NavRail active={active} onNavigate={goTo} />
+      <div className="hmi-stage">
+        <header className="status-bar">
+          <div className="status-bar-live">
+            <span className={apiOnline ? 'status-dot online' : 'status-dot offline'} aria-hidden="true" />
+            <span className="muted">
               {apiOnline ? t('app.connected') : t('app.offline')}
               {authUser ? ` · ${authUser.display_name}` : ''}
-            </p>
+            </span>
           </div>
           <div className="topbar-actions">
             <LanguageSwitcher />
@@ -169,24 +187,11 @@ export default function App() {
               </button>
             ) : null}
           </div>
-        </div>
-        <nav className="tabs" aria-label={t('app.navLabel')}>
-          {SCREEN_ORDER.map((screenId) => (
-            <button
-              key={screenId}
-              type="button"
-              data-testid={`nav-${screenId}`}
-              onClick={() => setActive(screenId)}
-              className={screenId === active ? 'tab active' : 'tab'}
-            >
-              {t(`nav.${screenId}`)}
-            </button>
-          ))}
-        </nav>
-      </header>
-      <main id="main-content" className="main-content">
-        {pages[active]}
-      </main>
+        </header>
+        <main id="main-content" className="main-content">
+          {pages[active]}
+        </main>
+      </div>
       <HelpLauncher onOpenArticle={openHelp} onOpenFullHelp={openFullHelp} />
     </div>
   );
