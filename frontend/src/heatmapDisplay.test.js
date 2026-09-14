@@ -57,6 +57,17 @@ describe('resolveDisplayRecipeId', () => {
       'recipe-from-run'
     );
   });
+
+  it('uses the inspection recipe instead of the active recipe when nothing is selected', () => {
+    assert.equal(
+      resolveDisplayRecipeId({
+        selectedRecipeId: '',
+        recipes,
+        inspectionRecipeId: 'recipe-custom',
+      }),
+      'recipe-custom'
+    );
+  });
 });
 
 describe('canShowHeatmapImage', () => {

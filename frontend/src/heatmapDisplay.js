@@ -29,9 +29,14 @@ export function recipeDisplayLabel(recipes, recipeId) {
 }
 
 export function resolveDisplayRecipeId({ selectedRecipeId, recipes, inspectionRecipeId } = {}) {
-  const fromSelection = resolveRecipeSelection(recipes, selectedRecipeId);
-  if (fromSelection) return fromSelection;
-  return String(inspectionRecipeId || selectedRecipeId || '').trim();
+  const preferred = String(selectedRecipeId || '').trim();
+  const items = Array.isArray(recipes) ? recipes : [];
+  if (preferred && (!items.length || items.some((item) => item?.recipe_id === preferred))) {
+    return preferred;
+  }
+  const fromInspection = String(inspectionRecipeId || '').trim();
+  if (fromInspection) return fromInspection;
+  return resolveRecipeSelection(items, preferred);
 }
 
 export function canShowHeatmapImage(inspection) {
