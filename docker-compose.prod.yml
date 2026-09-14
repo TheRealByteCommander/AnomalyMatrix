@@ -36,6 +36,7 @@ services:
       AMX_RETENTION_TTL_DAYS: ${AMX_RETENTION_TTL_DAYS:-90}
       AMX_CAPTURE_WATCHDOG_SEC: ${AMX_CAPTURE_WATCHDOG_SEC:-30}
       MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET:-archive-images}
+    volumes:
       - api_data:/app/data
     # API only on localhost — HMI reaches it via nginx proxy
     ports:
