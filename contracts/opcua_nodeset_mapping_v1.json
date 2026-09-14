@@ -15,7 +15,9 @@
     "reject_part": "ns=2;s=Inspection.RejectPart",
     "result_ready": "ns=2;s=Inspection.ResultReady",
     "camera_id": "ns=2;s=Inspection.Request.CameraId",
-    "recipe_id": "ns=2;s=Inspection.Request.RecipeId"
+    "recipe_id": "ns=2;s=Inspection.Request.RecipeId",
+    "epc": "ns=2;s=Inspection.Request.Epc",
+    "process_id": "ns=2;s=Inspection.Request.ProcessId"
   },
   "last_result": {
     "pass_fail": "ns=2;s=Inspection.LastResult.PassFail",
@@ -30,7 +32,9 @@
     "worst_view_camera_id": "ns=2;s=Inspection.LastResult.WorstViewCameraId",
     "camera_ids": "ns=2;s=Inspection.LastResult.CameraIds",
     "view_count": "ns=2;s=Inspection.LastResult.ViewCount",
-    "decision_policy": "ns=2;s=Inspection.LastResult.DecisionPolicy"
+    "decision_policy": "ns=2;s=Inspection.LastResult.DecisionPolicy",
+    "epc": "ns=2;s=Inspection.LastResult.Epc",
+    "process_id": "ns=2;s=Inspection.LastResult.ProcessId"
   },
   "trend_warning": "ns=2;s=Inspection.Trend.Warning",
   "trend": {

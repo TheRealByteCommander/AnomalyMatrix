@@ -3,7 +3,7 @@
 Engineering-first MVP for industrial anomaly detection (unüberwachte Gut-Teil-Prüfung, Operator-HMI, OPC-UA-Anbindung).
 
 **Aktueller Stand (2026-07):** API **v1.2.0** — Pilot-/Deploy-ready (siehe Rollout-Gates in `docs/RELEASE_READINESS.md`)  
-**Installation:** `docs/INSTALLATION.md` · **Konfiguration:** `docs/CONFIGURATION.md` · **Multi-Kamera:** `docs/MULTI_CAMERA.md`  
+**Installation:** `docs/INSTALLATION.md` · **Konfiguration:** `docs/CONFIGURATION.md` · **Multi-Kamera:** `docs/MULTI_CAMERA.md` · **AI-Vision EOL:** `docs/AI_VISION_EOL_STANDARD.md`  
 **Deployment:** `docker-compose.prod.yml` + `.env.production` — siehe `docs/PRODUCTION_RUNBOOK.md`  
 **GitHub Release:** `v1.2.0` — `docs/RELEASE_NOTES_v1.2.0.md`
 
@@ -120,8 +120,11 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 
 ### Kameras (Multi-View)
 - `GET /api/v1/cameras` — Hardware-Erkennung + Auswahl
-- `GET` / `PUT /api/v1/cameras/selection` — 1–4 Kameras speichern
-- Details: `docs/MULTI_CAMERA.md`
+- `GET` / `PUT /api/v1/cameras/selection` — 1–N Kameras speichern (`AMX_MAX_CAMERAS`)
+- `GET` / `PUT /api/v1/station/vision-profile` — EOL Vision Setup, Export/Import/Clone
+- `POST /api/v1/triggers/mqtt` — MQTT-Payload (Commissioning) → Inspektion inkl. EPC
+- `GET /api/v1/storage/stats`, `GET`/`PUT /api/v1/storage/retention`
+- Details: `docs/MULTI_CAMERA.md`, `docs/AI_VISION_EOL_STANDARD.md`
 
 ### Catalog, Feedback, Audit
 - `GET /api/v1/recipes`, `PUT /api/v1/recipes/{id}/thresholds` — Ampelschwellen je Rezept
@@ -156,6 +159,8 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 | `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
 | `LICENSE_SERVER_URL`, `LICENSE_PRODUCT_ID` | Byte-Commander License Server (Integer-ID) |
 | `CAMERA_DRIVER`, `CAMERA_SOURCE`, `CAMERA_SOURCES_JSON` | Edge-Capture / Multi-Kamera-Mapping (`synthetic`, `opencv`, `gige`) |
+| `MQTT_ENABLED`, `MQTT_BROKER`, `MQTT_TOPIC` | MQTT-Trigger (zusätzlich zu OPC-UA) |
+| `AMX_STATION_ID`, `AMX_MAX_CAMERAS`, `AMX_RETENTION_TTL_DAYS` | EOL-Station, Kamera-Cap, Retention |
 
 Dev-Auth (nur wenn `ANOMALYMATRIX_ENV` ≠ `prod`): Header `X-AMX-Role` / `X-AMX-User` (Frontend: `VITE_DEV_AUTH_HEADERS=true`) oder `X-AMX-Api-Key`. Unbekannte Rollen werden **abgelehnt** (kein Admin-Fallback).
 
@@ -163,7 +168,7 @@ Produktion: `.env.production.example` · Dev: `.env.example`
 
 ## Frontend (HMI)
 
-Seiten: **Dashboard**, **Inspection Detail** (Multi-View + QA-Feedback), **Trends** (Drift je Kamera), **Configuration** (Kameraauswahl 1–4).
+Seiten: **Dashboard**, **Inspection Detail** (Multi-View + QA-Feedback + EPC), **Trends** (Drift je Kamera), **Configuration** (Kameraauswahl, Vision Setup, Training, Retention).
 
 ```bash
 cd frontend
@@ -197,6 +202,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 | WebSocket Live-View | 🔜 Folgerelease |
 
 ## Dokumente
+- `docs/AI_VISION_EOL_STANDARD.md` — AI-Vision Datenbereitschaft & Stations-Rollout
 - `docs/INSTALLATION.md` — **Installation** (Installer + Compose + lokal)
 - `docs/CONFIGURATION.md` — **Konfiguration & Go-Live** (TLS, Kamera, OPC-UA, Rezepte)
 - `docs/MULTI_CAMERA.md` — Multi-Kamera Case-Prüfung & Per-Camera-Drift

@@ -13,6 +13,8 @@ test('HMI shell and tab navigation', async ({ page }) => {
   await expect(page.getByTestId('license-billing')).toBeVisible();
   await expect(page.getByTestId('training-panel')).toBeVisible();
   await expect(page.getByTestId('decision-thresholds')).toBeVisible();
+  await expect(page.getByTestId('vision-setup')).toBeVisible();
+  await expect(page.getByTestId('storage-endurance')).toBeVisible();
 
   await page.getByTestId('nav-help').click();
   await expect(page.getByTestId('nav-help')).toHaveClass(/active/);

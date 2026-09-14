@@ -43,20 +43,35 @@ class PlcBridge:
         if rising and not self._running:
             camera = str(node_values.get(self._nid("camera_id"), "") or "").strip()
             recipe = str(node_values.get(self._nid("recipe_id"), "recipe-default") or "recipe-default")
+            epc = ""
+            process_id = ""
+            if "epc" in self._insp:
+                epc = str(node_values.get(self._nid("epc"), "") or "").strip()
+            if "process_id" in self._insp:
+                process_id = str(node_values.get(self._nid("process_id"), "") or "").strip()
             node_values[self._nid("external_trigger")] = False
             node_values[self._nid("start_request")] = False
-            await self._run_inspection(node_values, camera, recipe)
+            await self._run_inspection(node_values, camera, recipe, epc=epc, process_id=process_id)
 
-    async def run_method(self, node_values: dict, camera_id: str, recipe_id: str) -> bool:
+    async def run_method(self, node_values: dict, camera_id: str, recipe_id: str, epc: str = "", process_id: str = "") -> bool:
         if self._running:
             return False
         return await self._run_inspection(
             node_values,
             (camera_id or "").strip(),
             (recipe_id or "recipe-default").strip() or "recipe-default",
+            epc=(epc or "").strip(),
+            process_id=(process_id or "").strip(),
         )
 
-    async def _run_inspection(self, node_values: dict, camera_id: str, recipe_id: str) -> bool:
+    async def _run_inspection(
+        self,
+        node_values: dict,
+        camera_id: str,
+        recipe_id: str,
+        epc: str = "",
+        process_id: str = "",
+    ) -> bool:
         if self._running:
             return False
         self._running = True
@@ -65,16 +80,23 @@ class PlcBridge:
             node_values[self._nid("result_ready")] = False
             node_values[self._contract["system_state"]] = "busy"
             node_values[self._contract.get("system_health", "ns=2;s=System.Health")] = "ok"
+            if epc and "epc" in self._insp:
+                node_values[self._nid("epc")] = epc
+            if process_id and "process_id" in self._insp:
+                node_values[self._nid("process_id")] = process_id
 
             logger.info(
-                "OPC UA inspection trigger camera=%s recipe=%s",
+                "OPC UA inspection trigger camera=%s recipe=%s epc=%s",
                 camera_id or "<station-selection>",
                 recipe_id,
+                epc or "-",
             )
             result = await asyncio.to_thread(
                 run_inspection_sync,
                 camera_id=camera_id or None,
                 recipe_id=recipe_id,
+                epc=epc or None,
+                process_id=process_id or None,
             )
             if not result:
                 # Clear busy locally — API publish will not arrive on failure.

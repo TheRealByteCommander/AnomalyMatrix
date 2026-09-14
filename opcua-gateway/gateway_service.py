@@ -28,6 +28,8 @@ class TriggerRequest(BaseModel):
     # Empty camera_id => backend uses station multi-camera selection
     camera_id: str = ""
     recipe_id: str = "recipe-default"
+    epc: str = ""
+    process_id: str = ""
 
 
 @asynccontextmanager
@@ -104,8 +106,8 @@ async def manual_trigger(body: TriggerRequest):
     from plc_bridge import get_plc_bridge
 
     bridge = get_plc_bridge()
-    ok = await bridge.run_method(NODE_VALUES, body.camera_id, body.recipe_id)
-    return {"triggered": ok, "camera_id": body.camera_id, "recipe_id": body.recipe_id}
+    ok = await bridge.run_method(NODE_VALUES, body.camera_id, body.recipe_id, body.epc, body.process_id)
+    return {"triggered": ok, "camera_id": body.camera_id, "recipe_id": body.recipe_id, "epc": body.epc}
 
 
 @app.get("/last")

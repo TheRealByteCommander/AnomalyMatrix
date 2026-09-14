@@ -567,6 +567,8 @@ export const HELP_ARTICLES = [
           'Model profile — welches Anomalie-Modell ausgewertet wird.',
           'Training / Modelle — Gutteil-Bilder erfassen, PatchCore trainieren, Kandidaten promoten und ältere Trainings wieder aktiv setzen.',
           'Entscheidungsschwellen — Empfindlichkeit i.O. / Nachprüfung / n.i.O. je Rezept (Prozessingenieur/Admin).',
+          'EOL-Stationsstandard / Vision Setup — Kamerarollen (oben/seitlich/unten/STF), Objektiv-/FOV-Notizen, Belichtung und Checkliste. Vorlage JSON/YAML exportieren oder für eine andere Linie klonen.',
+          'Speicher & Retention — Objektzahl, TTL, Archiv, Watchdog für 24h-Betrieb. EPC der letzten Prüfung steht im Dashboard.',
           'n.i.O.-Muster — Anzahl der von QA bestätigten Defektbilder (nicht ins Gutteil-Training gemischt).',
           'Nur Prozessingenieur oder Admin dürfen trainieren; Operatoren sehen den Verlauf lesend.',
         ],
@@ -574,7 +576,7 @@ export const HELP_ARTICLES = [
       {
         heading: 'Integration',
         paragraphs: [
-          'OPC UA profile — wie Ergebnisse an die Anlage gemeldet werden.',
+          'OPC UA profile — wie Ergebnisse an die Anlage gemeldet werden. MQTT-Trigger (SPS/MES) läuft zusätzlich; beide dürfen parallel aktiv sein.',
           'Audit mode — ob Prüf- und Feedback-Aktionen protokolliert werden.',
         ],
       },
@@ -588,7 +590,33 @@ export const HELP_ARTICLES = [
         ],
       },
     ],
-    related: ['license-status-user', 'roles-overview', 'good-part-training'],
+    related: ['license-status-user', 'roles-overview', 'good-part-training', 'eol-vision-setup'],
+  },
+  {
+    id: 'eol-vision-setup',
+    category: 'screens',
+    title: 'EOL-Stationsstandard (Vision Setup)',
+    keywords: ['vision', 'eol', 'kamera', 'unten', 'epc', 'mqtt', 'retention', 'checkliste', 'basler'],
+    summary: 'Kamerarollen, Optik-Notizen, Checkliste und Vorlage für andere Linien.',
+    screen: 'Configuration',
+    sections: [
+      {
+        heading: 'Was Sie eintragen',
+        paragraphs: [
+          'Pro Slot: Rolle (oben, seitlich, unten, STF, Vollständigkeit), Objektiv-/FOV-Notizen, Belichtung, Gain, Trigger und optionale Lichtsteuerung.',
+          'Die Perspektiv-Checkliste (Ecken, Kanten, Merkmale, Unteransicht) bestätigt der Operator vor Go-Live.',
+          'JSON/YAML exportieren oder das Profil auf eine neue Stations-ID klonen — das ist der rollenfähige Standard für Phase 3.',
+        ],
+      },
+      {
+        heading: 'EPC und Trigger',
+        paragraphs: [
+          'Jedes Capture hängt an einer EPC (oder Prozess-ID) — sichtbar im Dashboard und Inspektionsdetail.',
+          'Die SPS kann per OPC UA oder MQTT auslösen; beides darf parallel laufen.',
+        ],
+      },
+    ],
+    related: ['configuration-overview', 'operator-daily-flow'],
   },
   {
     id: 'license-status-user',

@@ -38,6 +38,8 @@ def build_default_node_values() -> dict[str, object]:
         # Empty CameraId => API uses station multi-camera selection
         insp.get("camera_id", "ns=2;s=Inspection.Request.CameraId"): "",
         insp.get("recipe_id", "ns=2;s=Inspection.Request.RecipeId"): "recipe-default",
+        insp.get("epc", "ns=2;s=Inspection.Request.Epc"): "",
+        insp.get("process_id", "ns=2;s=Inspection.Request.ProcessId"): "",
         lr["pass_fail"]: "unknown",
         lr.get("pass_fail_bool", "ns=2;s=Inspection.LastResult.PassFailBool"): False,
         lr["anomaly_score"]: 0.0,
@@ -51,6 +53,8 @@ def build_default_node_values() -> dict[str, object]:
         lr.get("camera_ids", "ns=2;s=Inspection.LastResult.CameraIds"): "",
         lr.get("view_count", "ns=2;s=Inspection.LastResult.ViewCount"): 0,
         lr.get("decision_policy", "ns=2;s=Inspection.LastResult.DecisionPolicy"): "worst_view",
+        lr.get("epc", "ns=2;s=Inspection.LastResult.Epc"): "",
+        lr.get("process_id", "ns=2;s=Inspection.LastResult.ProcessId"): "",
         c["trend_warning"]: False,
         trend.get("warning", c["trend_warning"]): False,
         trend.get("severity", "ns=2;s=Inspection.Trend.Severity"): "green",

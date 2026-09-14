@@ -74,6 +74,15 @@ def map_inspection_to_opcua_payload(result: dict, *, busy: bool = False) -> dict
         payload[node("last_result.decision_policy")] = str(result.get("decision_policy") or "worst_view")
     except KeyError:
         pass
+    try:
+        payload[node("last_result.epc")] = str(result.get("epc") or (result.get("epc_binding") or {}).get("epc") or "")
+        payload[node("last_result.process_id")] = str(
+            result.get("process_id") or (result.get("epc_binding") or {}).get("process_id") or ""
+        )
+        if result.get("epc") or (result.get("epc_binding") or {}).get("epc"):
+            payload[node("inspection.epc")] = str(result.get("epc") or result["epc_binding"]["epc"])
+    except KeyError:
+        pass
 
     trend = result.get("trend_warning")
     if trend is not None:

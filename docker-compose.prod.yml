@@ -27,6 +27,15 @@ services:
       MINIO_PUBLIC_BASE: ${MINIO_PUBLIC_BASE:-/artifacts}
       CAMERA_DRIVER: ${CAMERA_DRIVER:-synthetic}
       CAMERA_SOURCE: ${CAMERA_SOURCE:-0}
+      MQTT_ENABLED: ${MQTT_ENABLED:-false}
+      MQTT_BROKER: ${MQTT_BROKER:-}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_TOPIC: ${MQTT_TOPIC:-anomalymatrix/eol/trigger}
+      AMX_STATION_ID: ${AMX_STATION_ID:-eol-station-01}
+      AMX_MAX_CAMERAS: ${AMX_MAX_CAMERAS:-4}
+      AMX_RETENTION_TTL_DAYS: ${AMX_RETENTION_TTL_DAYS:-90}
+      AMX_CAPTURE_WATCHDOG_SEC: ${AMX_CAPTURE_WATCHDOG_SEC:-30}
+      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET:-archive-images}
     volumes:
       - api_data:/app/data
     # API only on localhost — HMI reaches it via nginx proxy

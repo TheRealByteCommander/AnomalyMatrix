@@ -13,7 +13,7 @@ Verwandt: [`CONFIGURATION.md`](./CONFIGURATION.md) · [`PRODUCTION_RUNBOOK.md`](
 | | |
 |--|--|
 | Min. Kameras | **1** |
-| Max. Kameras | **4** |
+| Max. Kameras | **4** zertifiziert sequentiell; `AMX_MAX_CAMERAS` bis **16** |
 | Treiber heute | OpenCV / V4L2 (USB), **GigE/GenICam (MVP)**, oder Synthetic |
 | Capture | **sequentiell** (kein Hardware-Trigger-Sync) |
 | GigE / GenICam | ✅ MVP: Discovery + Free-Run/Software-Trigger, 1–4 Kameras |
@@ -131,11 +131,25 @@ Voraussetzungen Host (Ubuntu VPS/IPC):
 - UDP 3956 (GVCP) plus GVSP-Streaming-Ports nicht von UFW/iptables geblockt
 - Overlay **nicht** mit `docker-compose.dev.yml` kombinieren (`network_mode: host` vs. `ports`)
 
+Persistenz Auswahl: Volume `api_data` → `/app/data/station_cameras.json`.
+
+## Mehr als 4 Kameras / weitere Linien
+
+- `AMX_MAX_CAMERAS=8` (Hard-Cap 16). HMI liest `max_selectable` von `GET /api/v1/cameras`.
+- Zusätzliche Host-Geräte in `docker-compose.camera.yml` bzw. GigE-`CAMERA_SOURCES_JSON`.
+- Neue Linie: HMI Vision Setup → **Klonen** oder JSON/YAML-Import (`docs/AI_VISION_EOL_STANDARD.md`).
+- IPC: 1 GigE-NIC pro hochauflösender Kamera empfohlen; Jumbo Frames; sequentieller Capture plant die Zykluszeit (`n × grab`).
+
 Ohne gemounteten GenTL-Producer nutzt das Image **Aravis**. Mit `.cti` (Basler pylon, MATRIX VISION, IDS, …) wird Harvesters bevorzugt (`GIGE_BACKEND=auto`).
 
-**Nicht im MVP:** harter Multi-Cam-Hardware-Trigger / Encoder-Sync. `CAMERA_TRIGGER=hardware` setzt GenICam-Nodes best-effort; Linien-Sync bleibt Integrator-Thema.
+### Basler (pylon)
 
-Persistenz Auswahl: Volume `api_data` → `/app/data/station_cameras.json`.
+1. pylon auf dem Host installieren, Producer `.cti` nach `/opt/gentl` oder `GIGE_GENTL_CTI=…/ProducerGEV.cti`
+2. `CAMERA_DRIVER=gige`, `CAMERA_SOURCE=<Serial>` (pylon Viewer)
+3. Overlay `docker-compose.gige.yml`, Host-Netz, MTU 9000
+4. USB-OpenCV-Kameras bleiben über `CAMERA_DRIVER=opencv` ohne Overlay nutzbar
+
+**Nicht im MVP:** harter Multi-Cam-Hardware-Trigger / Encoder-Sync. `CAMERA_TRIGGER=hardware` setzt GenICam-Nodes best-effort; Linien-Sync bleibt Integrator-Thema.
 
 ---
 

@@ -11,6 +11,11 @@ def test_contract_files_present_and_parseable():
         root / 'contracts' / 'events_v1' / 'FeedbackSubmitted.json',
         root / 'contracts' / 'events_v1' / 'ModelRetrained.json',
         root / 'contracts' / 'events_v1' / 'TrendWarningRaised.json',
+        root / 'contracts' / 'image_asset_v1.json',
+        root / 'contracts' / 'capture_set_v1.json',
+        root / 'contracts' / 'epc_binding_v1.json',
+        root / 'contracts' / 'station_vision_profile_v1.json',
+        root / 'contracts' / 'retention_policy_v1.json',
     ]
     for file in files:
         assert file.exists(), f"missing contract: {file}"

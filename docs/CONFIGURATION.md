@@ -47,7 +47,11 @@ Datei: `.env.production` (Vorlage: `.env.production.example`)
 | `ANOMALYMATRIX_INFERENCE_PROVIDER` | ja | `patchcore` (nicht `stub`) |
 | `CAMERA_DRIVER` | empfohlen | `synthetic`, `opencv` oder `gige` (`genicam`) |
 | `CAMERA_SOURCE` | bei opencv/gige | Index, `/dev/video*`, Datei **oder** GigE-Serial / User-Name / GenTL-ID |
-| `CAMERA_SOURCES_JSON` | optional | Mapping `camera_id → source` (1–4) |
+| `CAMERA_SOURCES_JSON` | optional | Mapping `camera_id → source` (1–N, Default-Max 4, `AMX_MAX_CAMERAS`) |
+| `MQTT_ENABLED` / `MQTT_BROKER` / `MQTT_TOPIC` | optional | MQTT-Trigger (zusätzlich zu OPC-UA) |
+| `AMX_STATION_ID` | empfohlen | Stations-ID in Object-Keys und Vision-Profil |
+| `AMX_MAX_CAMERAS` | optional | >4 bis 16; zertifizierter sequentieller Pfad bleibt 1–4 |
+| `AMX_RETENTION_TTL_DAYS` | empfohlen | Lösch-/Archivfrist Rohbilder (Default 90) |
 | `MINIO_PUBLIC_BASE` | empfohlen | `/artifacts` (HMI-Heatmaps) |
 | `INFLUX_*` / `MINIO_*` | empfohlen | Metriken / Artefakte |
 
@@ -112,7 +116,7 @@ Datei als Quelle: `CAMERA_SOURCE=/path/to/image.png` (im Container erreichbar mo
 - Hardware-Erkennung: `GET /api/v1/cameras` (Edge: `GET /cameras`)
 - Auswahl speichern: `PUT /api/v1/cameras/selection` — Body `{"camera_ids":["video0","video1"]}`  
   Rollen: Admin / Prozessingenieur (HMI → Konfiguration)
-- Grenzen: **min. 1**, **max. 4** Kameras
+- Grenzen: **min. 1**, **max. 4** zertifiziert sequentiell (`AMX_MAX_CAMERAS` bis 16)
 - Inspektion nutzt die gespeicherte Auswahl; Entscheidung: **worst view wins**
 - Override pro Request: `POST /api/v1/inspections/run` mit `camera_ids`
 - OPC-UA: leeres `Request.CameraId` → Stationsauswahl; `LastResult` liefert `CameraIds`, `ViewCount`, `WorstViewCameraId`
@@ -182,8 +186,12 @@ docker compose … exec -T postgres \
 
 ### Trigger-Test
 
-- SPS: Flanke auf `Inspection.ExternalTrigger` oder `StartRequest`  
+- SPS: Flanke auf `Inspection.ExternalTrigger` oder `StartRequest` (optional `Request.Epc`)
 - oder HTTP (mit Service-Token): `POST http://opcua-gateway:8092/trigger`
+- MQTT: Topic `anomalymatrix/eol/trigger` mit JSON `{"action":"inspect","epc":"..."}`  
+  Overlay: `docker-compose.mqtt.yml`. Commissioning ohne Broker: `POST /api/v1/triggers/mqtt`
+
+AI-Vision-EOL-Standard (Vision Setup, Retention, Watchdog): [`AI_VISION_EOL_STANDARD.md`](./AI_VISION_EOL_STANDARD.md)
 
 ---
 
@@ -279,6 +287,9 @@ Nutzt `docker compose exec` gegen den Postgres-Container (kein Host-Port nötig)
 - [ ] OPC-UA: Kunden-Zertifikate, SPS-Trigger + Ergebnis-Nodes  
 - [ ] Kamera: `opencv` / `gige` **oder** bewusst synthetic für Demo  
 - [ ] Multi-Kamera: Auswahl 1–4 gespeichert; Testlauf `view_count` ok (`docs/MULTI_CAMERA.md`)  
+- [ ] MQTT (optional): Overlay `docker-compose.mqtt.yml`, Topic `anomalymatrix/eol/trigger`, EPC im Payload  
+- [ ] Vision Setup: Kamerarollen inkl. Unteransicht, Checkliste bestätigt, Vorlage exportiert  
+- [ ] Retention/Watchdog: `GET /storage/stats`, Self-Test nach Reboot  
 - [ ] Drift: `trend-summary.by_camera` / `drifting_camera_id` nachvollziehbar  
 - [ ] `OPCUA_API_KEY` = `operator-1.api_key`  
 - [ ] PatchCore-Modell trainiert/promoted (falls Live-Linie)  

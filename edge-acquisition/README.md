@@ -16,7 +16,7 @@ HTTP Capture-Service für AnomalyMatrix.
 | `gige` (Aliases: `genicam`, `gigE`) | GigE Vision / GenICam |
 
 ## Multi-Kamera
-Bis zu 4 Geräte. Mapping optional über `CAMERA_SOURCES_JSON`.  
+Bis zu 4 Geräte zertifiziert sequentiell (`AMX_MAX_CAMERAS` bis 16). Mapping optional über `CAMERA_SOURCES_JSON`.  
 Auswahl und Same-Case-Aggregation liegen in der API (`/api/v1/cameras*`, Inspektion).
 
 Capture ist **sequentiell** (ein Frame pro `/capture`-Aufruf). Hardware-Trigger-Sync / Encoder ist vorbereitet (GenICam-Nodes `TriggerMode` / `TriggerSource`) aber kein voller Linien-Sync — siehe unten.
@@ -93,3 +93,12 @@ PYTHONPATH=. pytest -q
 ```
 
 CI mockt GenTL/Harvesters; es wird **keine** echte Kamera benötigt.
+
+## Basler pylon
+
+1. Host: pylon Runtime + GigE Producer (`.cti`)
+2. `GENICAM_GENTL64_PATH=/opt/pylon/...` oder `GIGE_GENTL_CTI=/path/ProducerGEV.cti`
+3. `CAMERA_DRIVER=gige` `CAMERA_SOURCE=<Serial>` `GIGE_BACKEND=auto` (Harvesters, sonst Aravis)
+4. Compose: `docker-compose.gige.yml` (Host-Netz, Jumbo Frames)
+
+USB-Webcams bleiben `CAMERA_DRIVER=opencv`. RAW-Passthrough: wenn der Frame `raw_bytes` enthält, speichert die API `format=raw`; sonst PNG/JPEG laut Stationsprofil (Limitation in `view.raw_limitation`).

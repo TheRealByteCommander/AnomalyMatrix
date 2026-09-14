@@ -8,7 +8,13 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-def run_inspection_sync(*, camera_id: str | None = None, recipe_id: str | None = None) -> dict | None:
+def run_inspection_sync(
+    *,
+    camera_id: str | None = None,
+    recipe_id: str | None = None,
+    epc: str | None = None,
+    process_id: str | None = None,
+) -> dict | None:
     """Trigger backend inspection.
 
     Empty/None camera_id omits the field so the API uses the station multi-camera selection.
@@ -22,10 +28,15 @@ def run_inspection_sync(*, camera_id: str | None = None, recipe_id: str | None =
         headers["X-AMX-Api-Key"] = api_key
     body: dict = {
         "recipe_id": recipe_id or os.getenv("OPCUA_DEFAULT_RECIPE_ID", "recipe-default"),
+        "trigger_source": "opcua",
     }
     cam = (camera_id or "").strip()
     if cam:
         body["camera_id"] = cam
+    if epc:
+        body["epc"] = epc
+    if process_id:
+        body["process_id"] = process_id
     try:
         with httpx.Client(timeout=float(os.getenv("OPCUA_INSPECTION_TIMEOUT_SEC", "30"))) as client:
             response = client.post(f"{base}/api/v1/inspections/run", json=body, headers=headers)

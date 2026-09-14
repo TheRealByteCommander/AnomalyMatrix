@@ -128,6 +128,7 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.camera.yml config >/dev/null
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.gige.yml config >/dev/null
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tls.yml config >/dev/null
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.mqtt.yml config >/dev/null
       - name: Build API image
         run: docker build -f backend/Dockerfile --build-arg ANOMALYMATRIX_VERSION=1.2.0 -t amx-api:ci .
       - name: Build edge image

@@ -11,6 +11,8 @@ def test_opcua_contract_v12_has_plc_and_multiview_nodes():
     assert "worst_view_camera_id" in contract["last_result"]
     assert "view_count" in contract["last_result"]
     assert "drifting_camera_id" in contract["trend"]
+    assert "epc" in contract["inspection"]
+    assert "epc" in contract["last_result"]
 
 
 def test_opcua_payload_includes_multiview_and_drift():

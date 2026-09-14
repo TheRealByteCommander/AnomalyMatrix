@@ -86,6 +86,8 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
           <h2>{selectedInspection.id}</h2>
           <p className="muted">
             {t('inspectionDetail.part')}: {selectedInspection.part} · {new Date(selectedInspection.timestamp).toLocaleString()}
+            {selectedInspection.epc ? ` · EPC ${selectedInspection.epc}` : ''}
+            {selectedInspection.processId ? ` · ${t('inspectionDetail.processId')} ${selectedInspection.processId}` : ''}
           </p>
           <ContextHelp articleId="inspection-detail" onOpen={openHelp} />
         </div>
@@ -116,6 +118,9 @@ export default function InspectionDetailPage({ selectedInspection, setInspection
           <p className="muted">
             {t('inspectionDetail.modelVersion')}: {selectedInspection.modelVersion || '—'}
           </p>
+          {selectedInspection.epc ? (
+            <p className="muted" data-testid="inspection-epc">EPC: {selectedInspection.epc}</p>
+          ) : null}
           {selectedInspection.memoryBankKnown ? (
             <p className="muted">
               {t('inspectionDetail.memoryBank')}:{' '}

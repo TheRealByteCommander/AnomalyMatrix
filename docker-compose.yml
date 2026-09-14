@@ -32,6 +32,19 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
       MINIO_SECURE: "false"
+      MQTT_ENABLED: ${MQTT_ENABLED:-false}
+      MQTT_BROKER: ${MQTT_BROKER:-}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_TOPIC: ${MQTT_TOPIC:-anomalymatrix/eol/trigger}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_QOS: ${MQTT_QOS:-1}
+      AMX_STATION_ID: ${AMX_STATION_ID:-eol-station-01}
+      AMX_LINE_ID: ${AMX_LINE_ID:-line-01}
+      AMX_MAX_CAMERAS: ${AMX_MAX_CAMERAS:-4}
+      AMX_RETENTION_TTL_DAYS: ${AMX_RETENTION_TTL_DAYS:-90}
+      AMX_CAPTURE_WATCHDOG_SEC: ${AMX_CAPTURE_WATCHDOG_SEC:-30}
+      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET:-archive-images}
     volumes:
       - api_data:/app/data
     depends_on:
