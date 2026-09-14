@@ -14,7 +14,6 @@ test('recipe selection survives inspection, detail, and configuration', async ({
 
   await page.getByTestId('dashboard-run').click();
   await expect.poll(() => api.runRequests.length).toBe(1);
-  await expect(page.getByText('INSP-E2E-1')).toBeVisible();
   await expect(page.getByTestId('dashboard-recipe')).toHaveValue(CUSTOM_RECIPE_ID);
   expect(api.runRequests[0].recipe_id).toBe(CUSTOM_RECIPE_ID);
   expect(api.runRequests[0].trigger_source).toBe('hmi');
@@ -58,8 +57,9 @@ test('QA confirm marks inspection n.i.O. in the detail view', async ({ page }) =
   await mockHmiApi(page);
   await page.goto('/');
   await page.getByTestId('dashboard-run').click();
-  await expect(page.getByText('INSP-E2E-1')).toBeVisible();
+  await expect.poll(() => page.getByTestId('dashboard-open-detail').isEnabled()).toBeTruthy();
   await page.getByTestId('dashboard-open-detail').click();
+  await expect(page.getByTestId('inspection-id')).toHaveText('INSP-E2E-1');
   await page.getByTestId('qa-verdict').selectOption('confirm_anomaly');
   await page.getByTestId('qa-submit').click();
   await expect(page.getByTestId('qa-nio-banner')).toBeVisible();
