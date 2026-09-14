@@ -185,3 +185,23 @@ def test_rollback_restores_previous_bank(tmp_path, monkeypatch):
     assert active_link.exists()
     _, meta = load_memory_bank(active_link)
     assert meta.get("model_version") == first["model_version"]
+
+
+def test_promote_rejects_small_sample_count_with_readable_error(tmp_path, monkeypatch):
+    _bind_store(tmp_path, monkeypatch)
+    trained = client.post(
+        "/api/v1/models/train",
+        json={"recipe_id": "recipe-default", "sample_count": 4},
+        headers=ENGINEER,
+    ).json()["data"]
+    promote = client.post(
+        f"/api/v1/models/{trained['model_id']}/promote",
+        json={"baseline_score": 0.4, "candidate_score": 0.3},
+        headers=ADMIN,
+    )
+    assert promote.status_code == 409
+    message = promote.json()["error"]["message"]
+    assert "insufficient_samples" in message
+    activate = client.post(f"/api/v1/models/{trained['model_id']}/activate", headers=ADMIN)
+    assert activate.status_code == 200
+    assert activate.json()["data"]["model"]["status"] == "active"

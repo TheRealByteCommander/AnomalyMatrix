@@ -21,6 +21,15 @@ function metaOf(model) {
   return model?.metadata || {};
 }
 
+function friendlyError(message, t) {
+  const text = String(message || '');
+  if (text.includes('insufficient_samples')) return t('training.errInsufficientSamples');
+  if (text.includes('regression_detected')) return t('training.errRegression');
+  if (text.includes('synthetic_only_dataset')) return t('training.errSynthetic');
+  if (text.includes('Memory-bank artifact missing')) return t('training.errMissingArtifact');
+  return text || t('training.actionFailed');
+}
+
 function formatWhen(value, locale) {
   if (!value) return '—';
   const date = new Date(value);
@@ -88,7 +97,7 @@ export default function ModelTraining({
       setNotice({ ok: true, message: t(successKey, vars) });
       return result;
     } catch (err) {
-      setNotice({ ok: false, message: err.message || t('training.actionFailed') });
+      setNotice({ ok: false, message: friendlyError(err.message, t) });
       return null;
     } finally {
       setBusy('');
@@ -250,6 +259,7 @@ export default function ModelTraining({
 
       <h4 className="training-history-title">{t('training.historyTitle')}</h4>
       <p className="muted">{t('training.historyHint')}</p>
+      <p className="muted">{t('training.promoteHint')}</p>
       {!rows.length ? (
         <p className="muted">{t('training.historyEmpty')}</p>
       ) : (

@@ -110,7 +110,7 @@ button.primary,
 button.primary:disabled,
 .primary:disabled { opacity: .55; cursor: not-allowed; }
 .training-status { margin: .85rem 0; }
-.training-status p { margin: .25rem 0 0; font-size: .8rem; word-break: break-all; }
+.training-status p { margin: .25rem 0 0; font-size: .8rem; overflow-wrap: anywhere; }
 .training-form {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: .75rem; margin: .75rem 0;

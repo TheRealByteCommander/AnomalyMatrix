@@ -135,7 +135,10 @@ async def promote_model(request: Request, model_id: str, payload: dict = Body(de
         sample_count=sample_count,
     )
     if not validation["passed"]:
-        raise HTTPException(status_code=409, detail=validation)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Promotion validation failed: {validation['reason']}",
+        )
     if meta.get("artifact_uri") and artifact_path_for_model(model) is None:
         raise HTTPException(status_code=409, detail=f"Memory-bank artifact missing: {meta.get('artifact_uri')}")
 
