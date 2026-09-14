@@ -1,8 +1,46 @@
 from __future__ import annotations
 
-import io
+from pathlib import Path
 
 import numpy as np
+
+from .nio_store import safe_id
+
+
+def heatmap_dir(data_root: Path, inspection_id: str) -> Path:
+    return Path(data_root) / "heatmaps" / safe_id(inspection_id)
+
+
+def heatmap_api_uri(inspection_id: str, camera_id: str) -> str:
+    return f"/api/v1/inspections/{inspection_id}/heatmap?camera_id={safe_id(camera_id, fallback='cam')}"
+
+
+def save_local_heatmap(
+    *,
+    data_root: Path,
+    inspection_id: str,
+    camera_id: str,
+    png_bytes: bytes,
+) -> Path | None:
+    if not png_bytes:
+        return None
+    folder = heatmap_dir(data_root, inspection_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{safe_id(camera_id, fallback='cam')}.png"
+    path.write_bytes(png_bytes)
+    return path
+
+
+def load_local_heatmap(data_root: Path, inspection_id: str, camera_id: str | None = None) -> Path | None:
+    folder = heatmap_dir(data_root, inspection_id)
+    if not folder.exists():
+        return None
+    if camera_id:
+        path = folder / f"{safe_id(camera_id, fallback='cam')}.png"
+        if path.exists():
+            return path
+    pngs = sorted(folder.glob("*.png"))
+    return pngs[0] if pngs else None
 
 
 def generate_heatmap_png(gray: np.ndarray, anomaly_score: float) -> bytes:

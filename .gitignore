@@ -23,6 +23,10 @@ backend/data/sessions.json
 backend/data/license_state.json
 backend/data/station_cameras.json
 backend/data/training-artifacts/
+backend/data/training-images/
+backend/data/nio-images/
+backend/data/heatmaps/
+backend/data/inspection-frames/
 opcua-gateway/certs/*.pem
 opcua-gateway/certs/*.der
 opcua-gateway/certs/*.crl

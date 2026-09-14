@@ -61,38 +61,67 @@ async function parseEnvelope(response) {
   return body.data;
 }
 
+/** True when the heatmap URI can be shown as a real overlay image. */
+export function isRenderableHeatmap(uri) {
+  if (!uri || typeof uri !== 'string') return false;
+  if (uri.startsWith('synthetic:') || uri.startsWith('placeholder:')) return false;
+  return (
+    uri.startsWith('/') ||
+    uri.startsWith('http://') ||
+    uri.startsWith('https://') ||
+    uri.startsWith('data:')
+  );
+}
+
 /** Map backend inspection DTO to HMI view model (Phase 2/3 contract). */
 export function mapApiInspection(item) {
   const frame = item.frame || {};
   const inf = item.inference || {};
+  const qa = item.qa || {};
   const score = Number(inf.anomaly_score ?? 0);
-  const decision =
-    item.decision ||
-    (score >= 0.85 ? 'red' : score >= 0.55 ? 'amber' : 'green');
+  const thresholds = item.decision_thresholds || {};
+  const amber = Number(thresholds.amber ?? 0.55);
+  const red = Number(thresholds.red ?? 0.85);
+  const autoDecision =
+    qa.auto_decision ||
+    (score >= red ? 'red' : score >= amber ? 'amber' : 'green');
+  const decision = item.decision || autoDecision;
   const views = Array.isArray(item.views)
     ? item.views.map((v) => ({
         cameraId: v.camera_id,
         score: Number(v.inference?.anomaly_score ?? 0),
         decision: v.decision,
         heatmapUri: v.heatmap?.uri || v.inference?.heatmap_uri || null,
+        heatmapPlaceholder: Boolean(v.heatmap?.placeholder),
         source: v.source || v.frame?.source || null,
       }))
     : [];
+  const heatmapUri = item.heatmap?.uri || inf.heatmap_uri || null;
 
   return {
     id: item.inspection_id || item.id,
     part: frame.recipe_id || frame.camera_id || 'unknown',
     score,
     decision,
+    autoDecision,
+    qaVerdict: qa.verdict || null,
+    qaOverride: qa.override || null,
+    qaPending: Boolean(qa.pending),
+    qaActor: qa.actor || null,
     defect: inf.status === 'anomaly' ? inf.defect_class || 'anomaly detected' : 'none',
     timestamp: frame.captured_at || new Date().toISOString(),
-    heatmapUri: item.heatmap?.uri || inf.heatmap_uri || null,
+    heatmapUri,
+    heatmapPlaceholder: item.heatmap ? Boolean(item.heatmap.placeholder) : !isRenderableHeatmap(heatmapUri),
     cameraIds: item.camera_ids || (frame.camera_id ? [frame.camera_id] : []),
     viewCount: item.view_count || views.length || 1,
     worstViewCameraId: item.worst_view_camera_id || frame.camera_id || null,
     driftingCameraId: item.drifting_camera_id || null,
     byCamera: item.by_camera || [],
     views,
+    modelVersion: inf.model_version || item.memory_bank?.model_version || null,
+    memoryBankLoaded: Boolean(item.memory_bank?.loaded),
+    memoryBankKnown: item.memory_bank != null,
+    thresholds,
     raw: item,
   };
 }
@@ -203,6 +232,18 @@ export async function fetchObservabilitySummary() {
 
 export async function fetchRecipes() {
   const r = await fetch(`${API_BASE}/recipes`, withCredentials());
+  return parseEnvelope(r);
+}
+
+export async function updateRecipeThresholds(recipeId, { amber, red }) {
+  const r = await fetch(
+    `${API_BASE}/recipes/${encodeURIComponent(recipeId)}/thresholds`,
+    withCredentials({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amber, red }),
+    })
+  );
   return parseEnvelope(r);
 }
 

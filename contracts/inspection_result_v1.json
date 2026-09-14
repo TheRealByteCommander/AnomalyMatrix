@@ -41,6 +41,26 @@
       }
     },
     "heatmap": {"type": "object"},
+    "qa": {
+      "type": "object",
+      "description": "QA feedback overlay. confirm_anomaly sets decision to red (NIO) while auto_decision is preserved.",
+      "properties": {
+        "auto_decision": {"type": "string", "enum": ["green", "amber", "red"]},
+        "verdict": {"type": ["string", "null"], "enum": ["confirm_anomaly", "false_positive", "needs_review", null]},
+        "override": {"type": ["string", "null"], "enum": ["nio", null]},
+        "pending": {"type": "boolean"},
+        "actor": {"type": ["string", "null"]},
+        "feedback_id": {"type": ["string", "null"]}
+      }
+    },
+    "decision_thresholds": {
+      "type": "object",
+      "properties": {
+        "amber": {"type": "number"},
+        "red": {"type": "number"}
+      }
+    },
+    "memory_bank": {"type": "object"},
     "views": {
       "type": "array",
       "maxItems": 4,

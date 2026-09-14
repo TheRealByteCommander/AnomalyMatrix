@@ -170,8 +170,8 @@ export const HELP_ARTICLES = [
         heading: 'Nutzen',
         paragraphs: [
           'Feedback (bestätigen / falsch positiv / Nachprüfung) dokumentiert die QS-Entscheidung.',
+          '„Anomalie bestätigt“ setzt die Prüfung auf n.i.O. (rot) und speichert das Bild als n.i.O.-Muster.',
           'Audit-Log und Events für Nachvollziehbarkeit bei Audits.',
-          'Grundlage für spätere Modell-Nachschulung (Continual Learning, roadmap).',
         ],
       },
     ],
@@ -275,15 +275,15 @@ export const HELP_ARTICLES = [
         heading: 'Wann Feedback geben?',
         paragraphs: [
           'Nach visueller oder messtechnischer Nachprüfung des Teils.',
-          'Besonders wichtig bei rot (Fail) und amber (Review).',
-          'Auch bei grün, wenn Sie einen verdeckten Fehler vermuten.',
+          'Besonders wichtig bei n.i.O. (rot) und Nachprüfung (gelb).',
+          'Auch bei i.O., wenn Sie einen verdeckten Fehler vermuten.',
         ],
       },
       {
         heading: 'Feedback senden',
         paragraphs: [
           'Inspection Detail öffnen → Abschnitt „QA-Feedback“.',
-          'Verdict wählen: Anomalie bestätigen, Falsch positiv oder Nachprüfung nötig.',
+          'Verdict wählen: Anomalie bestätigt, Falsch positiv oder Nachprüfung nötig.',
           'Optional Kommentar (z. B. Fehlerstelle, Batch, Schicht).',
           '„Feedback senden“ — bei Erfolg erscheint „Feedback gespeichert.“',
         ],
@@ -291,8 +291,10 @@ export const HELP_ARTICLES = [
       {
         heading: 'Wirkung',
         paragraphs: [
-          'Ihr Feedback fließt in die Qualitätsdokumentation und späteres Modell-Lernen ein.',
-          'Ohne Berechtigung erscheint eine Fehlermeldung — Schichtleitung oder Admin kontaktieren.',
+          '„Anomalie bestätigt“ zeigt die Prüfung dauerhaft als n.i.O. (rot), mit Audit der automatischen Entscheidung.',
+          'Das Prüfbild wird als n.i.O.-Muster zu Rezept/Kamera gespeichert (Anzahl in Configuration unter Training).',
+          'Falsch positiv bleibt die automatische Entscheidung — kein n.i.O.-Muster.',
+          'Nachprüfung bleibt offen, ohne die Ampel zu überschreiben.',
         ],
       },
     ],
@@ -331,6 +333,7 @@ export const HELP_ARTICLES = [
           '3. „Training starten“ erzeugt einen Kandidaten (Memory-Bank .npz). Vorherige Trainings werden nicht gelöscht.',
           '4. Nach Prüfung „Promoten“ (Validierung) oder „Aktivieren“ (gespeichertes Training wiederverwenden).',
           '5. Bei Bedarf Rollback oder ein älteres Training aus der Historie erneut aktivieren.',
+          '6. Prüfung starten → QA „Anomalie bestätigt“ setzt n.i.O. und speichert n.i.O.-Muster (Zähler in diesem Panel).',
         ],
       },
       {
@@ -496,13 +499,14 @@ export const HELP_ARTICLES = [
           'Prüf-ID, Teil/Rezept und Zeitpunkt der Prüfung.',
           'Anomaly score — numerischer Verdachtsindex (0 bis 1, siehe Glossar).',
           'Defect label — vom System vorgeschlagene Fehlerklasse oder „none“.',
-          'Pass / Review / Fail — Kurzentscheidung aus der Ampelfarbe.',
+          'Pass / Review / Fail — Kurzentscheidung als i.O. / Nachprüfung / n.i.O.',
+          'Modellversion und ob eine trainierte Memory Bank geladen ist.',
         ],
       },
       {
         heading: 'Heatmap',
         paragraphs: [
-          'Zeigt, wo die Software Auffälligkeiten vermutet (Vorschau/Platzhalter je nach Ausbaustand).',
+          'Zeigt, wo die Software Auffälligkeiten vermutet. Bei vorhandener Overlay-Datei ist das die echte Heatmap, kein Platzhalter.',
           'Zur endgültigen Beurteilung immer Teil und Bild vergleichen.',
         ],
       },
@@ -562,6 +566,8 @@ export const HELP_ARTICLES = [
           'Recipe version — aktives Prüfrezept (Beleuchtung, Kamera, Grenzen).',
           'Model profile — welches Anomalie-Modell ausgewertet wird.',
           'Training / Modelle — Gutteil-Bilder erfassen, PatchCore trainieren, Kandidaten promoten und ältere Trainings wieder aktiv setzen.',
+          'Entscheidungsschwellen — Empfindlichkeit i.O. / Nachprüfung / n.i.O. je Rezept (Prozessingenieur/Admin).',
+          'n.i.O.-Muster — Anzahl der von QA bestätigten Defektbilder (nicht ins Gutteil-Training gemischt).',
           'Nur Prozessingenieur oder Admin dürfen trainieren; Operatoren sehen den Verlauf lesend.',
         ],
       },
@@ -654,29 +660,36 @@ export const HELP_ARTICLES = [
   {
     id: 'decision-colors',
     category: 'decisions',
-    title: 'Ampelfarben & Entscheidungen',
-    keywords: ['grün', 'amber', 'rot', 'green', 'red', 'pass', 'fail'],
-    summary: 'Bedeutung von grün, amber und rot.',
+    title: 'Ampelfarben: i.O., Nachprüfung, n.i.O.',
+    keywords: ['grün', 'amber', 'rot', 'green', 'red', 'i.o.', 'n.i.o.', 'pass', 'fail'],
+    summary: 'Bedeutung von i.O. (grün), Nachprüfung (gelb) und n.i.O. (rot).',
     sections: [
       {
-        heading: 'Grün (Pass)',
+        heading: 'Grün — i.O.',
         paragraphs: [
-          'Kein relevanter Anomalie-Verdacht.',
+          'Kein relevanter Anomalie-Verdacht. Teil ist i.O.',
           'Weiterproduktion nach Werksstandard.',
         ],
       },
       {
-        heading: 'Amber (Review)',
+        heading: 'Gelb — Nachprüfung',
         paragraphs: [
           'Grenzbereich — menschliche Nachprüfung empfohlen.',
           'Nicht automatisch ausschleusen; QA-Regelwerk beachten.',
         ],
       },
       {
-        heading: 'Rot (Fail)',
+        heading: 'Rot — n.i.O.',
         paragraphs: [
-          'Starker Anomalie-Verdacht oder Fehlerklasse.',
+          'Starker Anomalie-Verdacht, Fehlerklasse oder QA-Bestätigung.',
           'Teil sperren/nacharbeiten gemäß Prozess; QA einbinden.',
+        ],
+      },
+      {
+        heading: 'Schwellen in der HMI',
+        paragraphs: [
+          'Standard: Nachprüfung ab 0,55, n.i.O. ab 0,85. Prozessingenieur/Admin stellen die Werte unter Configuration je Rezept ein.',
+          'QA „Anomalie bestätigt“ überschreibt die Anzeige auf n.i.O., unabhängig vom Score.',
         ],
       },
     ],
@@ -808,8 +821,8 @@ export const HELP_ARTICLES = [
         heading: 'Einordnung',
         paragraphs: [
           'Je höher der Wert, desto stärker weicht das Teil vom „Gut-Teil“-Modell ab.',
-          'Ab ca. 0,55: Review (amber). Ab ca. 0,85: Fail (rot). Darunter: Pass (grün).',
-          'Schwellen können je Rezept leicht abweichen — Entscheidungsfarbe ist maßgeblich.',
+          'Ab dem Rezept-Schwellenwert (Standard 0,55): Nachprüfung (gelb). Ab n.i.O.-Schwelle (Standard 0,85): n.i.O. (rot). Darunter: i.O. (grün).',
+          'Schwellen stellt der Prozessingenieur in Configuration ein — die Ampelentscheidung ist maßgeblich.',
         ],
       },
     ],
@@ -841,7 +854,9 @@ export const HELP_ARTICLES = [
     sections: [
       {
         heading: 'Anomalie bestätigen',
-        paragraphs: ['Das System hat recht — es liegt ein echter Defekt oder relevanter Befund vor.'],
+        paragraphs: [
+          'Das System hat recht — echter Defekt. Die Prüfung wird als n.i.O. angezeigt und das Bild als n.i.O.-Muster gespeichert.',
+        ],
       },
       {
         heading: 'Falsch positiv',

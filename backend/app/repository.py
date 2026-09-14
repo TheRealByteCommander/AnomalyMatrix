@@ -36,6 +36,33 @@ class ResultRepository:
         out = self._read_all()
         return list(reversed(out[-limit:]))
 
+    def get(self, inspection_id: str) -> dict | None:
+        if not inspection_id:
+            return None
+        match = None
+        for item in self._read_all():
+            if str(item.get("inspection_id") or item.get("id") or "") == str(inspection_id):
+                match = item
+        return match
+
+    def update(self, payload: dict) -> dict | None:
+        inspection_id = str(payload.get("inspection_id") or "")
+        if not inspection_id:
+            return None
+        items = self._read_all()
+        found = False
+        for index, item in enumerate(items):
+            if str(item.get("inspection_id") or item.get("id") or "") == inspection_id:
+                items[index] = payload
+                found = True
+        if not found:
+            items.append(payload)
+        with self._lock:
+            with self.results_file.open("w", encoding="utf-8") as handle:
+                for item in items:
+                    handle.write(json.dumps(item, ensure_ascii=False) + "\n")
+        return payload
+
     def query(
         self,
         *,

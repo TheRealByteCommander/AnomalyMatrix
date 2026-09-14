@@ -22,14 +22,17 @@ from .camera_station import MAX_CAMERAS, MIN_CAMERAS, CameraSelectionError, Came
 from .contracts.envelope import error_envelope, success_envelope
 from .contracts import events as event_contracts
 from .core_store import CoreStore
+from .decision import score_to_decision
 from .event_bus import DomainEventBus
-from .heatmap import generate_heatmap_png
+from .heatmap import generate_heatmap_png, heatmap_api_uri, load_local_heatmap, save_local_heatmap
 from .inference_provider import _frame_grayscale, get_inference_provider
 from .licensing import LicenseManager
 from .metrics_influx import query_observability_summary, record_inspection_metrics, record_process_trend
 from .middleware_production import configure_production_middleware
 from .models import CameraSelectionRequest, CaptureRequest, InferRequest, RunInspectionRequest
+from .nio_store import png_bytes_from_frame, save_inspection_frame_png
 from .opcua_publish import publish_busy_state, publish_to_opcua
+from .patchcore_memory import inspect_memory_bank
 from .production import enforce_production_config, is_production
 from .rbac import require_permission, resolve_auth
 from .repository_factory import build_repository
@@ -46,14 +49,6 @@ event_bus = DomainEventBus(_data_root)
 camera_station = CameraStationStore(_data_root / "station_cameras.json")
 
 _DECISION_RANK = {"green": 0, "amber": 1, "red": 2}
-
-
-def _score_to_decision(score: float) -> str:
-    if score >= 0.85:
-        return "red"
-    if score >= 0.55:
-        return "amber"
-    return "green"
 
 
 def _resolve_run_cameras(payload: RunInspectionRequest) -> tuple[list[str], dict[str, str]]:
@@ -76,46 +71,78 @@ def _run_single_view(
     recipe_id: str,
     source: str | None,
     provider,
+    thresholds: dict,
+    data_root: Path,
 ) -> dict:
     frame = capture_frame(camera_id=camera_id, recipe_id=recipe_id, source=source)
     frame_dict = frame_to_dict(frame)
     inference = provider.infer(frame_dict)
-    decision = _score_to_decision(float(inference.anomaly_score))
+    decision = score_to_decision(
+        float(inference.anomaly_score),
+        amber=float(thresholds["amber"]),
+        red=float(thresholds["red"]),
+    )
     view = {
         "camera_id": camera_id,
         "source": source or frame_dict.get("source"),
         "frame": frame_dict,
         "inference": inference.__dict__,
         "decision": decision,
-        "heatmap": {"uri": inference.heatmap_uri, "placeholder": False},
+        "heatmap": {"uri": inference.heatmap_uri, "placeholder": True},
     }
 
     gray = _frame_grayscale(frame_dict)
     heatmap_png = generate_heatmap_png(gray, inference.anomaly_score)
-    if frame_dict.get("image_b64"):
-        import base64
-
+    png_bytes = png_bytes_from_frame(frame_dict, data_root=data_root)
+    if not png_bytes:
         try:
-            raw_bytes = base64.b64decode(frame_dict["image_b64"])
-            raw_uri = store_raw_frame(
-                inspection_id=inspection_id,
-                recipe_id=recipe_id,
-                image_bytes=raw_bytes,
-                camera_id=camera_id,
-            )
-            if raw_uri:
-                view["frame"]["stored_raw_uri"] = raw_uri
-        except Exception:
-            pass
+            import cv2
 
+            ok, buf = cv2.imencode(".png", gray)
+            png_bytes = buf.tobytes() if ok else None
+        except Exception:
+            png_bytes = None
+    if png_bytes:
+        local_frame = save_inspection_frame_png(
+            data_root=data_root,
+            inspection_id=inspection_id,
+            camera_id=camera_id,
+            png_bytes=png_bytes,
+        )
+        if local_frame:
+            view["frame"]["local_png_path"] = local_frame
+        if frame_dict.get("image_b64"):
+            try:
+                raw_uri = store_raw_frame(
+                    inspection_id=inspection_id,
+                    recipe_id=recipe_id,
+                    image_bytes=png_bytes,
+                    camera_id=camera_id,
+                )
+                if raw_uri:
+                    view["frame"]["stored_raw_uri"] = raw_uri
+            except Exception:
+                pass
+
+    local_heatmap = save_local_heatmap(
+        data_root=data_root,
+        inspection_id=inspection_id,
+        camera_id=camera_id,
+        png_bytes=heatmap_png,
+    )
+    local_uri = heatmap_api_uri(inspection_id, camera_id) if local_heatmap else None
     stored_uri = store_heatmap_binary(
         inspection_id=inspection_id,
         png_bytes=heatmap_png,
         anomaly_score=inference.anomaly_score,
         camera_id=camera_id,
     )
-    if stored_uri:
-        view["heatmap"] = {"uri": stored_uri, "placeholder": False, "storage": "minio"}
+    heatmap_uri = stored_uri or local_uri or inference.heatmap_uri
+    view["heatmap"] = {
+        "uri": heatmap_uri,
+        "placeholder": not bool(heatmap_png),
+        "storage": "minio" if stored_uri else ("local" if local_heatmap else "synthetic"),
+    }
     return view
 
 
@@ -125,6 +152,7 @@ async def lifespan(app: FastAPI):
     enforce_production_config()
     app.state.core_store = core_store
     app.state.event_bus = event_bus
+    app.state.repo = repo
     if is_production():
         import logging
 
@@ -500,6 +528,8 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
     camera_ids, sources = _resolve_run_cameras(payload)
     primary_camera = camera_ids[0]
     publish_busy_state(camera_id=primary_camera, recipe_id=payload.recipe_id)
+    thresholds = core_store.get_decision_thresholds(payload.recipe_id)
+    memory_bank = inspect_memory_bank(core_store.data_root)
 
     try:
         inspection_id = str(uuid4())
@@ -512,6 +542,8 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
                 recipe_id=payload.recipe_id,
                 source=sources.get(camera_id),
                 provider=provider,
+                thresholds=thresholds,
+                data_root=core_store.data_root,
             )
             views.append(view)
 
@@ -537,6 +569,14 @@ async def run_inspection(request: Request, payload: RunInspectionRequest = Body(
             "views": views,
             "decision_policy": "worst_view",
             "worst_view_camera_id": primary.get("camera_id"),
+            "decision_thresholds": thresholds,
+            "memory_bank": memory_bank,
+            "qa": {
+                "auto_decision": decision,
+                "verdict": None,
+                "override": None,
+                "pending": False,
+            },
         }
 
         # Trend enrichment BEFORE persist/OPC-UA so interfaces stay consistent
@@ -634,6 +674,27 @@ async def results_latest(request: Request, limit: int = 20):
     request_id = request.state.request_id
     data = repo.latest(limit=max(1, min(100, limit)))
     return success_envelope({"items": data, "count": len(data)}, request_id)
+
+
+@app.get("/api/v1/inspections/{inspection_id}")
+async def inspection_get(inspection_id: str, request: Request):
+    _guard(request, "inspection.read")
+    request_id = request.state.request_id
+    item = repo.get(inspection_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    return success_envelope(item, request_id)
+
+
+@app.get("/api/v1/inspections/{inspection_id}/heatmap")
+async def inspection_heatmap(inspection_id: str, request: Request, camera_id: str | None = None):
+    _guard(request, "inspection.read")
+    path = load_local_heatmap(core_store.data_root, inspection_id, camera_id)
+    if path is None or not path.exists():
+        raise HTTPException(status_code=404, detail="Heatmap not found")
+    from fastapi.responses import FileResponse
+
+    return FileResponse(path, media_type="image/png")
 
 
 @app.get("/api/v1/results/query")

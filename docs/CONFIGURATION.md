@@ -191,25 +191,32 @@ docker compose … exec -T postgres \
 
 HMI → **Configuration** → Abschnitt **Training / Modelle**.
 
-Nur **i.O.-Gutteile** erfassen. Das System lernt den Sollzustand; n.i.O.-Teile gehören nicht ins Training.
+Nur **i.O.-Gutteile** ins Training geben. Das System lernt den Sollzustand.
+
+**QA „Anomalie bestätigt“** ist der n.i.O.-Pfad: die Prüfung wird in Liste und Detail **n.i.O. (rot)** angezeigt, das Bild landet unter `data/nio-images/{recipe_id}/` (nicht in der Gutteil-Memory-Bank). Falsch positiv und Nachprüfung ändern die Ampel nicht auf n.i.O.
 
 Ablauf in der HMI:
 
-1. Rezept wählen, Kamera in der Kamerauswahl setzen (Live: USB OpenCV `/dev/video0`).
+1. Rezept wählen, Kamera in der Kamerauswahl setzen (Live: USB OpenCV `/dev/video0`). Status (erreichbar/offline) steht im Dashboard und unter Configuration.
 2. **Gutteile erfassen** — speichert PNG unter `data/training-images/{recipe_id}/` (und optional MinIO `raw-images`).
-3. **Training starten** — erzeugt einen Kandidaten (`status=candidate`) und eine Memory-Bank `.npz` unter `training-artifacts/`. Vorherige Artefakte bleiben liegen.
+3. **Training starten** — erzeugt einen Kandidaten (`status=candidate`) und eine Memory-Bank `.npz` unter `training-artifacts/`. Vorherige Artefakte bleiben liegen. Bestätigte n.i.O.-Muster erscheinen als Holdout in den Trainings-Metadaten.
 4. Nach Prüfung **Promoten** (Validierung) oder **Aktivieren** (gespeichertes Training ohne Neu-Training).
 5. **Rollback** oder ein älteres Training aus der Historie erneut aktiv setzen. `active_memory_bank.npz` zeigt dann auf das gewählte Artefakt.
+6. **Entscheidungsschwellen** (Configuration, Engineer/Admin): Nachprüfung / n.i.O. je Rezept, Standard 0,55 / 0,85.
+7. Dashboard **Inspektion starten** → Score, i.O./n.i.O., Modellversion, Memory-Bank-Status.
+8. Inspection Detail **QA-Feedback**: Anomalie bestätigt → n.i.O. + Muster; Falsch positiv → keine n.i.O.-Markierung; Nachprüfung bleibt offen.
 
 | Aktion | Endpoint / Ort |
 |--------|----------------|
 | Rezepte lesen | `GET /api/v1/recipes` |
-| Modelle + Historie + Memory-Bank-Status | `GET /api/v1/models` |
+| Schwellen speichern | `PUT /api/v1/recipes/{id}/thresholds` (Engineer/Admin) |
+| Modelle + Historie + Memory-Bank + n.i.O.-Zähler | `GET /api/v1/models` |
 | Gutteile erfassen | `POST /api/v1/models/training-samples` (Engineer/Admin) |
 | Trainieren | `POST /api/v1/models/train` (Engineer/Admin) |
 | Promoten | `POST /api/v1/models/{id}/promote` |
 | Gespeichertes Training aktivieren | `POST /api/v1/models/{id}/activate` |
 | Rollback | `POST /api/v1/models/rollback` |
+| QA-Feedback | `POST /api/v1/feedback` (`confirm_anomaly` / `false_positive` / `needs_review`) |
 
 Rechte: `models.train` / `models.promote` (Prozessingenieur, Admin). Operatoren haben `models.read` (Historie sichtbar, Aktionen deaktiviert).
 

@@ -5,6 +5,9 @@ from fastapi import APIRouter, Body, HTTPException, Query, Request
 from ..contracts.envelope import success_envelope
 from ..core_store import CoreStore
 from ..event_bus import DomainEventBus
+from ..models import RecipeThresholdsRequest
+from ..nio_store import count_nio_images
+from ..qa_feedback import apply_qa_verdict
 from ..rbac import require_permission, resolve_auth
 from .training import models_catalog_payload
 
@@ -21,12 +24,40 @@ def _events(_request: Request) -> DomainEventBus:
     return main_module.event_bus
 
 
+def _repo(request: Request):
+    repo = getattr(request.app.state, "repo", None)
+    if repo is not None:
+        return repo
+    from .. import main as main_module
+
+    return main_module.repo
+
+
 @router.get("/recipes")
 async def list_recipes(request: Request):
     auth = resolve_auth(request, _store(request))
     require_permission(auth, "recipes.read")
     items = _store(request).list_recipes()
     return success_envelope({"items": items, "count": len(items)}, request.state.request_id)
+
+
+@router.put("/recipes/{recipe_id}/thresholds")
+async def update_recipe_thresholds(recipe_id: str, request: Request, payload: RecipeThresholdsRequest):
+    auth = resolve_auth(request, _store(request))
+    require_permission(auth, "recipes.write")
+    try:
+        recipe = _store(request).update_recipe_thresholds(recipe_id, amber=payload.amber, red=payload.red)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _store(request).append_audit(
+        actor=auth.user_id,
+        action="recipes.thresholds",
+        resource_type="recipe",
+        resource_id=recipe_id,
+        after_state=recipe,
+        request_id=request.state.request_id,
+    )
+    return success_envelope(recipe, request.state.request_id)
 
 
 @router.get("/models")
@@ -84,12 +115,35 @@ async def submit_feedback(request: Request, payload: dict = Body(...)):
         recipe_version=str(payload.get("recipe_version", "v1")),
         model_version=str(payload.get("model_version", "v0")),
     )
+    applied = apply_qa_verdict(
+        repo=_repo(request),
+        data_root=store.data_root,
+        inspection_id=inspection_id,
+        verdict=verdict,
+        actor=auth.user_id,
+        feedback_id=entry["feedback_id"],
+        comment=comment,
+    )
+    entry["inspection"] = applied.get("inspection")
+    entry["nio_sample"] = applied.get("nio_sample")
+    entry["decision_override"] = applied.get("decision_override")
+    if applied.get("inspection"):
+        entry["decision"] = applied["inspection"].get("decision")
+        recipe_id = str((applied["inspection"].get("frame") or {}).get("recipe_id") or "recipe-default")
+        entry["nio_count"] = count_nio_images(store.data_root, recipe_id)
     store.append_audit(
         actor=auth.user_id,
         action="feedback.submit",
         resource_type="inspection",
         resource_id=inspection_id,
-        after_state=entry,
+        after_state={
+            "feedback_id": entry["feedback_id"],
+            "verdict": verdict,
+            "decision": (applied.get("inspection") or {}).get("decision"),
+            "decision_override": applied.get("decision_override"),
+            "qa": (applied.get("inspection") or {}).get("qa"),
+            "nio_sample": (applied.get("nio_sample") or {}).get("path"),
+        },
         request_id=request.state.request_id,
     )
     event = _events(request).emit(

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { hmiState } from '../data/sampleData';
-import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary } from '../services';
+import { runInspection, fetchRecentInspections, fetchObservabilitySummary, fetchRecipes, fetchModels, fetchTrendSummary, fetchCameras } from '../services';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
 import { useI18n } from '../i18n/I18nProvider';
@@ -22,6 +22,7 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     warning: true,
     severity: hmiState.status,
   });
+  const [cameras, setCameras] = useState([]);
 
   useEffect(() => {
     if (runState === 'idle') setNotice(t('dashboard.ready'));
@@ -31,11 +32,12 @@ export default function DashboardPage({ inspections, setInspections, setSelected
     let cancelled = false;
     (async () => {
       try {
-        const [summary, recipeData, modelData, trend] = await Promise.all([
+        const [summary, recipeData, modelData, trend, cameraData] = await Promise.all([
           fetchObservabilitySummary(),
           fetchRecipes().catch(() => ({ items: [] })),
           fetchModels().catch(() => ({ items: [] })),
           fetchTrendSummary().catch(() => null),
+          fetchCameras().catch(() => ({ cameras: [] })),
         ]);
         if (cancelled) return;
 
@@ -56,6 +58,8 @@ export default function DashboardPage({ inspections, setInspections, setSelected
           memoryBankLoaded: Boolean(modelData.memory_bank?.loaded),
           memoryBankKnown: modelData.memory_bank != null,
         });
+
+        setCameras(cameraData.cameras || []);
 
         setKpis({
           cycleMsP95: summary.inference_latency_mean_ms || summary.inference_p95_ms || hmiState.kpis.cycleMsP95,
@@ -171,6 +175,26 @@ export default function DashboardPage({ inspections, setInspections, setSelected
       </article>
 
       <article className="card">
+        <h3>{t('dashboard.camerasTitle')}</h3>
+        {!cameras.length ? (
+          <p className="muted">{t('configuration.camerasEmpty')}</p>
+        ) : (
+          <ul className="camera-select-list">
+            {cameras.map((cam) => (
+              <li key={cam.camera_id}>
+                <strong>{cam.label || cam.camera_id}</strong>
+                {' '}
+                <StatusBadge state={cam.available === false ? 'red' : 'green'}>
+                  {cam.available === false ? t('configuration.camerasOffline') : t('configuration.camerasOnline')}
+                </StatusBadge>
+                {cam.selected ? <span className="muted"> · {t('configuration.camerasSelected')}</span> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+
+      <article className="card">
         <h3>{t('dashboard.latestTitle')}</h3>
         <div className="table">
           {inspections.map((i) => (
@@ -190,7 +214,10 @@ export default function DashboardPage({ inspections, setInspections, setSelected
                   ? `${i.viewCount}×cam`
                   : (i.cameraIds?.[0] || i.part)}
               </span>
-              <StatusBadge state={i.decision}>{t(`decision.${i.decision}`)}</StatusBadge>
+              <StatusBadge state={i.decision}>
+                {t(`decision.${i.decision}`)}
+                {i.qaOverride === 'nio' ? ` · ${t('inspectionDetail.verdicts.confirm_anomaly')}` : ''}
+              </StatusBadge>
             </button>
           ))}
         </div>

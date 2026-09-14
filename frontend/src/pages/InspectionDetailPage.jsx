@@ -1,12 +1,28 @@
 import { useState } from 'react';
 import StatusBadge from '../components/StatusBadge';
 import ContextHelp from '../components/ContextHelp';
-import { submitFeedback } from '../services';
+import { isRenderableHeatmap, mapApiInspection, submitFeedback } from '../services';
 import { useI18n } from '../i18n/I18nProvider';
 
 const VERDICT_KEYS = ['confirm_anomaly', 'false_positive', 'needs_review'];
 
-export default function InspectionDetailPage({ selectedInspection, openHelp }) {
+function HeatmapBlock({ uri, placeholder, hintLive, hintPlaceholder, aria, fallback }) {
+  const real = isRenderableHeatmap(uri) && !placeholder;
+  return (
+    <>
+      {real ? (
+        <img className="heatmap-image" src={uri} alt={aria} />
+      ) : (
+        <div className="heatmap-placeholder" role="img" aria-label={aria}>
+          <span>{fallback}</span>
+        </div>
+      )}
+      <p className="muted">{real ? hintLive : hintPlaceholder}</p>
+    </>
+  );
+}
+
+export default function InspectionDetailPage({ selectedInspection, setInspections, openHelp }) {
   const { t } = useI18n();
   const [verdict, setVerdict] = useState('needs_review');
   const [comment, setComment] = useState('');
@@ -24,24 +40,34 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
     );
   }
 
-  const passFail =
-    selectedInspection.decision === 'red'
-      ? t('decision.fail')
-      : selectedInspection.decision === 'amber'
-        ? t('decision.review')
-        : t('decision.pass');
+  const displayDecision = selectedInspection.decision;
+  const passFail = t(`decision.${displayDecision === 'red' ? 'fail' : displayDecision === 'amber' ? 'review' : 'pass'}`);
+  const qaNio = selectedInspection.qaOverride === 'nio' || selectedInspection.qaVerdict === 'confirm_anomaly';
 
   async function handleFeedbackSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
     setFeedbackStatus(null);
     try {
-      await submitFeedback({
+      const result = await submitFeedback({
         inspectionId: selectedInspection.id,
         verdict,
         comment,
+        recipeVersion: selectedInspection.raw?.frame?.recipe_id ? 'v1' : 'v1',
+        modelVersion: selectedInspection.modelVersion || 'v0',
       });
-      setFeedbackStatus({ ok: true, message: t('inspectionDetail.saved') });
+      if (result?.inspection && setInspections) {
+        const mapped = mapApiInspection(result.inspection);
+        setInspections((prev) => {
+          const rest = prev.filter((item) => item.id !== mapped.id);
+          return [mapped, ...rest];
+        });
+      }
+      const extra =
+        verdict === 'confirm_anomaly' && result?.nio_sample
+          ? ` ${t('inspectionDetail.nioStored')}`
+          : '';
+      setFeedbackStatus({ ok: true, message: `${t('inspectionDetail.saved')}${extra}` });
       setComment('');
     } catch (err) {
       setFeedbackStatus({ ok: false, message: err.message || t('inspectionDetail.failed') });
@@ -49,6 +75,8 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
       setSubmitting(false);
     }
   }
+
+  const thresholds = selectedInspection.thresholds || {};
 
   return (
     <section className="page-grid">
@@ -61,8 +89,20 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
           </p>
           <ContextHelp articleId="inspection-detail" onOpen={openHelp} />
         </div>
-        <StatusBadge state={selectedInspection.decision}>{passFail}</StatusBadge>
+        <StatusBadge state={displayDecision}>{passFail}</StatusBadge>
       </article>
+
+      {qaNio ? (
+        <article className="card" data-testid="qa-nio-banner">
+          <p className="ok">{t('inspectionDetail.qaOverrideNio')}</p>
+          <p className="muted">
+            {t('inspectionDetail.qaAutoDecision', {
+              decision: t(`decision.${selectedInspection.autoDecision || 'green'}`),
+            })}
+            {selectedInspection.qaActor ? ` · ${selectedInspection.qaActor}` : ''}
+          </p>
+        </article>
+      ) : null}
 
       <article className="card detail-grid">
         <div>
@@ -71,25 +111,33 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
           <p className="muted">{t('inspectionDetail.defectLabel')}: {selectedInspection.defect}</p>
           <p className="muted">
             {t('inspectionDetail.decisionLabel')}:{' '}
-            <StatusBadge state={selectedInspection.decision}>{t(`decision.${selectedInspection.decision}`)}</StatusBadge>
+            <StatusBadge state={displayDecision}>{t(`decision.${displayDecision}`)}</StatusBadge>
           </p>
+          <p className="muted">
+            {t('inspectionDetail.modelVersion')}: {selectedInspection.modelVersion || '—'}
+          </p>
+          {selectedInspection.memoryBankKnown ? (
+            <p className="muted">
+              {t('inspectionDetail.memoryBank')}:{' '}
+              {selectedInspection.memoryBankLoaded ? t('training.bankLoaded') : t('training.bankFallback')}
+            </p>
+          ) : null}
+          {thresholds.amber != null && thresholds.red != null ? (
+            <p className="muted">
+              {t('inspectionDetail.thresholdsUsed')}: {thresholds.amber} / {thresholds.red}
+            </p>
+          ) : null}
         </div>
         <div>
           <h3>{t('inspectionDetail.heatmapTitle')}</h3>
-          {selectedInspection.heatmapUri &&
-          (selectedInspection.heatmapUri.startsWith('/') ||
-            selectedInspection.heatmapUri.startsWith('http')) ? (
-            <img
-              className="heatmap-image"
-              src={selectedInspection.heatmapUri}
-              alt={t('inspectionDetail.heatmapAria')}
-            />
-          ) : (
-            <div className="heatmap-placeholder" role="img" aria-label={t('inspectionDetail.heatmapAria')}>
-              <span>{selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}</span>
-            </div>
-          )}
-          <p className="muted">{t('inspectionDetail.heatmapHint')}</p>
+          <HeatmapBlock
+            uri={selectedInspection.heatmapUri}
+            placeholder={selectedInspection.heatmapPlaceholder}
+            hintLive={t('inspectionDetail.heatmapHint')}
+            hintPlaceholder={t('inspectionDetail.heatmapHintPlaceholder')}
+            aria={t('inspectionDetail.heatmapAria')}
+            fallback={selectedInspection.heatmapUri || t('inspectionDetail.heatmapPlaceholder')}
+          />
         </div>
       </article>
 
@@ -105,8 +153,7 @@ export default function InspectionDetailPage({ selectedInspection, openHelp }) {
                 <label>{view.cameraId}</label>
                 <strong>{view.score}</strong>
                 <StatusBadge state={view.decision}>{t(`decision.${view.decision}`)}</StatusBadge>
-                {view.heatmapUri &&
-                (view.heatmapUri.startsWith('/') || view.heatmapUri.startsWith('http')) ? (
+                {isRenderableHeatmap(view.heatmapUri) && !view.heatmapPlaceholder ? (
                   <img
                     className="heatmap-image"
                     src={view.heatmapUri}
