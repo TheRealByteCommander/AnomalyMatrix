@@ -77,6 +77,15 @@ export default {
     activated: 'Lizenz gekauft und auf diesem Gerät aktiviert.',
     readOnly: 'Nur ein Administrator darf Lizenzen kaufen, verlängern oder kündigen.',
   },
+  heatmapDisplay: {
+    waiting: 'Warte auf Inspektion…',
+    noHeatmap: 'Keine Heatmap-Datei',
+    noRecipe: 'Kein Rezept gewählt',
+    scoreLabel: 'Anomalie-Score',
+    fullscreen: 'Vollbild',
+    exitFullscreen: 'Vollbild beenden',
+    openMonitor: 'Heatmap-Monitor',
+  },
   common: {
     recipe: 'Rezept',
     model: 'Modell',

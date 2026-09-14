@@ -218,6 +218,15 @@ export default function DashboardPage({
           <button type="button" className="tab" data-testid="dashboard-training" onClick={() => goTo(SCREEN_IDS.configuration)}>
             {t('training.title')}
           </button>
+          <a
+            className="tab"
+            href="/heatmap"
+            target="amx-heatmap-display"
+            rel="noopener noreferrer"
+            data-testid="dashboard-heatmap-display"
+          >
+            {t('heatmapDisplay.openMonitor')}
+          </a>
           <StatusBadge state={stateClass.replace('state-', '')}>{notice}</StatusBadge>
         </div>
       </article>
