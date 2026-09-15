@@ -357,7 +357,8 @@ RBAC_ENFORCE=true
 LICENSE_ENFORCE=true
 LICENSE_ADMIN_TOKEN=${license_admin}
 LICENSE_SERVER_URL=${LICENSE_SERVER_URL:-}
-LICENSE_PRODUCT_ID=${LICENSE_PRODUCT_ID:-}
+LICENSE_PRODUCT_ID=${LICENSE_PRODUCT_ID:-2}
+LICENSE_OFFLINE_ONLY=${LICENSE_OFFLINE_ONLY:-true}
 LICENSE_ALLOW_LOCAL_KEYS=${LICENSE_ALLOW_LOCAL_KEYS:-false}
 LICENSE_OFFLINE_GRACE_HOURS=${LICENSE_OFFLINE_GRACE_HOURS:-72}
 LICENSE_VALIDATE_INTERVAL_SEC=${LICENSE_VALIDATE_INTERVAL_SEC:-300}
@@ -531,41 +532,54 @@ SQL
 activate_license() {
   [[ "$MODE" == "prod" ]] || return 0
   local env_file="$APP_DIR/.env.production"
-  local admin_pw license_admin license_key cookie_jar server_url
+  local admin_pw license_admin license_key cookie_jar server_url offline_only
   admin_pw="$(grep -E '^AMX_ADMIN_PASSWORD=' "$env_file" | cut -d= -f2-)"
   license_admin="$(grep -E '^LICENSE_ADMIN_TOKEN=' "$env_file" | cut -d= -f2-)"
   server_url="$(grep -E '^LICENSE_SERVER_URL=' "$env_file" | cut -d= -f2-)"
-  # Prefer explicit bootstrap key; otherwise local AMX key only when no license server.
-  if [[ -n "${LICENSE_BOOTSTRAP_KEY:-}" ]]; then
-    license_key="$LICENSE_BOOTSTRAP_KEY"
-  elif [[ -n "$server_url" ]]; then
-    warn "LICENSE_SERVER_URL gesetzt — kein lokaler Bootstrap-Key. Aktivierung mit echtem Key:"
-    warn "  POST /api/v1/license/activate  (Header X-License-Admin-Token)"
-    echo "License server: ${server_url}" >> "$CREDENTIALS_FILE"
-    echo "Activate with real license key via /api/v1/license/activate" >> "$CREDENTIALS_FILE"
-    return 0
-  else
-    license_key="AMX-INSTALL-$(rand_alnum 16)"
-  fi
+  offline_only="$(grep -E '^LICENSE_OFFLINE_ONLY=' "$env_file" | cut -d= -f2-)"
   cookie_jar="$(mktemp)"
 
-  log "Admin-Login + Lizenz-Aktivierung..."
-  # Give bootstrap a moment after API healthy
+  log "Admin-Login + Lizenzstatus..."
   sleep 2
   if ! curl -fsS -c "$cookie_jar" -X POST "http://127.0.0.1:8080/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"user_id\":\"admin-1\",\"password\":\"${admin_pw}\"}" >/tmp/amx-login.json 2>/dev/null; then
-    warn "Login fehlgeschlagen — Lizenz später manuell aktivieren."
+    warn "Login fehlgeschlagen — Lizenz später in der HMI importieren (Einstellungen → Lizenz)."
     rm -f "$cookie_jar"
     return 0
   fi
 
-  local token
+  local token device_id
   token="$(jq -r '.data.access_token // empty' /tmp/amx-login.json 2>/dev/null || true)"
   if [[ -z "$token" ]]; then
-    warn "Kein Access-Token — Lizenz-Aktivierung übersprungen."
+    warn "Kein Access-Token — Lizenz-Import später in der HMI."
     rm -f "$cookie_jar" /tmp/amx-login.json
     return 0
+  fi
+
+  device_id="$(curl -fsS -b "$cookie_jar" "http://127.0.0.1:8080/api/v1/license/status" \
+    -H "Authorization: Bearer ${token}" 2>/dev/null | jq -r '.data.device_id // empty' || true)"
+  if [[ -n "$device_id" ]]; then
+    echo "Device ID (an Vendor senden): ${device_id}" >> "$CREDENTIALS_FILE"
+    ok "Geräte-ID: ${device_id}"
+  fi
+
+  if [[ "${offline_only:-true}" != "false" && -z "${LICENSE_BOOTSTRAP_KEY:-}" ]]; then
+    warn "Offline-Lizenz: .lic.json unter Einstellungen → Lizenz importieren (kein Stripe, kein Online-Activate)."
+    echo "Import signed .lic.json via Settings → License or POST /api/v1/license/import" >> "$CREDENTIALS_FILE"
+    rm -f "$cookie_jar" /tmp/amx-login.json
+    return 0
+  fi
+
+  if [[ -n "${LICENSE_BOOTSTRAP_KEY:-}" ]]; then
+    license_key="$LICENSE_BOOTSTRAP_KEY"
+  elif [[ -n "$server_url" ]]; then
+    warn "LICENSE_SERVER_URL gesetzt — kein lokaler Bootstrap-Key."
+    echo "License server: ${server_url}" >> "$CREDENTIALS_FILE"
+    rm -f "$cookie_jar" /tmp/amx-login.json
+    return 0
+  else
+    license_key="AMX-INSTALL-$(rand_alnum 16)"
   fi
 
   if curl -fsS -b "$cookie_jar" -X POST "http://127.0.0.1:8080/api/v1/license/activate" \

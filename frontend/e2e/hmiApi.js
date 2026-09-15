@@ -195,10 +195,24 @@ export async function mockHmiApi(page, options = {}) {
       await route.fulfill(json(request, {
         active: true,
         tier: 'dev',
-        mode: 'local',
+        mode: 'offline',
+        offline: true,
         billing_enabled: false,
         grace_active: false,
-        features: ['inspection'],
+        device_id: '4a0cb3fce728d2f463bf21cb0445eef2c157f79330767711a1ac61cfca967151',
+        license_key: 'AMXB-OFFL-DEMO-0001',
+        features: ['inspection.run', 'trends_filters'],
+      }));
+      return;
+    }
+    if (path.endsWith('/license/import') && method === 'POST') {
+      await route.fulfill(json(request, {
+        active: true,
+        offline: true,
+        mode: 'offline',
+        license_key: 'AMXB-OFFL-DEMO-0001',
+        device_id: '4a0cb3fce728d2f463bf21cb0445eef2c157f79330767711a1ac61cfca967151',
+        features: ['inspection.run', 'trends_filters'],
       }));
       return;
     }

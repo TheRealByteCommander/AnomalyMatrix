@@ -474,25 +474,64 @@ async def generic_exception_handler(request: Request, exc: Exception):
 async def license_status(request: Request):
     _guard(request, "license.read")
     request_id = request.state.request_id
-    snap = license_manager.snapshot()
-    features = getattr(snap, "enabled_features", None)
-    if features is None:
-        raw = getattr(snap, "features", [])
-        features = list(raw.keys()) if isinstance(raw, dict) else list(raw or [])
-    payload = {
-        "active": bool(getattr(snap, "active", False)),
-        "tier": getattr(snap, "tier", "none"),
-        "features": features,
-        "token_present": bool(getattr(snap, "token_present", False)),
-        "valid_until": getattr(snap, "valid_until", None),
-        "last_validation_at": getattr(snap, "last_validation_at", None),
-        "offline_grace_until": getattr(snap, "offline_grace_until", None),
-        "grace_active": bool(getattr(snap, "grace_active", False)),
-        "mode": "server" if license_manager.server_configured else "local",
-        "last_error": getattr(snap, "last_error", None) if not is_production() else None,
-    }
-    payload.update(license_manager.billing_hints())
+    payload = license_manager.public_status()
+    if is_production():
+        payload["last_error"] = None
     return success_envelope(payload, request_id)
+
+
+def _license_public_payload(state: dict) -> dict:
+    return {
+        "active": state.get("active", False),
+        "tier": state.get("tier"),
+        "features": state.get("features", []),
+        "mode": state.get("mode"),
+        "offline": bool(state.get("offline")),
+        "device_id": state.get("device_id"),
+        "license_key": state.get("license_key"),
+        "product_id": state.get("product_id"),
+        "valid_until": state.get("valid_until"),
+        "state": state.get("state"),
+        "message": state.get("message"),
+    }
+
+
+def _extract_grant_payload(payload: dict):
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("format") == "licenseGrant/v1":
+        return payload
+    for key in ("grant", "grant_json", "license_grant", "file"):
+        raw = payload.get(key)
+        if raw in (None, ""):
+            continue
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, str):
+            return raw
+    return None
+
+
+@app.post("/api/v1/license/import")
+async def license_import(request: Request, payload: dict = Body(...)):
+    """Import a signed offline `.lic.json` grant, or activate by key if a grant is already stored."""
+    _guard(request, "license.admin")
+    request_id = request.state.request_id
+    body = payload or {}
+    grant = _extract_grant_payload(body)
+    key = str(body.get("license_key") or body.get("licenseKey") or "").strip()
+    try:
+        if grant is not None:
+            state = license_manager.import_grant(grant, license_key=key or None)
+        elif key:
+            state = license_manager.activate(key)
+        else:
+            raise HTTPException(status_code=400, detail="grant file or license_key required")
+    except PermissionError as exc:
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return success_envelope(_license_public_payload(state), request_id)
 
 
 @app.post("/api/v1/license/activate")
@@ -509,15 +548,7 @@ async def license_activate(request: Request, payload: dict = Body(...)):
         raise HTTPException(status_code=402, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return success_envelope(
-        {
-            "active": state.get("active", False),
-            "tier": state.get("tier"),
-            "features": state.get("features", []),
-            "mode": state.get("mode"),
-        },
-        request_id,
-    )
+    return success_envelope(_license_public_payload(state), request_id)
 
 
 @app.post("/api/v1/license/deactivate")

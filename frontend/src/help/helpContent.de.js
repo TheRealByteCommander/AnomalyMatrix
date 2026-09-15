@@ -588,8 +588,8 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'License tier — gebuchte Stufe.',
           'License active — darf die Software prüfen (bei „false“ IT informieren).',
-          'Grace active — vorübergehende Toleranz ohne Live-Lizenzserver.',
-          'Lizenz & Abrechnung — Administratoren kaufen, verlängern oder kündigen hier über Stripe. Nicht die Vendor-Admin-Oberfläche nutzen.',
+          'Geräte-ID — kopieren und an den Vendor senden. Die Lizenz ist an diesen PC gebunden.',
+          'Lizenz — Administratoren importieren eine signierte .lic.json oder tragen die Lizenznummer ein. In der HMI wird nichts gekauft.',
         ],
       },
     ],
@@ -625,7 +625,7 @@ export const HELP_ARTICLES = [
     id: 'license-status-user',
     category: 'screens',
     title: 'Lizenzstatus verstehen',
-    keywords: ['lizenz', 'licensed', 'grace', 'aktiv', 'abrechnung', 'billing', 'stripe', 'checkout'],
+    keywords: ['lizenz', 'licensed', 'grace', 'aktiv', 'offline', 'geräte-id', 'grant'],
     summary: 'Was die Lizenzanzeige auf Configuration für Sie bedeutet.',
     sections: [
       {
@@ -835,7 +835,7 @@ export const HELP_ARTICLES = [
         heading: 'Was tun?',
         paragraphs: [
           'Schichtleitung und IT informieren.',
-          'Ein Administrator kann die Lizenz unter Konfiguration → Lizenz & Abrechnung kaufen oder verlängern (Stripe-Checkout in AnomalyMatrix).',
+          'Ein Administrator importiert die Vendor-.lic.json (oder trägt die Lizenznummer ein) unter Einstellungen → Lizenz. In der HMI wird keine Lizenz gekauft.',
         ],
       },
     ],

@@ -140,6 +140,7 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 
 ### License
 - `GET /api/v1/license/status`
+- `POST /api/v1/license/import`
 - `POST /api/v1/license/activate`, `POST /api/v1/license/deactivate`
 
 ## Konfiguration (ENV, wichtigste)
@@ -157,8 +158,8 @@ DB-Init-Skripte werden aus `scripts/db/` in Postgres geladen (`001`–`006`).
 | `OPCUA_GATEWAY_URL` | OPC-UA Gateway HTTP |
 | `INFLUX_URL`, `MINIO_ENDPOINT` | Optionale Metriken/Heatmap-Persistenz |
 | `RBAC_ENFORCE` | `true` = Rollen/Permissions erzwingen |
-| `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Admin-Aktionen |
-| `LICENSE_SERVER_URL`, `LICENSE_PRODUCT_ID` | Byte-Commander License Server (Integer-ID) |
+| `LICENSE_ENFORCE`, `LICENSE_ADMIN_TOKEN` | Feature-Gates & Dual-Control Activate/Deactivate |
+| `LICENSE_PRODUCT_ID`, `LICENSE_OFFLINE_ONLY` | Produkt 2, Default offline/node-locked (kein Stripe) |
 | `CAMERA_DRIVER`, `CAMERA_SOURCE`, `CAMERA_SOURCES_JSON` | Edge-Capture / Multi-Kamera-Mapping (`synthetic`, `opencv`, `gige`) |
 | `MQTT_ENABLED`, `MQTT_BROKER`, `MQTT_TOPIC` | MQTT-Trigger (zusätzlich zu OPC-UA) |
 | `AMX_STATION_ID`, `AMX_MAX_CAMERAS`, `AMX_RETENTION_TTL_DAYS` | EOL-Station, Kamera-Cap, Retention |
@@ -215,7 +216,7 @@ Optional: `VITE_API_BASE`, `VITE_AMX_ROLE`, `VITE_AMX_FEEDBACK_ROLE` in `.env` i
 - `docs/RELEASE_READINESS.md` — Freigabe-Checkliste
 - `docs/RELEASE_NOTES_v1.2.0.md` — Aktuelles Release
 - `docs/MCP_SETUP.md` — MCP Team-Setup (codebase-memory + Context7)
-- `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
+- `docs/LICENSE_OFFLINE.md`, `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`
 
 ## Tests
 ```bash
