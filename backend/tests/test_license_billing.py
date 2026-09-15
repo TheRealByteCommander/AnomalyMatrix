@@ -11,7 +11,8 @@ def _mgr(tmp_path, monkeypatch, **env):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "license_state.json"))
     monkeypatch.setenv("LICENSE_ENFORCE", "true")
     monkeypatch.setenv("LICENSE_SERVER_URL", "https://licadmin.schmitz.ms")
-    monkeypatch.setenv("LICENSE_PRODUCT_ID", "2")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "42")
+    monkeypatch.setenv("LICENSE_OFFLINE_ONLY", "false")
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     return LicenseManager()
@@ -46,8 +47,12 @@ def test_list_plans_filters_product_id(tmp_path, monkeypatch):
     def fake_plans(self):
         return [
             {"id": 1, "name": "Other", "productId": 1},
-            {"id": 4, "name": "AMX Pro", "productId": 2, "features": ["inspection", "Trends"]},
+            {"id": 4, "name": "AMX Pro", "productId": 42, "features": ["inspection", "Trends"]},
         ]
+
+    monkeypatch.setattr("app.licensing_sdk.client.LicenseClient.list_public_plans", fake_plans)
+    plans = LicenseBillingService(manager).list_plans()
+    assert [plan["id"] for plan in plans] == [4]
 
     monkeypatch.setattr("app.licensing_sdk.client.LicenseClient.list_public_plans", fake_plans)
     plans = LicenseBillingService(manager).list_plans()
@@ -74,7 +79,7 @@ def test_complete_checkout_activates_server_license(tmp_path, monkeypatch):
         return {
             "valid": True,
             "license": {
-                "productId": 2,
+                "productId": 42,
                 "type": "subscription",
                 "expiresAt": "2026-12-01T00:00:00+00:00",
                 "features": ["inspection", "Trends", "Export"],
@@ -101,7 +106,8 @@ def test_complete_checkout_activates_server_license(tmp_path, monkeypatch):
 def test_billing_status_without_key_is_available_false(tmp_path, monkeypatch):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
     monkeypatch.setenv("LICENSE_SERVER_URL", "https://licadmin.schmitz.ms")
-    monkeypatch.setenv("LICENSE_PRODUCT_ID", "2")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "42")
+    monkeypatch.setenv("LICENSE_OFFLINE_ONLY", "false")
     license_manager.storage_path = tmp_path / "lic.json"
     license_manager._save(license_manager._default())
 
@@ -113,8 +119,9 @@ def test_billing_status_without_key_is_available_false(tmp_path, monkeypatch):
 
 def test_billing_api_requires_server_and_hides_key(tmp_path, monkeypatch):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
+    monkeypatch.setenv("LICENSE_OFFLINE_ONLY", "false")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "42")
     monkeypatch.delenv("LICENSE_SERVER_URL", raising=False)
-    monkeypatch.delenv("LICENSE_PRODUCT_ID", raising=False)
     license_manager.storage_path = tmp_path / "lic.json"
     license_manager._save(license_manager._default())
 
@@ -126,7 +133,8 @@ def test_billing_api_requires_server_and_hides_key(tmp_path, monkeypatch):
 def test_checkout_api_orchestrates(tmp_path, monkeypatch):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
     monkeypatch.setenv("LICENSE_SERVER_URL", "https://licadmin.schmitz.ms")
-    monkeypatch.setenv("LICENSE_PRODUCT_ID", "2")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "42")
+    monkeypatch.setenv("LICENSE_OFFLINE_ONLY", "false")
     monkeypatch.delenv("ANOMALYMATRIX_ENV", raising=False)
     license_manager.storage_path = tmp_path / "lic.json"
     license_manager._save(license_manager._default())
@@ -161,7 +169,8 @@ def test_checkout_api_orchestrates(tmp_path, monkeypatch):
 def test_billing_status_omits_raw_key(tmp_path, monkeypatch):
     monkeypatch.setenv("LICENSE_STATE_FILE", str(tmp_path / "lic.json"))
     monkeypatch.setenv("LICENSE_SERVER_URL", "https://licadmin.schmitz.ms")
-    monkeypatch.setenv("LICENSE_PRODUCT_ID", "2")
+    monkeypatch.setenv("LICENSE_PRODUCT_ID", "42")
+    monkeypatch.setenv("LICENSE_OFFLINE_ONLY", "false")
     license_manager.storage_path = tmp_path / "lic.json"
     license_manager._save(
         {
@@ -176,7 +185,7 @@ def test_billing_status_omits_raw_key(tmp_path, monkeypatch):
         assert kwargs["license_key"] == "SUPER-SECRET-KEY"
         return {
             "licenseKey": "SUPER-SECRET-KEY",
-            "productId": 2,
+            "productId": 42,
             "status": "active",
             "expiresAt": None,
             "features": ["inspection"],

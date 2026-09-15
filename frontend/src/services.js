@@ -171,66 +171,16 @@ export async function fetchLicenseStatus() {
   return parseEnvelope(r);
 }
 
-export async function fetchLicensePlans() {
-  const r = await fetch(`${API_BASE}/license/plans`, withCredentials());
-  return parseEnvelope(r);
-}
-
-export async function startLicenseCheckout({ billingPlanId, customerEmail, successUrl, cancelUrl }) {
+export async function importLicenseGrant({ grant, licenseKey } = {}) {
+  const body = {};
+  if (grant) body.grant = grant;
+  if (licenseKey) body.license_key = licenseKey;
   const r = await fetch(
-    `${API_BASE}/license/checkout`,
+    `${API_BASE}/license/import`,
     withCredentials({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        billing_plan_id: billingPlanId,
-        customer_email: customerEmail,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      }),
-    })
-  );
-  return parseEnvelope(r);
-}
-
-export async function fetchLicenseCheckoutResult(sessionId, customerEmail) {
-  const q = new URLSearchParams({ session_id: sessionId });
-  if (customerEmail) q.set('customer_email', customerEmail);
-  const r = await fetch(`${API_BASE}/license/checkout/result?${q.toString()}`, withCredentials());
-  return parseEnvelope(r);
-}
-
-export async function fetchLicenseBilling(customerEmail) {
-  const q = customerEmail ? `?customer_email=${encodeURIComponent(customerEmail)}` : '';
-  const r = await fetch(`${API_BASE}/license/billing${q}`, withCredentials());
-  return parseEnvelope(r);
-}
-
-export async function openLicensePortal({ customerEmail, returnUrl }) {
-  const r = await fetch(
-    `${API_BASE}/license/billing/portal`,
-    withCredentials({
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_email: customerEmail,
-        return_url: returnUrl,
-      }),
-    })
-  );
-  return parseEnvelope(r);
-}
-
-export async function cancelLicenseSubscription({ customerEmail, cancelAtPeriodEnd = true }) {
-  const r = await fetch(
-    `${API_BASE}/license/billing/cancel`,
-    withCredentials({
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_email: customerEmail,
-        cancel_at_period_end: cancelAtPeriodEnd,
-      }),
+      body: JSON.stringify(body),
     })
   );
   return parseEnvelope(r);

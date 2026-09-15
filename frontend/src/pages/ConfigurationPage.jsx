@@ -9,7 +9,7 @@ import {
   saveCameraSelection,
 } from '../services';
 import { resolveRecipeSelection } from '../recipeSelection';
-import LicenseBilling from '../components/LicenseBilling';
+import LicensePanel from '../components/LicensePanel';
 import DecisionThresholds from '../components/DecisionThresholds';
 import RecipeManager from '../components/RecipeManager';
 import StationVisionSetup from '../components/StationVisionSetup';
@@ -237,7 +237,7 @@ export default function ConfigurationPage({
     vision: <StationVisionSetup canConfigure={canConfigure} openHelp={openHelp} />,
     storage: <StorageEndurancePanel canConfigure={canConfigure} />,
     license: (
-      <LicenseBilling
+      <LicensePanel
         license={license}
         canManage={canManageLicense}
         onLicenseChange={handleLicenseChange}

@@ -84,6 +84,12 @@ class LicenseBillingService:
         self.manager = manager
 
     def _require_server(self) -> None:
+        if getattr(self.manager, "offline_only", False):
+            raise LicenseBillingError(
+                "BILLING_DISABLED",
+                "AnomalyMatrix industrial licenses are vendor-issued offline grants — Stripe/Checkout is disabled",
+                status_code=410,
+            )
         if not self.manager.server_configured:
             raise LicenseBillingError(
                 "LICENSE_SERVER_UNCONFIGURED",

@@ -34,9 +34,10 @@ Datei: `.env.production` (Vorlage: `.env.production.example`)
 | `ANOMALYMATRIX_ENV` | ja | `prod` |
 | `JWT_SECRET` | ja | ≥32 Zeichen |
 | `SERVICE_AUTH_TOKEN` | ja | ≥24 Zeichen, API↔Edge↔Gateway |
-| `LICENSE_ADMIN_TOKEN` | ja | Lizenz-Admin-Aktionen |
-| `LICENSE_SERVER_URL` | empfohlen Prod | Byte-Commander License Server |
-| `LICENSE_PRODUCT_ID` | mit Server | Integer-Product-ID |
+| `LICENSE_ADMIN_TOKEN` | ja | Dual-Control Activate/Deactivate |
+| `LICENSE_PRODUCT_ID` | ja | Integer, Default **2** |
+| `LICENSE_OFFLINE_ONLY` | empfohlen Prod | Default `true` für Produkt 2 (kein Stripe, kein Online-Activate) |
+| `LICENSE_SERVER_URL` | nein (Industrie) | Leer lassen auf Offline-PCs |
 | `AMX_CORS_ORIGINS` | ja | HMI-URL(s), kommagetrennt |
 | `AMX_ADMIN_PASSWORD` | erstes Setup | Bootstrap Admin-Login |
 | `COOKIE_SECURE` | ja bei HTTPS | `true` hinter TLS |
@@ -264,15 +265,15 @@ Training braucht Gut-Teil-Bilder (`training-images/{recipe_id}` hat Vorrang vor 
 
 ## 7. Lizenz
 
-Mit `LICENSE_SERVER_URL` + `LICENSE_PRODUCT_ID` (Integer) gegen den
-[Byte-Commander License Server](https://github.com/TheRealByteCommander/software-licensing-concept).
-Ohne Server-URL: Installer-Bootstrap (`AMX-INSTALL-…` in `CREDENTIALS.txt`).
-Details: [`LICENSE_INTEGRATION.md`](./LICENSE_INTEGRATION.md).
+Industrieller Default (Produkt 2): **offline / node-locked**. Der Vendor erzeugt den Key in licadmin;
+der Kunde importiert `.lic.json` unter Einstellungen → Lizenz. Kein Stripe, kein Online-Activate.
+Details: [`LICENSE_OFFLINE.md`](./LICENSE_OFFLINE.md), [`LICENSE_INTEGRATION.md`](./LICENSE_INTEGRATION.md).
 
 | Aktion | Header / Hinweis |
 |--------|------------------|
-| Status | `GET /api/v1/license/status` (auth) |
-| Activate/Deactivate | RBAC **und** `X-License-Admin-Token` |
+| Status (inkl. Geräte-ID) | `GET /api/v1/license/status` (auth) |
+| Grant importieren | `POST /api/v1/license/import` (`license.admin`) |
+| Activate/Deactivate | RBAC **und** `X-License-Admin-Token` (nicht der HMI-Import) |
 
 Siehe `docs/OPS_LICENSE_RUNBOOK.md`, `docs/LICENSE_INTEGRATION.md`.
 

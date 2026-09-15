@@ -52,14 +52,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('session_id') || params.get('checkout')) {
-      goTo(SCREEN_IDS.configuration, { section: 'license' });
-    }
-  }, [goTo]);
-
-  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {

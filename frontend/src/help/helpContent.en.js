@@ -588,8 +588,8 @@ export const HELP_ARTICLES = [
         paragraphs: [
           'License tier — licensed level.',
           'License active — whether the software may run inspections (if "false", notify your supervisor).',
-          'Grace active — temporary tolerance without live license server.',
-          'License & billing — administrators buy, renew, or cancel here via Stripe. Do not use the vendor license admin UI.',
+          'Device ID — copy this value and send it to the vendor. The grant is bound to this PC.',
+          'License — administrators import a signed .lic.json or enter the vendor license number. There is no in-HMI purchase.',
         ],
       },
     ],
@@ -625,7 +625,7 @@ export const HELP_ARTICLES = [
     id: 'license-status-user',
     category: 'screens',
     title: 'Understanding license status',
-    keywords: ['license', 'licensed', 'grace', 'active', 'billing', 'stripe', 'checkout'],
+    keywords: ['license', 'licensed', 'grace', 'active', 'offline', 'device id', 'grant'],
     summary: 'What the license display on Configuration means for you.',
     sections: [
       {
@@ -835,7 +835,7 @@ export const HELP_ARTICLES = [
         heading: 'What to do',
         paragraphs: [
           'Notify shift lead and supervisor.',
-          'An administrator can buy or renew the license on Configuration → License & billing (Stripe checkout inside AnomalyMatrix).',
+          'An administrator imports the vendor .lic.json (or enters the license number) under Settings → License. Licenses are never purchased inside the HMI.',
         ],
       },
     ],

@@ -135,7 +135,8 @@ a:focus-visible {
 .feedback-form textarea,
 .help-search-input,
 .confirm-dialog input,
-.billing-form input {
+.billing-form input,
+.billing-form textarea {
   min-height: var(--touch);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -551,13 +552,21 @@ button.danger:disabled { opacity: .55; cursor: not-allowed; }
 }
 .confirm-dialog h3 { margin: 0; }
 .confirm-dialog label { display: grid; gap: .35rem; color: var(--muted); font-size: .85rem; }
-.billing-form { display: grid; gap: .65rem; max-width: 480px; margin-top: .75rem; }
+.billing-form { display: grid; gap: .65rem; max-width: 560px; margin-top: .75rem; }
 .billing-form label { display: grid; gap: .35rem; font-size: .85rem; color: var(--muted); }
 .billing-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.plan-list { list-style: none; padding: 0; margin: .75rem 0; display: grid; gap: .55rem; }
-.plan-card { display: flex; gap: .65rem; align-items: flex-start; cursor: pointer; }
-.plan-card input { margin-top: .25rem; }
 .billing-status { margin: .75rem 0; }
+.license-device { display: grid; gap: .45rem; margin: .85rem 0; max-width: 720px; }
+.license-device-id {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .82rem;
+  word-break: break-all;
+  background: #111;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: .65rem .75rem;
+}
 
 .context-help-link {
   display: inline-flex; align-items: center; gap: .35rem; margin-top: .55rem;

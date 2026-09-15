@@ -1,8 +1,11 @@
 """AnomalyMatrix license manager.
 
-Integrates Byte Commander software-licensing-concept server when
-`LICENSE_SERVER_URL` + `LICENSE_PRODUCT_ID` are set. Without a server URL,
-local bootstrap keys (`AMX-*`) remain available for install/CI.
+Product 2 (industrial HMI) is offline / node-locked by default: vendor issues
+a signed `.lic.json` grant, the PC verifies RS256 locally, and never calls
+licadmin activate/validate or Stripe checkout.
+
+Local bootstrap keys (`AMX-*`) remain available for install/CI when no grant
+is present and the environment is not production.
 """
 
 from __future__ import annotations
@@ -14,6 +17,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .licensing_sdk import LicenseClient, LicensingApiError
+from .licensing_sdk.offline import (
+    AMX_OFFLINE_PUBLIC_KEY,
+    OfflineLicenseError,
+    load_offline_license_file,
+    verify_offline_license_file,
+)
+from .production import is_production
 
 
 @dataclass
@@ -104,13 +114,33 @@ def _server_url() -> str:
 
 
 def _product_id() -> int | None:
-    raw = os.getenv("LICENSE_PRODUCT_ID", "").strip()
+    raw = os.getenv("LICENSE_PRODUCT_ID", "2").strip()
     if not raw:
-        return None
+        return 2
     try:
         return int(raw)
     except ValueError:
         return None
+
+
+def _offline_only() -> bool:
+    raw = os.getenv("LICENSE_OFFLINE_ONLY", "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    return _product_id() == 2
+
+
+def compute_device_id() -> str:
+    """Stable SHA-256 hex fingerprint (same as LicenseClient.get_device_id)."""
+    override = os.getenv("LICENSE_DEVICE_ID", "").strip() or None
+    pid = _product_id() or 2
+    return LicenseClient(
+        server_url=_server_url() or "http://127.0.0.1",
+        product_id=pid,
+        device_id=override,
+    ).get_device_id()
 
 
 def _features_from_server_list(
@@ -142,6 +172,7 @@ def _features_from_server_list(
         "dashboard_run": "dashboard_run",
         "dashboard": "dashboard_run",
         "inspection_detail": "inspection_detail",
+        "basic": "dashboard_run",
         "trends_filters": "trends_filters",
         "trends": "trends_filters",
         "pro": "trends_filters",
@@ -184,7 +215,28 @@ class LicenseManager:
 
     @property
     def server_configured(self) -> bool:
+        if self.offline_only:
+            return False
         return bool(_server_url() and _product_id() is not None)
+
+    @property
+    def offline_only(self) -> bool:
+        return _offline_only()
+
+    def grant_path(self) -> Path:
+        env_path = os.getenv("LICENSE_GRANT_FILE", "").strip()
+        if env_path:
+            return Path(env_path)
+        return self.storage_path.parent / "license_grant.lic.json"
+
+    def current_device_id(self) -> str:
+        return compute_device_id()
+
+    def _chmod_private(self, path: Path) -> None:
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
 
     def _base_features(self, *, enabled: bool) -> dict:
         return {
@@ -209,7 +261,8 @@ class LicenseManager:
             "token": None,
             "licenseKey": None,
             "customerEmail": None,
-            "mode": "server" if self.server_configured else "local",
+            "mode": "offline" if self.offline_only else ("server" if self.server_configured else "local"),
+            "offline": bool(self.offline_only),
         }
 
     def _load(self) -> dict:
@@ -223,6 +276,7 @@ class LicenseManager:
     def _save(self, data: dict) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         self.storage_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        self._chmod_private(self.storage_path)
 
     def _normalize(self, data: dict) -> dict:
         if "expiresAt" not in data and "valid_until" in data:
@@ -283,12 +337,38 @@ class LicenseManager:
             "last_error": snap.last_error,
             "state": "grace" if (snap.state == "expired" and snap.grace_active) else snap.state,
             "message": snap.message,
-            "mode": "server" if self.server_configured else "local",
+            "mode": data.get("mode")
+            or ("offline" if self.offline_only else ("server" if self.server_configured else "local")),
+            "offline": bool(
+                data.get("offline")
+                or data.get("mode") == "offline"
+                or snap.state == "offline"
+                or self.offline_only
+            ),
+            "device_id": self.current_device_id(),
+            "license_key": data.get("licenseKey"),
+            "product_id": _product_id(),
+            "billing_enabled": False if self.offline_only else self.server_configured,
         }
 
     def validate_once(self) -> dict:
         data = self._normalize(self._load())
         now = datetime.now(timezone.utc)
+
+        if self.grant_path().exists() or (
+            (data.get("mode") == "offline" or data.get("offline"))
+            and data.get("token")
+            and not str(data.get("token") or "").startswith("local-")
+        ):
+            return self._validate_offline_grant(data, now)
+
+        if self.offline_only:
+            data.setdefault("device", {})["id"] = self.current_device_id()
+            data["device"]["lastValidationUtc"] = now.isoformat()
+            data["mode"] = data.get("mode") or "offline"
+            data["offline"] = True
+            self._save(data)
+            return self._status_dict(data)
 
         if self.server_configured and data.get("token"):
             return self._validate_server(data, now)
@@ -386,10 +466,152 @@ class LicenseManager:
     def snapshot(self) -> LicenseSnapshot:
         return self._to_snapshot(self._load())
 
+    def public_status(self) -> dict:
+        data = self._normalize(self._load())
+        status = self._status_dict(data)
+        status.update(self.billing_hints())
+        return status
+
+    def _persist_grant_file(self, file_data: dict) -> None:
+        path = self.grant_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(file_data, indent=2), encoding="utf-8")
+        self._chmod_private(path)
+
+    def _clear_grant_file(self) -> None:
+        path = self.grant_path()
+        try:
+            if path.exists():
+                path.unlink()
+        except OSError:
+            pass
+
+    def _verify_grant_source(self, source, *, now: datetime | None = None) -> dict:
+        try:
+            return verify_offline_license_file(
+                source,
+                device_id=self.current_device_id(),
+                public_key=AMX_OFFLINE_PUBLIC_KEY,
+                now=now,
+                expected_product_id=_product_id(),
+            )
+        except OfflineLicenseError as exc:
+            raise PermissionError(str(exc)) from exc
+
+    def _apply_offline_claims(self, claims: dict, *, file_data: dict | None = None) -> dict:
+        now = datetime.now(timezone.utc)
+        feature_list = claims.get("features") if isinstance(claims.get("features"), list) else []
+        features = _features_from_server_list(feature_list, enabled=True, grant_core=True)
+        key = str(claims.get("licenseKey") or "").strip()
+        expires = claims.get("expiresAt")
+        if expires is not None and not isinstance(expires, str):
+            expires = None
+        data = {
+            "state": "offline",
+            "message": "Offline license active (node-locked)",
+            "expiresAt": expires,
+            "graceUntil": None,
+            "seats": {"used": 1, "total": 1},
+            "device": {"id": self.current_device_id(), "lastValidationUtc": now.isoformat()},
+            "features": features,
+            "token": claims.get("token"),
+            "licenseKey": key or None,
+            "licenseKeyMasked": f"***{key[-4:]}" if len(key) >= 4 else None,
+            "customerEmail": self._load().get("customerEmail"),
+            "mode": "offline",
+            "offline": True,
+            "productId": claims.get("productId"),
+        }
+        if file_data is not None:
+            self._persist_grant_file(file_data)
+        self._save(data)
+        return self._status_dict(data)
+
+    def _validate_offline_grant(self, data: dict, now: datetime) -> dict:
+        path = self.grant_path()
+        if not path.exists():
+            data["state"] = "invalid"
+            data["message"] = "Offline license file missing"
+            data["offline"] = True
+            data["mode"] = "offline"
+            data.setdefault("device", {})["id"] = self.current_device_id()
+            data["device"]["lastValidationUtc"] = now.isoformat()
+            self._save(data)
+            return self._status_dict(data)
+        try:
+            claims = self._verify_grant_source(path, now=now)
+        except PermissionError as exc:
+            msg = str(exc)
+            expired = "expired" in msg.lower()
+            if expired and data.get("graceUntil"):
+                try:
+                    if datetime.fromisoformat(data["graceUntil"]) > now:
+                        data["state"] = "grace"
+                        data["message"] = f"Grace active after offline grant expiry: {msg}"
+                        data["offline"] = True
+                        data["mode"] = "offline"
+                        self._save(data)
+                        return self._status_dict(data)
+                except ValueError:
+                    pass
+            data["state"] = "expired" if expired else "invalid"
+            data["message"] = msg
+            data["offline"] = True
+            data["mode"] = "offline"
+            data.setdefault("device", {})["id"] = self.current_device_id()
+            data["device"]["lastValidationUtc"] = now.isoformat()
+            if expired and not data.get("graceUntil"):
+                grace_days = None
+                try:
+                    raw_file = load_offline_license_file(path)
+                    grace_days = raw_file.get("offlineGraceDays")
+                except (OSError, json.JSONDecodeError, OfflineLicenseError, TypeError):
+                    grace_days = None
+                hours = _offline_grace_hours()
+                if isinstance(grace_days, int) and grace_days > 0:
+                    hours = max(1, grace_days * 24)
+                data["graceUntil"] = (now + timedelta(hours=hours)).isoformat()
+                data["state"] = "grace"
+                data["message"] = f"License expired, grace active: {msg}"
+            self._save(data)
+            return self._status_dict(data)
+        return self._apply_offline_claims(claims)
+
+    def import_grant(self, source, *, license_key: str | None = None) -> dict:
+        try:
+            file_data = load_offline_license_file(source)
+            claims = self._verify_grant_source(file_data)
+        except OfflineLicenseError as exc:
+            raise PermissionError(str(exc)) from exc
+        grant_key = str(claims.get("licenseKey") or "").strip()
+        entered = (license_key or "").strip()
+        if entered and grant_key and entered != grant_key:
+            raise PermissionError("License number does not match the imported grant")
+        return self._apply_offline_claims(claims, file_data=file_data)
+
+    def _allow_local_bootstrap(self, key: str) -> bool:
+        if not key.startswith("AMX-"):
+            return False
+        if _env_bool("LICENSE_ALLOW_LOCAL_KEYS", default=False):
+            return True
+        return not is_production()
+
     def activate(self, key: str, *, seats_requested: int = 1, device_id: str = "local-device") -> dict:
         key = key.strip()
         if not key:
             raise ValueError("license key required")
+
+        if self.grant_path().exists():
+            claims = self._verify_grant_source(self.grant_path())
+            grant_key = str(claims.get("licenseKey") or "").strip()
+            if grant_key and key != grant_key:
+                raise PermissionError("License number does not match the imported grant")
+            return self._apply_offline_claims(claims)
+
+        if self.offline_only:
+            if self._allow_local_bootstrap(key):
+                return self._activate_local(key, seats_requested=seats_requested, device_id=device_id)
+            raise PermissionError("Import a signed .lic.json grant before entering a license number")
 
         if self.server_configured and not _env_bool("LICENSE_ALLOW_LOCAL_KEYS", default=False):
             return self._activate_server(key)
@@ -498,7 +720,8 @@ class LicenseManager:
 
     def deactivate(self) -> dict:
         data = self._load()
-        if self.server_configured and data.get("licenseKey") and data.get("token"):
+        self._clear_grant_file()
+        if (not self.offline_only) and self.server_configured and data.get("licenseKey") and data.get("token"):
             try:
                 client = self._client(license_key=data.get("licenseKey"), token=data.get("token"))
                 client.deactivate()
@@ -506,7 +729,7 @@ class LicenseManager:
                 # Still clear local state even if server call fails.
                 pass
         self._save(self._default())
-        return self.validate_once()
+        return self.public_status()
 
     def enforce_feature(self, feature_name: str) -> None:
         state = self._normalize(self._load())
@@ -553,7 +776,7 @@ class LicenseManager:
         data = self._load()
         email = data.get("customerEmail") if isinstance(data.get("customerEmail"), str) else ""
         return {
-            "billing_enabled": self.server_configured,
+            "billing_enabled": False if self.offline_only else self.server_configured,
             "customer_email_masked": _mask_email(email),
             "license_key_masked": data.get("licenseKeyMasked") or _mask_key(data.get("licenseKey")),
         }

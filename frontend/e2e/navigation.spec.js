@@ -35,7 +35,7 @@ test('HMI shell and primary navigation', async ({ page }) => {
   await page.getByTestId('settings-back').click();
 
   await page.getByTestId('settings-license').click();
-  await expect(page.getByTestId('license-billing')).toBeVisible();
+  await expect(page.getByTestId('license-panel')).toBeVisible();
   await page.getByTestId('settings-back').click();
 
   await page.getByTestId('nav-trends').click();
